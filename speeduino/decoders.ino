@@ -316,7 +316,7 @@ If it's the correct tooth, but the schedule is not yet started, calculate and an
     { \
       if( (ignitionSchedule8.Status == RUNNING) ) { IGN8_COMPARE = IGN8_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition8EndAngle - crankAngle) ) ) ); } \
       else if(currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE) { ignitionSchedule8.endCompare = IGN8_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition8EndAngle - crankAngle) ) ) ); ignitionSchedule8.endScheduleSetByDecoder = true; } \
-    } \  
+    } \
   } \
 }
 
@@ -3556,10 +3556,10 @@ void triggerSetup_420a()
   toothAngles[6] = toothAngles[2] + 180;
   toothAngles[7] = toothAngles[3] + 180;
   toothAngles[8] = toothAngles[4] + 180; //Just before #4 TDC
-  toothAngles[9] = toothAngles[1] + 360;
+  toothAngles[9]  = toothAngles[1] + 360;
   toothAngles[10] = toothAngles[2] + 360;
   toothAngles[11] = toothAngles[3] + 360;
-  toothAngles[12] = toothAngles[4] + 360; //Just before #4 TDC
+  toothAngles[12] = toothAngles[4] + 360; //Just before #2 TDC
   toothAngles[13] = toothAngles[1] + 540;
   toothAngles[14] = toothAngles[2] + 540;
   toothAngles[15] = toothAngles[3] + 540;
