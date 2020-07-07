@@ -17,39 +17,12 @@ void initialiseADC()
 {
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__) //AVR chips use the ISR for this
 
-  #if defined(ANALOG_ISR)
-    //This sets the ADC (Analog to Digitial Converter) to run at 250KHz, greatly reducing analog read times (MAP/TPS)
-    //the code on ISR run each conversion every 25 ADC clock, conversion run about 100KHz effectively
-    //making a 6250 conversions/s on 16 channels and 12500 on 8 channels devices.
-    noInterrupts(); //Interrupts should be turned off when playing with any of these registers
-
-    ADCSRB = 0x00; //ADC Auto Trigger Source is in Free Running mode
-    ADMUX = 0x40;  //Select AREF as reference, ADC Left Adjust Result, Starting at channel 0
-
-    //All of the below is the longhand version of: ADCSRA = 0xEE;
-    #define ADFR 5 //Why the HELL isn't this defined in the same place as everything else (wiring.h)?!?!
-    BIT_SET(ADCSRA,ADFR); //Set free running mode
-    BIT_SET(ADCSRA,ADIE); //Set ADC interrupt enabled
-    BIT_CLEAR(ADCSRA,ADIF); //Clear interrupt flag
-
-    // Set ADC clock to 125KHz (Prescaler = 128)
-    BIT_SET(ADCSRA,ADPS2);
-    BIT_SET(ADCSRA,ADPS1);
-    BIT_SET(ADCSRA,ADPS0);
-
-    BIT_SET(ADCSRA,ADEN); //Enable ADC
-
-    interrupts();
-    BIT_SET(ADCSRA,ADSC); //Start conversion
-
-  #else
     //This sets the ADC (Analog to Digitial Converter) to run at 1Mhz, greatly reducing analog read times (MAP/TPS) when using the standard analogRead() function
     //1Mhz is the fastest speed permitted by the CPU without affecting accuracy
     //Please see chapter 11 of 'Practical Arduino' (books.google.com.au/books?id=HsTxON1L6D4C&printsec=frontcover#v=onepage&q&f=false) for more detail
      BIT_SET(ADCSRA,ADPS2);
      BIT_CLEAR(ADCSRA,ADPS1);
      BIT_CLEAR(ADCSRA,ADPS0);
-  #endif
 #elif defined(ARDUINO_ARCH_STM32) //STM32GENERIC core and ST STM32duino core, change analog read to 12 bit
   analogReadResolution(12); //use 12bits for analog reading on STM32 boards
 #endif
@@ -155,12 +128,8 @@ static inline void instanteneousMAPReading()
 
   unsigned int tempReading;
   //Instantaneous MAP readings
-  #if defined(ANALOG_ISR_MAP)
-    tempReading = AnChannel[pinMAP-A0];
-  #else
     tempReading = analogRead(pinMAP);
     tempReading = analogRead(pinMAP);
-  #endif
   //Error checking
   if( (tempReading >= VALID_MAP_MAX) || (tempReading <= VALID_MAP_MIN) ) { mapErrorCount += 1; }
   else { mapErrorCount = 0; }
@@ -192,12 +161,8 @@ static inline void readMAP()
       {
         if( (MAPcurRev == currentStatus.startRevolutions) || ( (MAPcurRev+1) == currentStatus.startRevolutions) ) //2 revolutions are looked at for 4 stroke. 2 stroke not currently catered for.
         {
-          #if defined(ANALOG_ISR_MAP)
-            tempReading = AnChannel[pinMAP-A0];
-          #else
             tempReading = analogRead(pinMAP);
             tempReading = analogRead(pinMAP);
-          #endif
 
           //Error check
           if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
@@ -263,9 +228,6 @@ static inline void readMAP()
       {
         if( (MAPcurRev == currentStatus.startRevolutions) || ((MAPcurRev+1) == currentStatus.startRevolutions) ) //2 revolutions are looked at for 4 stroke. 2 stroke not currently catered for.
         {
-          #if defined(ANALOG_ISR_MAP)
-            tempReading = AnChannel[pinMAP-A0];
-          #else
             tempReading = analogRead(pinMAP);
             tempReading = analogRead(pinMAP);
           #endif
@@ -302,12 +264,8 @@ static inline void readMAP()
       {
         if( (MAPcurRev == ignitionCount) ) //Watch for a change in the ignition counter to determine whether we're still on the same event
         {
-          #if defined(ANALOG_ISR_MAP)
-            tempReading = AnChannel[pinMAP-A0];
-          #else
             tempReading = analogRead(pinMAP);
             tempReading = analogRead(pinMAP);
-          #endif
 
           //Error check
           if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
@@ -354,12 +312,9 @@ void readTPS(bool useFilter)
 {
   TPSlast = currentStatus.TPS;
   TPSlast_time = TPS_time;
-  #if defined(ANALOG_ISR)
-    byte tempTPS = fastMap1023toX(AnChannel[pinTPS-A0], 255); //Get the current raw TPS ADC value and map it into a byte
-  #else
     analogRead(pinTPS);
     byte tempTPS = fastMap1023toX(analogRead(pinTPS), 255); //Get the current raw TPS ADC value and map it into a byte
-  #endif
+
   //The use of the filter can be overridden if required. This is used on startup to disable priming pulse if flood clear is wanted
   if(useFilter == true) { currentStatus.tpsADC = ADC_FILTER(tempTPS, configPage4.ADCFILTER_TPS, currentStatus.tpsADC); }
   else { currentStatus.tpsADC = tempTPS; }
@@ -401,12 +356,9 @@ void readTPS(bool useFilter)
 void readCLT(bool useFilter)
 {
   unsigned int tempReading;
-  #if defined(ANALOG_ISR)
-    tempReading = fastMap1023toX(AnChannel[pinCLT-A0], 511); //Get the current raw CLT value
-  #else
     tempReading = analogRead(pinCLT);
     tempReading = fastMap1023toX(analogRead(pinCLT), 511); //Get the current raw CLT value
-  #endif
+
   //The use of the filter can be overridden if required. This is used on startup so there can be an immediately accurate coolant value for priming
   if(useFilter == true) { currentStatus.cltADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_CLT, currentStatus.cltADC); }
   else { currentStatus.cltADC = tempReading; }
@@ -418,12 +370,9 @@ void readCLT(bool useFilter)
 void readIAT()
 {
   unsigned int tempReading;
-  #if defined(ANALOG_ISR)
-    tempReading = fastMap1023toX(AnChannel[pinIAT-A0], 511); //Get the current raw IAT value
-  #else
     tempReading = analogRead(pinIAT);
     tempReading = fastMap1023toX(analogRead(pinIAT), 511); //Get the current raw IAT value
-  #endif
+
   currentStatus.iatADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_IAT, currentStatus.iatADC);
   //currentStatus.IAT = iatCalibrationTable[currentStatus.iatADC] - CALIBRATION_TEMPERATURE_OFFSET;
   currentStatus.IAT = table2D_getValue(&iatCalibrationTable_new, currentStatus.iatADC) - CALIBRATION_TEMPERATURE_OFFSET;
@@ -435,12 +384,8 @@ void readBaro()
   {
     int tempReading;
     // readings
-    #if defined(ANALOG_ISR_MAP)
-      tempReading = AnChannel[pinBaro-A0];
-    #else
       tempReading = analogRead(pinBaro);
       tempReading = analogRead(pinBaro);
-    #endif
 
     currentStatus.baroADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_BARO, currentStatus.baroADC); //Very weak filter
 
@@ -454,12 +399,9 @@ void readO2()
   if(configPage6.egoType > 0)
   {
     unsigned int tempReading;
-    #if defined(ANALOG_ISR)
-      tempReading = fastMap1023toX(AnChannel[pinO2-A0], 511); //Get the current O2 value.
-    #else
       tempReading = analogRead(pinO2);
       tempReading = fastMap1023toX(analogRead(pinO2), 511); //Get the current O2 value.
-    #endif
+
     currentStatus.O2ADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_O2, currentStatus.O2ADC);
     currentStatus.O2 = o2CalibrationTable[currentStatus.O2ADC];
   }
@@ -476,12 +418,9 @@ void readO2_2()
   //Second O2 currently disabled as its not being used
   //Get the current O2 value.
   unsigned int tempReading;
-  #if defined(ANALOG_ISR)
-    tempReading = fastMap1023toX(AnChannel[pinO2_2-A0], 511); //Get the current O2 value.
-  #else
     tempReading = analogRead(pinO2_2);
     tempReading = fastMap1023toX(analogRead(pinO2_2), 511); //Get the current O2 value.
-  #endif
+
   currentStatus.O2_2ADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_O2, currentStatus.O2_2ADC);
   currentStatus.O2_2 = o2CalibrationTable[currentStatus.O2_2ADC];
 }
@@ -489,19 +428,14 @@ void readO2_2()
 void readBat()
 {
   int tempReading;
-  #if defined(ANALOG_ISR)
-    tempReading = fastMap1023toX(AnChannel[pinBat-A0], 245); //Get the current raw Battery value. Permissible values are from 0v to 24.5v (245)
-  #else
     tempReading = analogRead(pinBat);
     tempReading = fastMap1023toX(analogRead(pinBat), 245); //Get the current raw Battery value. Permissible values are from 0v to 24.5v (245)
-  #endif
 
   //Apply the offset calibration value to the reading
   tempReading += configPage4.batVoltCorrect;
   if(tempReading < 0){
     tempReading=0;
-  }  //with negative overflow prevention
-
+  }  //do not allow negative values
 
   //The following is a check for if the voltage has jumped up from under 5.5v to over 7v.
   //If this occurs, it's very likely that the system has gone from being powered by USB to being powered from the 12v power source.
@@ -662,13 +596,9 @@ uint16_t readAuxanalog(uint8_t analogPin)
 {
   //read the Aux analog value for pin set by analogPin 
   unsigned int tempReading;
-  #if defined(ANALOG_ISR)
-    tempReading = fastMap1023toX(AnChannel[analogPin-A0], 1023); //Get the current raw Auxanalog value
-  #else
     tempReading = analogRead(analogPin);
     tempReading = analogRead(analogPin);
     //tempReading = fastMap1023toX(analogRead(analogPin), 511); Get the current raw Auxanalog value
-  #endif
   return tempReading;
 } 
 
