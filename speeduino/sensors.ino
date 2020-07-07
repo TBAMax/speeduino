@@ -355,8 +355,9 @@ void readTPS(bool useFilter)
 void readCLT(bool useFilter)
 {
   unsigned int tempReading;
-    tempReading = analogRead(pinCLT);
-    tempReading = fastMap1023toX(analogRead(pinCLT), 511); //Get the current raw CLT value
+//    tempReading = analogRead(pinCLT);
+//    tempReading = fastMap1023toX(analogRead(pinCLT), 511); //Get the current raw CLT value
+    tempReading = analogRead(pinCLT)/8; //even more faster mapping from 12bit to 9bit(511)
 
   //The use of the filter can be overridden if required. This is used on startup so there can be an immediately accurate coolant value for priming
   if(useFilter == true) { currentStatus.cltADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_CLT, currentStatus.cltADC); }
@@ -369,8 +370,9 @@ void readCLT(bool useFilter)
 void readIAT()
 {
   unsigned int tempReading;
-    tempReading = analogRead(pinIAT);
-    tempReading = fastMap1023toX(analogRead(pinIAT), 511); //Get the current raw IAT value
+//    tempReading = analogRead(pinIAT);
+//    tempReading = fastMap1023toX(analogRead(pinIAT), 511); //Get the current raw IAT value
+    tempReading = analogRead(pinIAT)/8; //even more faster mapping from 12bit to 9bit(511)
 
   currentStatus.iatADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_IAT, currentStatus.iatADC);
   //currentStatus.IAT = iatCalibrationTable[currentStatus.iatADC] - CALIBRATION_TEMPERATURE_OFFSET;
@@ -398,8 +400,9 @@ void readO2()
   if(configPage6.egoType > 0)
   {
     unsigned int tempReading;
-      tempReading = analogRead(pinO2);
-      tempReading = fastMap1023toX(analogRead(pinO2), 511); //Get the current O2 value.
+//      tempReading = analogRead(pinO2);
+//      tempReading = fastMap1023toX(analogRead(pinO2), 511); //Get the current O2 value.
+      tempReading = analogRead(pinO2)/8; ////even more faster mapping to 511 (9bit)
 
     currentStatus.O2ADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_O2, currentStatus.O2ADC);
     currentStatus.O2 = o2CalibrationTable[currentStatus.O2ADC];
@@ -417,8 +420,9 @@ void readO2_2()
   //Second O2 currently disabled as its not being used
   //Get the current O2 value.
   unsigned int tempReading;
-    tempReading = analogRead(pinO2_2);
-    tempReading = fastMap1023toX(analogRead(pinO2_2), 511); //Get the current O2 value.
+//    tempReading = analogRead(pinO2_2);
+//    tempReading = fastMap1023toX(analogRead(pinO2_2), 511); //Get the current O2 value.
+  tempReading = analogRead(pinO2_2)/16; //even more faster mapping to 511 (9bit)
 
   currentStatus.O2_2ADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_O2, currentStatus.O2_2ADC);
   currentStatus.O2_2 = o2CalibrationTable[currentStatus.O2_2ADC];
@@ -427,9 +431,9 @@ void readO2_2()
 void readBat()
 {
   int tempReading;
-    tempReading = analogRead(pinBat);
-    tempReading = fastMap1023toX(analogRead(pinBat), 245); //Get the current raw Battery value. Permissible values are from 0v to 24.5v (245)
-
+//    tempReading = analogRead(pinBat);
+//    tempReading = fastMap1023toX(analogRead(pinBat), 245); //Get the current raw Battery value. Permissible values are from 0v to 24.5v (245)
+  tempReading = analogRead(pinBat)/16; //keep it simple. Shift 4 bits down from 12bit to 8bit accuracy. Permissible values are from 0V to 25.5V (255)
   //Apply the offset calibration value to the reading
   tempReading += configPage4.batVoltCorrect;
   if(tempReading < 0){
