@@ -230,7 +230,6 @@ static inline void readMAP()
         {
             tempReading = analogRead(pinMAP);
             tempReading = analogRead(pinMAP);
-          #endif
           //Error check
           if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
           {
