@@ -56,7 +56,7 @@ void initialiseAll()
     //STM32 can not currently enabled
     #endif
 
-    #if defined(CORE_TEENSY)
+    #if defined(CORE_TEENSY35)
     configPage9.intcan_available = 1;   // device has internal canbus
     //Teensy uses the Flexcan_T4 library to use the internal canbus
     //enable local can interface
@@ -1100,8 +1100,6 @@ void initialiseAll()
         }
         break;
 
-
-
     default:
         //Wasted spark (Shouldn't ever happen anyway)
         ign1StartFunction = beginCoil1Charge;
@@ -1127,29 +1125,8 @@ void initialiseAll()
     else { fpPrimed = true; } //If the user has set 0 for the pump priming, immediately mark the priming as being completed
 
     interrupts();
-    //Perform the priming pulses. Set these to run at an arbitrary time in the future (100us). The prime pulse value is in ms*10, so need to multiple by 100 to get to uS
     readCLT(false); // Need to read coolant temp to make priming pulsewidth work correctly. The false here disables use of the filter
     readTPS(false); // Need to read tps to detect flood clear state
-    unsigned long primingValue = table2D_getValue(&PrimingPulseTable, currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET);
-    if((primingValue > 0) && (currentStatus.TPS < configPage4.floodClear))
-    {
-      if(channel1InjEnabled == true) { setFuelSchedule1(100, (primingValue * 100 * 5)); } //to achieve long enough priming pulses, the values in tunerstudio are divided by 0.5 instead of 0.1, so multiplier of 5 is required.
-      if(channel2InjEnabled == true) { setFuelSchedule2(100, (primingValue * 100 * 5)); }
-      if(channel3InjEnabled == true) { setFuelSchedule3(100, (primingValue * 100 * 5)); }
-      if(channel4InjEnabled == true) { setFuelSchedule4(100, (primingValue * 100 * 5)); }
-      #if INJ_CHANNELS >= 5
-      if(channel5InjEnabled == true) { setFuelSchedule5(100, (primingValue * 100 * 5)); }
-      #endif
-      #if INJ_CHANNELS >= 6
-      if(channel6InjEnabled == true) { setFuelSchedule6(100, (primingValue * 100 * 5)); }
-      #endif
-      #if INJ_CHANNELS >= 7
-      if(channel7InjEnabled == true) { setFuelSchedule7(100, (primingValue * 100 * 5)); }
-      #endif
-      #if INJ_CHANNELS >= 8
-      if(channel8InjEnabled == true) { setFuelSchedule8(100, (primingValue * 100 * 5)); }
-      #endif
-    }
 
     initialisationComplete = true;
     digitalWrite(LED_BUILTIN, HIGH);
@@ -2127,9 +2104,8 @@ void setPinMapping(byte boardID)
         pinIAT = PC2; //ADC123
         pinCLT = PC3; //ADC123
         pinO2 = PC4; //ADC12
-        /* = PC5; */ //ADC12
+        pinBat = PC5;  //ADC12
         /*pinVVT_1 = PC6; */ //
-        pinBat = PC6; //
         pinDisplayReset = PC7; //
         /* = PC8; */ //(DO NOT USE FOR SPEEDUINO) - SDIO_D0
         /* = PC9; */ //(DO NOT USE FOR SPEEDUINO) - SDIO_D1
@@ -2275,9 +2251,8 @@ void setPinMapping(byte boardID)
         pinIAT = PC2; //ADC123
         pinCLT = PC3; //ADC123
         pinO2 = PC4; //ADC12
-        /* = PC5; */ //ADC12
+        pinBat = PC5; //ADC12
         /*pinVVT_1 = PC6; */ //
-        pinBat = PC6; //
         pinDisplayReset = PC7; //
         /* = PC8; */ //(DO NOT USE FOR SPEEDUINO) - SDIO_D0
         /* = PC9; */ //(DO NOT USE FOR SPEEDUINO) - SDIO_D1
