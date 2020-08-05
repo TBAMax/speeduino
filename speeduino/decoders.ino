@@ -1126,51 +1126,26 @@ Tooth number one is at 355* ATDC
 */
 void triggerSetup_4G63()
 {
-  triggerToothAngle = 180; //The number of degrees that passes from tooth to tooth (primary)
+//  triggerToothAngle = 180; //The number of degrees that passes from tooth to tooth (primary)
   toothCurrentCount = 99; //Fake tooth count represents no sync
   secondDerivEnabled = false;
   decoderIsSequential = true;
   decoderHasFixedCrankingTiming = true;
-  triggerToothAngleIsCorrect = true;
+  triggerToothAngleIsCorrect = false;
   MAX_STALL_TIME = 366667UL; //Minimum 50rpm based on the 110 degree tooth spacing
   if(initialisationComplete == false) { toothLastToothTime = micros(); } //Set a startup value here to avoid filter errors when starting. This MUST have the initi check to prevent the fuel pump just staying on all the time
-  //decoderIsLowRes = true;
 
-  //Note that these angles are for every rising and falling edge
-  if(configPage2.nCylinders == 6)
-  {
-    //New values below
-    toothAngles[0] = 715; //Rising edge of tooth #1
-    toothAngles[1] = 45;  //Falling edge of tooth #1
-    toothAngles[2] = 115; //Rising edge of tooth #2
-    toothAngles[3] = 165; //Falling edge of tooth #2
-    toothAngles[4] = 235; //Rising edge of tooth #3
-    toothAngles[5] = 285; //Falling edge of tooth #3
-
-    toothAngles[6] = 355; //Rising edge of tooth #4
-    toothAngles[7] = 405; //Falling edge of tooth #4
-    toothAngles[8] = 475; //Rising edge of tooth #5
-    toothAngles[9] = 525; //Falling edge of tooth $5
-    toothAngles[10] = 595; //Rising edge of tooth #6
-    toothAngles[11] = 645; //Falling edge of tooth #6
-
-    triggerActualTeeth = 12; //Both sides of all teeth over 720 degrees
-  }
-  else
-  {
     // 70 / 110 for 4 cylinder
-    toothAngles[0] = 715; //Falling edge of tooth #1
-    toothAngles[1] = 105; //Rising edge of tooth #2
-    toothAngles[2] = 175; //Falling edge of tooth #2
-    toothAngles[3] = 285; //Rising edge of tooth #1
-
-    toothAngles[4] = 355; //Falling edge of tooth #1
-    toothAngles[5] = 465; //Rising edge of tooth #2
-    toothAngles[6] = 535; //Falling edge of tooth #2
-    toothAngles[7] = 645; //Rising edge of tooth #1
+    toothAngles[0] = 702; //Rising edge of tooth #1
+    toothAngles[1] = 94;  //Falling edge of tooth #1
+    toothAngles[2] = 164; //Rising edge of tooth #2
+    toothAngles[3] = 270; //Falling edge of tooth #2
+    toothAngles[4] = 340; //Rising edge of tooth #3
+    toothAngles[5] = 444; //Falling edge of tooth #3
+    toothAngles[6] = 516; //Rising edge of tooth #4
+    toothAngles[7] = 624; //Falling edge of tooth #4
 
     triggerActualTeeth = 8;
-  }
 
   triggerFilterTime = 1500; //10000 rpm, assuming we're triggering on both edges off the crank tooth.
   triggerSecFilterTime = (int)(1000000 / (MAX_RPM / 60 * 2)) / 2; //Same as above, but fixed at 2 teeth on the secondary input and divided by 2 (for cam speed)
@@ -1182,6 +1157,7 @@ void triggerPri_4G63()
 {
   curTime = micros();
   curGap = curTime - toothLastToothTime;
+
   if ( (curGap >= triggerFilterTime) || (currentStatus.startRevolutions == 0) )
   {
     validTrigger = true; //Flag that this pulse was accepted as a valid trigger
@@ -1199,7 +1175,11 @@ void triggerPri_4G63()
        toothOneTime = curTime;
        currentStatus.startRevolutions++; //Counter
     }
-
+    if((READ_PRI_TRIGGER() == true) && (toothCurrentCount & 0x01)) //only odd tooth allowed for high signal
+    {
+      toothCurrentCount--;                  //fall one tooth back
+      currentStatus.syncLossCounter++;
+    }
     if (currentStatus.hasSync == true)
     {
       if ( BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK) && configPage4.ignCranklock && (currentStatus.startRevolutions >= configPage4.StgCycles))
@@ -1222,104 +1202,56 @@ void triggerPri_4G63()
       if( (configPage4.triggerFilter == 1) || (currentStatus.RPM < 1400) )
       {
         //Lite filter
-        if( (toothCurrentCount == 1) || (toothCurrentCount == 3) || (toothCurrentCount == 5) || (toothCurrentCount == 7) || (toothCurrentCount == 9) || (toothCurrentCount == 11) )
+        if(toothCurrentCount & 0x01) //if odd tooth edge
         {
-          if(configPage2.nCylinders == 4)
-          {
             triggerToothAngle = 70;
             triggerFilterTime = curGap; //Trigger filter is set to whatever time it took to do 70 degrees (Next trigger is 110 degrees away)
-          }
-          else if(configPage2.nCylinders == 6)
-          {
-            triggerToothAngle = 70;
-            triggerFilterTime = (curGap >> 2); //Trigger filter is set to (70/4)=17.5=17 degrees (Next trigger is 50 degrees away).
-          }
         }
-        else
+        else  //even tooth edge
         {
-          if(configPage2.nCylinders == 4)
-          {
             triggerToothAngle = 110;
             triggerFilterTime = (curGap * 3) >> 3; //Trigger filter is set to (110*3)/8=41.25=41 degrees (Next trigger is 70 degrees away).
-          }
-          else if(configPage2.nCylinders == 6)
-          {
-            triggerToothAngle = 50;
-            triggerFilterTime = curGap >> 1; //Trigger filter is set to 25 degrees (Next trigger is 70 degrees away).
-          }
         }
       }
       else if(configPage4.triggerFilter == 2)
       {
         //Medium filter level
-        if( (toothCurrentCount == 1) || (toothCurrentCount == 3) || (toothCurrentCount == 5) || (toothCurrentCount == 7) || (toothCurrentCount == 9) || (toothCurrentCount == 11) )
+        if(toothCurrentCount & 0x01) //if odd tooth edge
         { 
           triggerToothAngle = 70; 
-          if(configPage2.nCylinders == 4)
-          { 
-            triggerFilterTime = (curGap * 5) >> 2 ; //87.5 degrees with a target of 110
-          }
-          else
-          {
-            triggerFilterTime = curGap >> 1 ; //35 degrees with a target of 50
-          }
+          triggerFilterTime = (curGap * 5) >> 2 ; //87.5 degrees with a target of 110
         } 
         else 
         { 
-          if(configPage2.nCylinders == 4)
-          { 
             triggerToothAngle = 110; 
             triggerFilterTime = (curGap >> 1); //55 degrees with a target of 70
-          }
-          else
-          {
-            triggerToothAngle = 50; 
-            triggerFilterTime = (curGap * 3) >> 2; //Trigger filter is set to (50*3)/4=37.5=37 degrees (Next trigger is 70 degrees away).
-          }
         } 
       }
       else if (configPage4.triggerFilter == 3)
       {
         //Aggressive filter level
-        if( (toothCurrentCount == 1) || (toothCurrentCount == 3) || (toothCurrentCount == 5) || (toothCurrentCount == 7) || (toothCurrentCount == 9) || (toothCurrentCount == 11) )
+        if(toothCurrentCount & 0x01) //if odd tooth edge
         { 
           triggerToothAngle = 70; 
-          if(configPage2.nCylinders == 4)
-          { 
-            triggerFilterTime = (curGap * 11) >> 3;//96.26 degrees with a target of 110
-          }
-          else
-          {
-            triggerFilterTime = curGap >> 1 ; //35 degrees with a target of 50
-          }
+          triggerFilterTime = (curGap * 11) >> 3;//96.26 degrees with a target of 110
         } 
-        else 
+        else //even tooth edge
         { 
-          if(configPage2.nCylinders == 4)
-          { 
             triggerToothAngle = 110; 
             triggerFilterTime = (curGap * 9) >> 5; //61.87 degrees with a target of 70
-          }
-          else
-          {
-            triggerToothAngle = 50; 
-            triggerFilterTime = curGap; //50 degrees with a target of 70
-          }
         } 
       }
       else
       {
         //trigger filter is turned off.
-        triggerFilterTime = 0;
-        if( (toothCurrentCount == 1) || (toothCurrentCount == 3) || (toothCurrentCount == 5) || (toothCurrentCount == 7) || (toothCurrentCount == 9) || (toothCurrentCount == 11) )
+        triggerFilterTime = 1500; //Still do not go below absolute minimum
+        if(toothCurrentCount & 0x01) //if odd tooth edge
         { 
-          if(configPage2.nCylinders == 4) { triggerToothAngle = 70; }
-          else  { triggerToothAngle = 70; }
+          triggerToothAngle = 70;
         } 
-        else 
+        else //even tooth edge
         { 
-          if(configPage2.nCylinders == 4) { triggerToothAngle = 110; }
-          else  { triggerToothAngle = 50; }
+          triggerToothAngle = 110;
         }
       }
 
@@ -1337,110 +1269,41 @@ void triggerPri_4G63()
         }
       }
     } //Has sync
-    else
+    else //was no sync
     {
-      triggerSecFilterTime = 0;
-      //New secondary method of determining sync
-      if(READ_PRI_TRIGGER() == true)
-      {
-        if(READ_SEC_TRIGGER() == true) { revolutionOne = true; }
-        else { revolutionOne = false; }
-      }
-      else
-      {
-        if( (READ_SEC_TRIGGER() == false) && (revolutionOne == true) ) 
-        { 
-          //Crank is low, cam is low and the crank pulse STARTED when the cam was high. 
-          if(configPage2.nCylinders == 4) { toothCurrentCount = 1; } //Means we're at 5* BTDC on a 4G63 4 cylinder
-          //else if(configPage2.nCylinders == 6) { toothCurrentCount = 8; } 
-        } 
-        //If sequential is ever enabled, the below toothCurrentCount will need to change:
-        else if( (READ_SEC_TRIGGER() == true) && (revolutionOne == true) ) 
-        { 
-          //Crank is low, cam is high and the crank pulse STARTED when the cam was high. 
-          if(configPage2.nCylinders == 4) { toothCurrentCount = 5; } //Means we're at 5* BTDC on a 4G63 4 cylinder
-          else if(configPage2.nCylinders == 6) { toothCurrentCount = 2; currentStatus.hasSync = true; } //Means we're at 45* ATDC on 6G72 6 cylinder
-        } 
-      }
+      currentStatus.hasSync = true;  //now should be at least half sync
+      
     }
   } //Filter time
 
 }
+
 void triggerSec_4G63()
 {
-  //byte crankState = READ_PRI_TRIGGER();
-  //First filter is a duration based one to ensure the pulse was of sufficient length (time)
-  //if(READ_SEC_TRIGGER()) { secondaryLastToothTime1 = micros(); return; }
-  if(currentStatus.hasSync == true)
-  {
-  //1166 is the time taken to cross 70 degrees at 10k rpm
-  //if ( (micros() - secondaryLastToothTime1) < triggerSecFilterTime_duration ) { return; }
-  //triggerSecFilterTime_duration = (micros() - secondaryLastToothTime1) >> 1;
-  }
-
-
   curTime2 = micros();
   curGap2 = curTime2 - toothLastSecToothTime;
-  if ( (curGap2 >= triggerSecFilterTime) )//|| (currentStatus.startRevolutions == 0) )
+  if (curGap2 >= triggerSecFilterTime)
   {
     toothLastSecToothTime = curTime2;
     validTrigger = true; //Flag that this pulse was accepted as a valid trigger
-    //addToothLogEntry(curGap, TOOTH_CAM);
 
     triggerSecFilterTime = curGap2 >> 1; //Basic 50% filter for the secondary reading
-    //More aggressive options:
-    //62.5%:
-    //triggerSecFilterTime = (curGap2 * 9) >> 5;
-    //75%:
-    //triggerSecFilterTime = (curGap2 * 6) >> 3;
 
-    //if( (currentStatus.RPM < currentStatus.crankRPM) || (currentStatus.hasSync == false) )
-    if( (currentStatus.hasSync == false) )
+    if((toothCurrentCount != 8) || (toothCurrentCount != 1))  //this means we need to correct sync
     {
-
-      triggerFilterTime = 1500; //If this is removed, can have trouble getting sync again after the engine is turned off (but ECU not reset).
-      triggerSecFilterTime = triggerSecFilterTime >> 1; //Divide the secondary filter time by 2 again, making it 25%. Only needed when cranking
-      if(READ_PRI_TRIGGER() == true)
-      {
-        if(configPage2.nCylinders == 4)
-        { 
-          if(toothCurrentCount == 8) { currentStatus.hasSync = true; } //Is 8 for sequential, was 4
-        }
-        else if(configPage2.nCylinders == 6) 
-        { 
-          if(toothCurrentCount == 7) { currentStatus.hasSync = true; }
-        }
-
-      }
-      else
-      {
-        if(configPage2.nCylinders == 4)
-        { 
-          if(toothCurrentCount == 5) { currentStatus.hasSync = true; } //Is 5 for sequential, was 1
-        }
-        //Cannot gain sync for 6 cylinder here. 
-      }
-    }
-
-    //if ( (micros() - secondaryLastToothTime1) < triggerSecFilterTime_duration && configPage2.useResync )
-    if ( (currentStatus.RPM < currentStatus.crankRPM) || (configPage4.useResync == 1) )
-    {
-      if( (currentStatus.hasSync == true) && (configPage2.nCylinders == 4) )
-      {
-        triggerSecFilterTime_duration = (micros() - secondaryLastToothTime1) >> 1;
-        if(READ_PRI_TRIGGER() == true)
+        currentStatus.syncLossCounter++; //take note of that loss of sync
+        if(READ_PRI_TRIGGER() == false)
         {
-          //Whilst we're cranking and have sync, we need to watch for noise pulses.
-          if(toothCurrentCount != 8) 
-          { 
-            // This should never be true, except when there's noise
-            currentStatus.hasSync = false; 
-            currentStatus.syncLossCounter++;
-          } 
-          else { toothCurrentCount = 8; } //Why? Just why?
+        toothCurrentCount=8;   //force that particular teeth
         }
-      } //Has sync and 4 cylinder 
-    } // Use resync or cranking
+        else
+        {
+          toothCurrentCount=1;   //force that particular teeth
+        }
+        currentStatus.hasSync = true;
+        triggerSecFilterTime = 4000;  //initial filter value
+    }
+    triggerToothAngleIsCorrect = true;
   } //Trigger filter
 }
 
@@ -2018,21 +1881,15 @@ void triggerSetup_Miata9905()
 
   //Note that these angles are for every rising and falling edge
 
-  /*
-  toothAngles[0] = 350;
-  toothAngles[1] = 100;
-  toothAngles[2] = 170;
-  toothAngles[3] = 280;
-  */
-
-  toothAngles[0] = 710; //
-  toothAngles[1] = 100; //First crank pulse after the SINGLE cam pulse
-  toothAngles[2] = 170; //
-  toothAngles[3] = 280; //
-  toothAngles[4] = 350; //
-  toothAngles[5] = 460; //First crank pulse AFTER the DOUBLE cam pulse
-  toothAngles[6] = 530; //
-  toothAngles[7] = 640; //
+//Note that these angles are for every rising and falling edge of primary trigger
+    toothAngles[0] = 702; //Rising edge of tooth #1
+    toothAngles[1] = 94;  //Falling edge of tooth #1, first falling edge after falling secondary
+    toothAngles[2] = 164; //Rising edge of tooth #2
+    toothAngles[3] = 270; //Falling edge of tooth #2
+    toothAngles[4] = 340; //Rising edge of tooth #3
+    toothAngles[5] = 444; //Falling edge of tooth #3
+    toothAngles[6] = 516; //Rising edge of tooth #4
+    toothAngles[7] = 624; //Falling edge of tooth #4
 
   MAX_STALL_TIME = (3333UL * triggerToothAngle); //Minimum 50rpm. (3333uS is the time per degree at 50rpm)
   triggerFilterTime = 1500; //10000 rpm, assuming we're triggering on both edges off the crank tooth.
@@ -2147,12 +2004,6 @@ void triggerSec_Miata9905()
     secondaryToothCount++;
 
     //TODO Add some secondary filtering here
-
-    //Record the VVT tooth time
-    if( (toothCurrentCount == 1) && (curTime2 > toothLastToothTime) )
-    {
-      lastVVTtime = curTime2 - toothLastToothTime;
-    }
   }
 }
 
