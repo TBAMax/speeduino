@@ -1327,6 +1327,60 @@ void setPinMapping(byte boardID)
       pinWMIIndicator = 44;
       pinWMIEnabled = 42;
 
+      //initialize unused pins to outputs
+      pinMode(A6,OUTPUT);
+      pinMode(A7,OUTPUT);
+      pinMode(A9,OUTPUT);
+      pinMode(A10,OUTPUT);
+      pinMode(A11,OUTPUT);
+      pinMode(A12,OUTPUT);
+      pinMode(A13,OUTPUT);
+      pinMode(A14,OUTPUT);
+      pinMode(A15,OUTPUT);
+      pinMode(0,OUTPUT);
+      pinMode(1,OUTPUT);
+      pinMode(3,OUTPUT);
+      pinMode(13,OUTPUT);
+      pinMode(14,OUTPUT);
+      pinMode(15,OUTPUT);
+      pinMode(20,OUTPUT);
+      pinMode(21,OUTPUT);
+      pinMode(22,OUTPUT);
+      pinMode(23,OUTPUT);
+      pinMode(25,OUTPUT);
+      pinMode(26,OUTPUT);
+      pinMode(2,OUTPUT);
+      pinMode(4,OUTPUT);
+      pinMode(6,OUTPUT);
+      pinMode(7,OUTPUT);
+      pinMode(16,OUTPUT);
+      pinMode(17,OUTPUT);
+      pinMode(24,OUTPUT);
+      pinMode(34,OUTPUT);
+      pinMode(45,OUTPUT);
+      pinMode(47,OUTPUT);
+      pinMode(48,OUTPUT);
+      pinMode(50,OUTPUT);
+      pinMode(51,OUTPUT);
+      pinMode(27,OUTPUT);
+      pinMode(28,OUTPUT);
+      pinMode(29,OUTPUT);
+      pinMode(30,OUTPUT);
+      pinMode(31,OUTPUT);
+      pinMode(32,OUTPUT);
+      pinMode(33,OUTPUT);
+      pinMode(35,OUTPUT);
+      pinMode(36,OUTPUT);
+      pinMode(37,OUTPUT);
+      pinMode(39,OUTPUT);
+      pinMode(41,OUTPUT);
+      pinMode(42,OUTPUT);
+      pinMode(43,OUTPUT);
+      pinMode(44,OUTPUT);
+      pinMode(46,OUTPUT);
+      pinMode(53,OUTPUT);
+      
+
       #if defined(CORE_TEENSY35)
         pinInjector6 = 51;
 
@@ -2515,7 +2569,7 @@ void setPinMapping(byte boardID)
   #endif
   pinMode(pinTrigger, INPUT);
   pinMode(pinTrigger2, INPUT);
-  pinMode(pinTrigger3, INPUT);
+//  pinMode(pinTrigger3, INPUT);
 
   //Each of the below are only set when their relevant function is enabled. This can help prevent pin conflicts that users aren't aware of with unused functions
   if(configPage2.flexEnabled > 0)
@@ -2628,7 +2682,7 @@ void initialiseTriggers()
 
   pinMode(pinTrigger, INPUT);
   pinMode(pinTrigger2, INPUT);
-  pinMode(pinTrigger3, INPUT);
+//  pinMode(pinTrigger3, INPUT);
   //digitalWrite(pinTrigger, HIGH);
   detachInterrupt(triggerInterrupt);
   detachInterrupt(triggerInterrupt2);
