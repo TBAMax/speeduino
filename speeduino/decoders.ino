@@ -215,7 +215,7 @@ static inline uint16_t stdGetRPM(uint16_t degreesOver)
   if( currentStatus.hasSync == true )
   {
     if( (currentStatus.RPM < currentStatus.crankRPM) && (currentStatus.startRevolutions == 0) ) { tempRPM = 0; } //Prevents crazy RPM spike when there has been less than 1 full revolution
-    else if( (toothOneTime == 0) || (toothOneMinusOneTime == 0) ) { tempRPM = 0; }
+//    else if( (toothOneTime == 0) || (toothOneMinusOneTime == 0) ) { tempRPM = 0; }
     else
     {
       noInterrupts();
@@ -1131,17 +1131,16 @@ Tooth number one is at 355* ATDC
 void triggerSetup_4G63()
 {
   if(READ_PRI_TRIGGER() == true){ //determine the initial position of the wheel
-      toothCurrentCount =1 ;      //
+      toothCurrentCount =8;      //even number tooth are all high so choose one random for starters
   }
-  else {toothCurrentCount =8;} //then next edge is valid for cranking ignition
-  
-//  secondDerivEnabled = false;
+  else {toothCurrentCount =1;} //next edge is valid for cranking ignition but not sequential yet
+
+  secondDerivEnabled = false;
   decoderIsSequential = true;
   decoderHasFixedCrankingTiming = false;
-  triggerToothAngleIsCorrect = true;
+  triggerToothAngleIsCorrect = false;  //we have unven teeth spacing here so avoid those functions that are using this
   MAX_STALL_TIME = 366667UL; //Minimum 50rpm based on the 110 degree tooth spacing
   if(initialisationComplete == false) { toothLastToothTime = micros(); } //Set a startup value here to avoid filter errors when starting. This MUST have the initi check to prevent the fuel pump just staying on all the time
-  //decoderIsLowRes = true;
 
     // 70 / 110 for 4 cylinder
     
@@ -1162,7 +1161,7 @@ void triggerSetup_4G63()
   secondaryLastToothTime = 0;
 }
 
-void triggerPri_4G63()
+void triggerPri_4G63() //called from interrupt at every primary trigger signal CHANGE
 {
   curTime = micros();
   curGap = curTime - toothLastToothTime;
@@ -1176,19 +1175,17 @@ void triggerPri_4G63()
 
     if(toothCurrentCount > triggerActualTeeth) //This is true for first falling edge after secondary in case of correct sync
     {
-      if(READ_PRI_TRIGGER() != true){ //re check the edge polarity
+      if(READ_PRI_TRIGGER() == true){ //re check the edge polarity(should be low)
           toothCurrentCount =8 ;      //and correct if nessesary, now we have at least half-sync maybe full-sync
           currentStatus.syncLossCounter++; //also indicate such happenings
-          currentStatus.hasSync = false; //sync is achieved at secondary trigger after full cycle (720degrees).
+          currentStatus.hasSync =false ; //sync is achieved again at secondary trigger
       }      
       else {toothCurrentCount = 1;} //all good. Reset the counter
 
-      toothOneMinusOneTime = toothOneTime; 
+      toothOneMinusOneTime = toothOneTime; //also save those
       toothOneTime = curTime;             //toothOneTime is used in RPM calculation
-      currentStatus.startRevolutions++; //Counter
-
-    }
-    
+      currentStatus.startRevolutions++; //Counter      
+    }    
       //EXPERIMENTAL!
       //New ignition mode is ONLY available on 4g63 when the trigger angle is set to the stock value of 0.
       if( (configPage2.perToothIgn == true) && (configPage4.triggerAngle == 0) )
@@ -1207,10 +1204,10 @@ void triggerPri_4G63()
 
 void triggerSec_4G63()  //one signal per 720 crankshaft degrees 
 {
+  curTime2 = micros();
+  curGap2 = curTime2 - toothLastSecToothTime; 
   if (curGap2 >= triggerSecFilterTime) // debounce filter
   {
-    curTime2 = micros();
-//    curGap2 = curTime2 - toothLastSecToothTime;      //no need for cap really here
     toothLastSecToothTime = curTime2;
 
     if((toothCurrentCount == 7)||(toothCurrentCount == 8)) //check for correct primary tooth position
@@ -1219,8 +1216,8 @@ void triggerSec_4G63()  //one signal per 720 crankshaft degrees
     }
     else  // This should never be true, except when was out of sync
     {
-      currentStatus.syncLossCounter++;
-      currentStatus.hasSync = false;   //indicate loss of sync (sync is to be be confirmed after next full cycle)
+      currentStatus.syncLossCounter++; //indicate loss of sync
+      currentStatus.hasSync = true;    //(sync is restored)
       //correct sync
       if(READ_PRI_TRIGGER() == true){toothCurrentCount = 8;} //primary can be either low or high at the moment
       else{toothCurrentCount = 7;}                            
@@ -1229,7 +1226,7 @@ void triggerSec_4G63()  //one signal per 720 crankshaft degrees
 }
 
 
-uint16_t getRPM_4G63()
+uint16_t getRPM_4G63()  //returns RPM value
 {
   uint16_t tempRPM = 0;
   uint8_t tempToothCurrentCount;
@@ -1244,29 +1241,33 @@ uint16_t getRPM_4G63()
         noInterrupts();
         tempToothCurrentCount = toothCurrentCount;
         toothTime = (toothLastToothTime - toothLastMinusOneToothTime); //Note that trigger tooth angle changes between 70 and 110 depending on the last tooth that was seen (or 70/50 for 6 cylinders)
+        revolutionTime = (toothOneTime - toothOneMinusOneTime);        
         interrupts();     
+      revolutionTime = revolutionTime / 2;  //may need that somwhere... time of one crankshaft revolution
 
       tempToothAngle=getToothAngle_4G63(tempToothCurrentCount); //last tooth angle range from database of tooth edge angles
 
       toothTime = toothTime * 6;
       tempRPM = ((unsigned long)tempToothAngle * 1000000UL) / toothTime; //quite a division for that Atmega
+      //if(tempRPM >= MAX_RPM) { tempRPM = currentStatus.RPM; } //Sanity check
       //revolutionTime = (10UL * toothTime) / tempToothAngle;
       MAX_STALL_TIME = 366667UL; // 50RPM
+      if(tempRPM >= MAX_RPM) { tempRPM = 0; }
+      
+      timePerDegreex16=toothTime*16UL/tempToothAngle;
+      timePerDegree=timePerDegreex16/16;
+      degreesPeruSx32768 = tempToothAngle*32768/toothTime;
     }
     else
     {
       tempRPM = stdGetRPM(720);
-      //EXPERIMENTAL! Add/subtract RPM based on the last rpmDOT calc
-      //tempRPM += (micros() - toothOneTime) * currentStatus.rpmDOT
-//      MAX_STALL_TIME = revolutionTime << 1; //Set the stall time to be twice the current RPM. This is a safe figure as there should be no single revolution where this changes more than this
-//      if(MAX_STALL_TIME < 366667UL) { MAX_STALL_TIME = 366667UL; } //Check for 50rpm minimum
     }
   }
 
   return tempRPM;
 }
 
-int getCrankAngle_4G63()
+int getCrankAngle_4G63() //returns crankshaft angle in degrees, from 0 to 720(or to CRANK_ANGLE_MAX)
 {
     unsigned long tempToothLastToothTime;
     unsigned long tempToothLastMinusOneToothTime;

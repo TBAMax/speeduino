@@ -144,6 +144,6 @@ void doCrankSpeedCalcs()
           timePerDegree = timePerDegreex16 / 16;
         }
       }
-      degreesPeruSx2048 = 2048 / timePerDegree;
+//      degreesPeruSx2048 = 2048 / timePerDegree; //this is not used currently so comment out.
       degreesPeruSx32768 = 524288 / timePerDegreex16;
 }
