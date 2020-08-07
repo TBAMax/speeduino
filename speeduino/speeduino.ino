@@ -513,7 +513,7 @@ void loop()
       int tempCrankAngle;
       int tempStartAngle;
 
-//      doCrankSpeedCalcs(); //In crankMaths.ino
+      doCrankSpeedCalcs(); //In crankMaths.ino
 
       //Check that the duty cycle of the chosen pulsewidth isn't too high.
       unsigned long pwLimit = percentage(configPage2.dutyLim, revolutionTime); //The pulsewidth limit is determined to be the duty cycle limit (Eg 85%) by the total time it takes to perform 1 revolution
