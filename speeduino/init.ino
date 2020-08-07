@@ -1326,7 +1326,7 @@ void setPinMapping(byte boardID)
       pinWMIEmpty = 46;
       pinWMIIndicator = 44;
       pinWMIEnabled = 42;
-
+/*
       //initialize unused pins to outputs
       pinMode(A6,OUTPUT);
       pinMode(A7,OUTPUT);
@@ -1379,7 +1379,7 @@ void setPinMapping(byte boardID)
       pinMode(44,OUTPUT);
       pinMode(46,OUTPUT);
       pinMode(53,OUTPUT);
-      
+ */     
 
       #if defined(CORE_TEENSY35)
         pinInjector6 = 51;
