@@ -3809,3 +3809,208 @@ void triggerSetEndTeeth_420a()
 
   lastToothCalcAdvance = currentStatus.advance;
 }
+
+void triggerSetup_HallDizzy()
+{
+  if(READ_PRI_TRIGGER() == true){ //determine the initial position of the wheel
+      toothCurrentCount =8;      //even number tooth are all high so choose one random for starters
+  }
+  else {toothCurrentCount =1;} 
+
+  secondDerivEnabled = false;
+  decoderIsSequential = true;
+  decoderHasFixedCrankingTiming = false;
+  triggerToothAngleIsCorrect = false;  //we have unven teeth spacing here so avoid those functions that are using this
+  MAX_STALL_TIME = 366667UL; //Minimum 50rpm based on the 110 degree tooth spacing
+  if(initialisationComplete == false) { toothLastToothTime = micros(); } //Set a startup value here to avoid filter errors when starting. This MUST have the initi check to prevent the fuel pump just staying on all the time
+
+    // 70 / 110 for 4 cylinder
+    
+    toothAngles[0] = 94;  //edge1: Falling edge of tooth #1, first falling edge after secondary (toothCurrentCount == 1)
+    toothAngles[1] = 164; //edge2: Rising edge of tooth #2
+    toothAngles[2] = 270; //edge3: Falling edge of tooth #2
+    toothAngles[3] = 340; //edge4: Rising edge of tooth #3
+    toothAngles[4] = 444; //edge5: Falling edge of tooth #3
+    toothAngles[5] = 516; //edge6: Rising edge of tooth #4
+    toothAngles[6] = 624; //edge7: Falling edge of tooth #4
+    toothAngles[7] = 702; //edge8: Rising edge of tooth #1
+    triggerActualTeeth = 8;
+  
+
+  triggerFilterTime = 1500; //10000 rpm, assuming we're triggering on both edges off the crank tooth.
+  triggerSecFilterTime = (int)(1000000 / (MAX_RPM / 60 * 2)) / 2; //Same as above, but fixed at 2 teeth on the secondary input and divided by 2 (for cam speed)
+  triggerSecFilterTime = 4000;
+  secondaryLastToothTime = 0;
+}
+
+void triggerPri_HallDizzy() //called from interrupt at every primary trigger signal CHANGE
+{
+  unsigned long curTime;
+  curTime = micros();
+  curGap = curTime - toothLastToothTime;
+  if ( (curGap >= triggerFilterTime) || (currentStatus.startRevolutions == 0) )
+  {
+    validTrigger = true; //Flag that this pulse was accepted as a valid trigger
+    triggerFilterTime = 1500; //This only applies during non-sync conditions. If there is sync then triggerFilterTime gets changed again below with a better value.
+    toothLastMinusOneToothTime = toothLastToothTime;
+    toothLastToothTime = curTime;
+    toothCurrentCount++;
+
+    if(toothCurrentCount > triggerActualTeeth) //This is true for first falling edge after secondary in case of correct sync
+    {
+      if(READ_PRI_TRIGGER() == true){ //re check the edge polarity(should be low)
+          toothCurrentCount =8 ;      //and correct if nessesary, now we have at least half-sync maybe full-sync
+          currentStatus.syncLossCounter++; //also indicate such happenings
+          currentStatus.hasSync =false ; //sync is achieved again at secondary trigger
+      }      
+      else {toothCurrentCount = 1;} //all good. Reset the counter
+
+      toothOneMinusOneTime = toothOneTime; //also save those
+      toothOneTime = curTime;             //toothOneTime is used in RPM calculation
+      currentStatus.startRevolutions++; //Counter      
+    }    
+      //EXPERIMENTAL!
+      //New ignition mode is ONLY available on 4g63 when the trigger angle is set to the stock value of 0.
+      if( (configPage2.perToothIgn == true) && (configPage4.triggerAngle == 0) )
+      {
+        if( (configPage2.nCylinders == 4) && (currentStatus.advance > 0) )
+        {
+          uint16_t crankAngle = toothAngles[(toothCurrentCount-1)];
+
+          //Handle non-sequential tooth counts 
+          if( (configPage4.sparkMode != IGN_MODE_SEQUENTIAL) && (toothCurrentCount > configPage2.nCylinders) ) { checkPerToothTiming(crankAngle, (toothCurrentCount-configPage2.nCylinders) ); }
+          else { checkPerToothTiming(crankAngle, toothCurrentCount); }
+        }
+      }
+  } 
+}
+
+void triggerSec_HallDizzy()  //one signal per 720 crankshaft degrees 
+{
+  unsigned int curtime();
+  curTime2 = micros();
+  curGap2 = curTime2 - toothLastSecToothTime; 
+  if (curGap2 >= triggerSecFilterTime) // debounce filter
+  {
+    toothLastSecToothTime = curTime2;
+
+    if((toothCurrentCount == 7)||(toothCurrentCount == 8)) //check for correct primary tooth position
+    {
+      currentStatus.hasSync = true;   //we are in sync, all good
+    }
+    else  // This should never be true, except when was out of sync
+    {
+      currentStatus.syncLossCounter++; //indicate loss of sync
+      currentStatus.hasSync = true;    //(sync is restored)
+      //correct sync
+      if(READ_PRI_TRIGGER() == true){toothCurrentCount = 8;} //primary can be either low or high at the moment
+      else{toothCurrentCount = 7;}                            
+    }       
+  }        
+}
+
+
+uint16_t getRPM_HallDizzy()  //returns RPM value
+{
+  uint16_t tempRPM = 0;
+  uint8_t tempToothCurrentCount;
+  unsigned long tempToothAngle;
+  unsigned long toothTime;
+  //During cranking, RPM is calculated 4 times per revolution, once for each rising/falling of the crank signal.
+  //Because these signals aren't even (Alternating 110 and 70 degrees), this needs a special function
+  if(currentStatus.hasSync == true)
+  {
+    if( (currentStatus.RPM < currentStatus.crankRPM)  )
+    {
+        noInterrupts();
+        tempToothCurrentCount = toothCurrentCount;
+        toothTime = (toothLastToothTime - toothLastMinusOneToothTime); //Note that trigger tooth angle changes between 70 and 110 depending on the last tooth that was seen (or 70/50 for 6 cylinders)
+        revolutionTime = (toothOneTime - toothOneMinusOneTime);        
+        interrupts();     
+      revolutionTime = revolutionTime / 2;  //may need that somwhere... time of one crankshaft revolution
+
+      tempToothAngle=getToothAngle_4G63(tempToothCurrentCount); //last tooth angle range from database of tooth edge angles
+
+      toothTime = toothTime * 6;
+      tempRPM = ((unsigned long)tempToothAngle * 1000000UL) / toothTime; //quite a division for that Atmega
+      //if(tempRPM >= MAX_RPM) { tempRPM = currentStatus.RPM; } //Sanity check
+      //revolutionTime = (10UL * toothTime) / tempToothAngle;
+      MAX_STALL_TIME = 366667UL; // 50RPM
+      if(tempRPM >= MAX_RPM) { tempRPM = 0; }
+      
+      timePerDegreex16=toothTime*16UL/tempToothAngle;
+      timePerDegree=timePerDegreex16/16;
+      degreesPeruSx32768 = tempToothAngle*32768/toothTime;
+    }
+    else
+    {
+      tempRPM = stdGetRPM(720);
+    }
+  }
+
+  return tempRPM;
+}
+
+int getCrankAngle_HallDizzy() //returns crankshaft angle in degrees, from 0 to 720(or to CRANK_ANGLE_MAX)
+{
+    unsigned long tempToothLastToothTime;
+    unsigned long tempToothLastMinusOneToothTime;
+    uint16_t tempToothCurrentCount;
+    int crankAngle = 0;
+    uint16_t extraAngle;    
+    uint8_t tempToothAngle;
+
+    if(currentStatus.hasSync == true)
+    {
+      //This is the current angle ATDC the engine is at. This is the last known position based on what tooth was last 'seen'. It is only accurate to the resolution of the trigger wheel (Eg 36-1 is 10 degrees)
+
+      //Grab some variables that are used in the trigger code and assign them to temp variables.
+      noInterrupts();
+      tempToothCurrentCount = toothCurrentCount;
+      tempToothLastToothTime = toothLastToothTime;
+      tempToothLastMinusOneToothTime = toothLastMinusOneToothTime;
+      lastCrankAngleCalc = micros(); //micros() is no longer interrupt safe
+      interrupts();
+
+      crankAngle = toothAngles[(tempToothCurrentCount - 1)] + configPage4.triggerAngle; //Perform a lookup of the fixed toothAngles array to find what the angle of the last tooth edge passed was.
+
+      tempToothAngle=getToothAngle_HallDizzy(tempToothCurrentCount); //last tooth angle range from database of tooth edge angles
+      elapsedTime = (lastCrankAngleCalc - tempToothLastToothTime); //time passed since last edge was seen
+
+      //Estimate the number of degrees travelled since the last tooth edge and add that
+      extraAngle =((unsigned long)(elapsedTime * tempToothAngle) / (tempToothLastToothTime - tempToothLastMinusOneToothTime));
+      //now check if this is within range of current tooth.
+      tempToothAngle=getToothAngle_HallDizzy(tempToothCurrentCount+1);//get width of the ongoing angle range between triggers
+      if(extraAngle > tempToothAngle)
+      {
+        extraAngle=tempToothAngle; //cap angle prediction to the point where next trigger should already happen
+      }
+      crankAngle += extraAngle;
+      if (crankAngle >= 720) { crankAngle -= 720; }
+      if (crankAngle > CRANK_ANGLE_MAX) { crankAngle -= CRANK_ANGLE_MAX; }
+//      if (crankAngle < 0) { crankAngle += 360; }
+    }
+    return crankAngle;
+}
+
+/*helper function for this trigger, used locally for crankangle and RPM calculations
+  returns width of the passed tooth in degrees
+*/
+uint8_t getToothAngle_HallDizzy(uint16_t toothCurrentCount) 
+{      
+        //determine the angle range of last passed tooth
+      if(toothCurrentCount > triggerActualTeeth)  //wrap around from exessive count when nessesary
+      {
+      toothCurrentCount=1;
+      }
+      if(toothCurrentCount==1)
+      {
+        //calculate angle for just passed single tooth. Used in RPM calculation
+        return(toothAngles[0]+720-toothAngles[(triggerActualTeeth-1)]); //this is wrap around case
+      }
+      else
+      {
+        //calculate angle for just passed single tooth. Used in RPM calculation
+        return(toothAngles[(toothCurrentCount-1)]-toothAngles[(toothCurrentCount-2)]); //this is normal case
+      }    
+}

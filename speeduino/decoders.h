@@ -154,6 +154,12 @@ uint16_t getRPM_420a();
 int getCrankAngle_420a();
 void triggerSetEndTeeth_420a();
 
+void triggerSetup_HallDizzy();
+void triggerPri_HallDizzy();
+void triggerSec_HallDizzy();
+uint16_t getRPM_HallDizzy();
+int getCrankAngle_HallDizzy();
+
 extern void (*triggerHandler)(); //Pointer for the trigger function (Gets pointed to the relevant decoder)
 extern void (*triggerSecondaryHandler)(); //Pointer for the secondary trigger function (Gets pointed to the relevant decoder)
 extern uint16_t (*getRPM)(); //Pointer to the getRPM function (Gets pointed to the relevant decoder)
