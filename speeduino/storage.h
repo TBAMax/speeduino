@@ -170,8 +170,8 @@ Current layout of EEPROM data (Version 3) is as follows (All sizes are in bytes)
 #define EEPROM_CALIBRATION_CLT_OLD  3583
 
 //New values using 2D tables
-#define EEPROM_CALIBRATION_IAT  3848 //3967-128
-#define EEPROM_CALIBRATION_CLT  3976 //4095-128
+#define EEPROM_CALIBRATION_IAT  3839 //3967-128
+#define EEPROM_CALIBRATION_CLT  3967 //4095-128
 
 
 #endif // STORAGE_H
