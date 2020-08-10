@@ -741,8 +741,9 @@ This is separate from the config load as the calibrations do not exist as pages 
 */
 void loadCalibration()
 {
-
-  for(int x=0; x<32; x++) //Each calibration table is 32 bytes long
+  int x;
+  int y;
+  for(x=0; x<32; x++) //Each calibration table is 32 bytes long
   {
     int y = EEPROM_CALIBRATION_CLT + (x * 2);
     EEPROM.get(y, cltCalibration_bins[x]);
@@ -759,6 +760,11 @@ void loadCalibration()
     y += 32; 
     o2Calibration_values[x] = EEPROM.read(y);
     */
+  }
+  for(x=0;x<512;x++)
+  {
+    y = EEPROM_CALIBRATION_O2 + x;
+    o2CalibrationTable[x]=EEPROM.read(y);
   }
 
 }
@@ -790,6 +796,8 @@ and saves them to the EEPROM.
 */
 void writeCalibration()
 {
+  int y;
+  int x;
 
   for(int x=0; x<32; x++) //Each calibration table is 512 bytes long
   {
@@ -808,6 +816,11 @@ void writeCalibration()
     y += 32; 
     EEPROM.update(y, o2Calibration_values[x]);
     */
+  }
+  for(x=0;x<512;x++)
+  {
+    y = EEPROM_CALIBRATION_O2 + x;
+    if(EEPROM.read(y) != o2CalibrationTable[x]) { EEPROM.write(y, o2CalibrationTable[x]); }
   }
 
 }
