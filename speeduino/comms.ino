@@ -1783,55 +1783,75 @@ void receiveCalibration_old(byte tableID)
 
 void receiveCalibration(byte tableID)
 {
-  byte tempBuffer[2];
-  int16_t tempvalue;
-  int x;
+  uint16_t* pnt_TargetTable_values; //Pointer that will be used to point to the required target table values
+  uint16_t* pnt_TargetTable_bins;   //Pointer that will be used to point to the required target table bins
+  int OFFSET, DIVISION_FACTOR, BYTES_PER_VALUE;
 
   switch (tableID)
   {
-    case 0: //coolant table      
-      for (x = 0; x < 32; x++)
-      {
-        while ( Serial.available() < 2 ) {}  //blocking wait for serial
-        tempBuffer[0] = Serial.read();
-        tempBuffer[1] = Serial.read();  //High byte
-          tempvalue=(tempBuffer[1] << 8 | tempBuffer[0]); //Read 2 bytes, convert to int
-          tempvalue=(tempvalue / 10);//These values come through * 10 from Tuner Studio
-          tempvalue = ((tempvalue - 32) * 5) / 9; //Convert from F to C
-          tempvalue += CALIBRATION_TEMPERATURE_OFFSET;
-          cltCalibration_values[x] = tempvalue;
-          cltCalibration_bins[x]=x*32;      //axis range is 10bit
-      }
+    case 0:
+      //coolant table
+      pnt_TargetTable_values = (uint16_t *)&cltCalibration_values;
+      pnt_TargetTable_bins = (uint16_t *)&cltCalibration_bins;
+      OFFSET = CALIBRATION_TEMPERATURE_OFFSET; //
+      DIVISION_FACTOR = 10;
+      BYTES_PER_VALUE = 2;
       break;
-    case 1: //Inlet air temp table
-      for (x = 0; x < 32; x++)
-      {
-        while ( Serial.available() < 2 ) {}  //blocking wait for serial
-        tempBuffer[0] = Serial.read();
-        tempBuffer[1] = Serial.read();  //High byte
-          tempvalue=(tempBuffer[1] << 8 | tempBuffer[0]); //Read 2 bytes, convert to int
-          tempvalue=(tempvalue / 10) ;//These values come through * 10 from Tuner Studio
-          tempvalue = ((tempvalue - 32) * 5) / 9; //Convert from F to C
-          tempvalue += CALIBRATION_TEMPERATURE_OFFSET;
-          iatCalibration_values[x] = tempvalue;
-          iatCalibration_bins[x]=x*32;      //axis range is 10bit
-      }  
+    case 1:
+      //Inlet air temp table
+      pnt_TargetTable_values = (uint16_t *)&iatCalibration_values;
+      pnt_TargetTable_bins = (uint16_t *)&iatCalibration_bins;
+      OFFSET = CALIBRATION_TEMPERATURE_OFFSET;
+      DIVISION_FACTOR = 10;
+      BYTES_PER_VALUE = 2;
       break;
     case 2:
-                  //OFFSET = 0; DIVISION_FACTOR = 1; BYTES_PER_VALUE = 1; EEPROM_START = EEPROM_CALIBRATION_O2;
-      //1024 values are sent. We have to receive them all, but only use every second one (We only store 512 calibratino table entries to save on EEPROM space)           
-      for (x = 0; x < 512; x++)
-      {
-        while ( Serial.available() < 2 ) {}  //blocking wait for serial
-        //UNlike what is listed in the protocol documentation, the O2 sensor values are sent as bytes rather than ints
-        tempBuffer[0] = Serial.read();
-        tempBuffer[1] = Serial.read();
-        o2CalibrationTable[x] =tempBuffer[0];
-      } 
       //O2 table
+      //pnt_TargetTable = (byte *)&o2CalibrationTable;
+      //pnt_TargetTable_values = (uint16_t *)&o2Calibration_values;
+      //pnt_TargetTable_bins = (uint16_t *)&o2Calibration_bins;
+      OFFSET = 0;
+      DIVISION_FACTOR = 1;
+      BYTES_PER_VALUE = 1;
       break;
+
     default:
-      break;
+      OFFSET = 0;
+      //pnt_TargetTable = (byte *)&o2CalibrationTable;
+      pnt_TargetTable_values = (uint16_t *)&iatCalibration_values;
+      pnt_TargetTable_bins = (uint16_t *)&iatCalibration_bins;
+      DIVISION_FACTOR = 1;
+      BYTES_PER_VALUE = 1;
+      break; //Should never get here, but if we do, just fail back to main loop
+  }
+
+  int tempValue;
+  byte tempBuffer[2];
+
+  for (byte x = 0; x < 32; x++)
+  {
+    if (BYTES_PER_VALUE == 1)
+    {
+      while ( Serial.available() < 1 ) {}
+      tempValue = Serial.read();
+    }
+    else
+    {
+      while ( Serial.available() < 2 ) {}
+      tempBuffer[0] = Serial.read();
+      tempBuffer[1] = Serial.read();
+
+      tempValue = div(int(word(tempBuffer[1], tempBuffer[0])), DIVISION_FACTOR).quot; //Read 2 bytes, convert to word (an unsigned int), convert to signed int. These values come through * 10 from Tuner Studio
+      tempValue = ((tempValue - 32) * 5) / 9; //Convert from F to C
+    }
+    
+    //Apply the temp offset and check that it results in all values being positive
+    tempValue = tempValue + OFFSET;
+    if (tempValue < 0) { tempValue = 0; }
+
+    //pnt_TargetTable[x] = tempValue;
+    pnt_TargetTable_values[x] = tempValue;
+    pnt_TargetTable_bins[x] = (x * 32);
   }
   writeCalibration();
 }

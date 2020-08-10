@@ -51,7 +51,7 @@ void initialiseADC()
      BIT_CLEAR(ADCSRA,ADPS0);
   #endif
 #elif defined(ARDUINO_ARCH_STM32) //STM32GENERIC core and ST STM32duino core, change analog read to 12 bit
-  analogReadResolution(10); //use 10bits for analog reading on STM32 boards
+  analogReadResolution(12); //use 12bits for analog reading on STM32 boards
 #endif
   MAPcurRev = 0;
   MAPcount = 0;
@@ -543,6 +543,7 @@ uint16_t getSpeed()
     if( (temp_vssLastPulseTime > 0) && (temp_vssLastMinusOnePulseTime > 0) ) //Check we've had at least 2 pulses
     {
       if(temp_vssLastPulseTime < temp_vssLastMinusOnePulseTime) { tempSpeed = currentStatus.vss; } //Check for overflow of micros()
+      else if ( (micros() - temp_vssLastPulseTime) > 1000000UL ) { tempSpeed = 0; } // Check that the car hasn't come to a stop (1s timeout)
       else
       {
         pulseTime = temp_vssLastPulseTime - temp_vssLastMinusOnePulseTime;
@@ -551,13 +552,6 @@ uint16_t getSpeed()
         if(tempSpeed > 1000) { tempSpeed = currentStatus.vss; } //Safety check. This usually occurs when there is a hardware issue
       }
     }
-    else
-    {
-      //Either not enough samples taken yet or speed has dropped to 0
-      if ( (micros() - temp_vssLastPulseTime) > 1000000UL ) { tempSpeed = 0; } // Check that the car hasn't come to a stop (1s timeout)
-      else { tempSpeed = currentStatus.vss; } 
-    }
-
   }
   return tempSpeed;
 }
