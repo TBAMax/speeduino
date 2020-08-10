@@ -186,18 +186,19 @@ void initialiseAll()
     wmiAdvTable.xSize = 6;
     wmiAdvTable.values = configPage10.wmiAdvAdj;
     wmiAdvTable.axisX = configPage10.wmiAdvBins;
+  
+    cltCalibrationTable.valueSize = SIZE_BYTE;
+    cltCalibrationTable.axisSize = SIZE_INT;
+    cltCalibrationTable.xSize = 32;
+    cltCalibrationTable.values = cltCalibration_values;
+    cltCalibrationTable.axisX = cltCalibration_bins;
 
-    cltCalibrationTable_new.valueSize = SIZE_INT;
-    cltCalibrationTable_new.axisSize = SIZE_INT;
-    cltCalibrationTable_new.xSize = 32;
-    cltCalibrationTable_new.values = cltCalibration_values;
-    cltCalibrationTable_new.axisX = cltCalibration_bins;
+    iatCalibrationTable.valueSize = SIZE_BYTE;
+    iatCalibrationTable.axisSize = SIZE_INT;
+    iatCalibrationTable.xSize = 32;
+    iatCalibrationTable.values = iatCalibration_values;
+    iatCalibrationTable.axisX = iatCalibration_bins;
 
-    iatCalibrationTable_new.valueSize = SIZE_INT;
-    iatCalibrationTable_new.axisSize = SIZE_INT;
-    iatCalibrationTable_new.xSize = 32;
-    iatCalibrationTable_new.values = iatCalibration_values;
-    iatCalibrationTable_new.axisX = iatCalibration_bins;
 
     //Setup the calibration tables
     loadCalibration();
