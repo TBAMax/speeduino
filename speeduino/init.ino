@@ -2959,7 +2959,7 @@ void initialiseTriggers()
       decoderHasSecondary = true;
       getRPM = getRPM_HallDizzy;
       getCrankAngle = getCrankAngle_HallDizzy;
-      //triggerSetEndTeeth = triggerSetEndTeeth_HallDizzy;
+      triggerSetEndTeeth = triggerSetEndTeeth_HallDizzy;
 
       primaryTriggerEdge = CHANGE;
       secondaryTriggerEdge = FALLING;

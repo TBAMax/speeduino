@@ -3887,7 +3887,8 @@ void triggerPri_HallDizzy() //called from interrupt at every primary trigger sig
 
 void triggerSec_HallDizzy()  //one signal per 720 crankshaft degrees 
 {
-  unsigned int curtime();
+  unsigned long curTime2;
+
   curTime2 = micros();
   curGap2 = curTime2 - toothLastSecToothTime; 
   if (curGap2 >= triggerSecFilterTime) // debounce filter
@@ -3929,7 +3930,7 @@ uint16_t getRPM_HallDizzy()  //returns RPM value
         interrupts();     
       revolutionTime = revolutionTime / 2;  //may need that somwhere... time of one crankshaft revolution
 
-      tempToothAngle=getToothAngle_4G63(tempToothCurrentCount); //last tooth angle range from database of tooth edge angles
+      tempToothAngle=getToothAngle_HallDizzy(tempToothCurrentCount); //last tooth angle range from database of tooth edge angles
 
       toothTime = toothTime * 6;
       tempRPM = ((unsigned long)tempToothAngle * 1000000UL) / toothTime; //quite a division for that Atmega
@@ -3955,6 +3956,7 @@ int getCrankAngle_HallDizzy() //returns crankshaft angle in degrees, from 0 to 7
 {
     unsigned long tempToothLastToothTime;
     unsigned long tempToothLastMinusOneToothTime;
+    unsigned long elapsedTime;
     uint16_t tempToothCurrentCount;
     int crankAngle = 0;
     uint16_t extraAngle;    
@@ -3969,14 +3971,13 @@ int getCrankAngle_HallDizzy() //returns crankshaft angle in degrees, from 0 to 7
       tempToothCurrentCount = toothCurrentCount;
       tempToothLastToothTime = toothLastToothTime;
       tempToothLastMinusOneToothTime = toothLastMinusOneToothTime;
-      lastCrankAngleCalc = micros(); //micros() is no longer interrupt safe
       interrupts();
 
+      lastCrankAngleCalc = micros();
       crankAngle = toothAngles[(tempToothCurrentCount - 1)] + configPage4.triggerAngle; //Perform a lookup of the fixed toothAngles array to find what the angle of the last tooth edge passed was.
 
-      tempToothAngle=getToothAngle_HallDizzy(tempToothCurrentCount); //last tooth angle range from database of tooth edge angles
-      elapsedTime = (lastCrankAngleCalc - tempToothLastToothTime); //time passed since last edge was seen
-
+      tempToothAngle=getToothAngle_HallDizzy(tempToothCurrentCount); //last tooth angle range from database of tooth edge angle
+      elapsedTime= lastCrankAngleCalc - tempToothLastToothTime;
       //Estimate the number of degrees travelled since the last tooth edge and add that
       extraAngle =((unsigned long)(elapsedTime * tempToothAngle) / (tempToothLastToothTime - tempToothLastMinusOneToothTime));
       //now check if this is within range of current tooth.
@@ -4013,4 +4014,23 @@ uint8_t getToothAngle_HallDizzy(uint16_t toothCurrentCount)
         //calculate angle for just passed single tooth. Used in RPM calculation
         return(toothAngles[(toothCurrentCount-1)]-toothAngles[(toothCurrentCount-2)]); //this is normal case
       }    
+}
+void triggerSetEndTeeth_HallDizzy()
+{
+  if(currentStatus.advance < 9)
+  {
+    ignition1EndTooth = 8;
+    ignition2EndTooth = 2;
+    ignition3EndTooth = 4;
+    ignition4EndTooth = 6;  
+  }
+  else
+  {
+    ignition1EndTooth = 7;
+    ignition2EndTooth = 1;
+    ignition3EndTooth = 3;
+    ignition4EndTooth = 5;  
+  }
+
+  lastToothCalcAdvance = currentStatus.advance;
 }

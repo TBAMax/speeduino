@@ -159,6 +159,7 @@ void triggerPri_HallDizzy();
 void triggerSec_HallDizzy();
 uint16_t getRPM_HallDizzy();
 int getCrankAngle_HallDizzy();
+void triggerSetEndTeeth_HallDizzy();
 
 extern void (*triggerHandler)(); //Pointer for the trigger function (Gets pointed to the relevant decoder)
 extern void (*triggerSecondaryHandler)(); //Pointer for the secondary trigger function (Gets pointed to the relevant decoder)
