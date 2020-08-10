@@ -2951,7 +2951,14 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    
+    case 19:
+      triggerSetup_HallDizzy();
+      triggerHandler = triggerPri_HallDizzy;
+      triggerSecondaryHandler = triggerSec_HallDizzy;
+      decoderHasSecondary = true;
+      getRPM = getRPM_HallDizzy;
+      getCrankAngle = getCrankAngle_HallDizzy;
+      triggerSetEndTeeth = triggerSetEndTeeth_HallDizzy;    
 
     default:
       triggerHandler = triggerPri_missingTooth;
