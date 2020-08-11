@@ -3812,6 +3812,7 @@ void triggerSetEndTeeth_420a()
 
 void triggerSetup_HallDizzy()
 {
+  BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC); //no halffsync for this, since halfsync inhibits operation
   if(READ_PRI_TRIGGER() == true){ //determine the initial position of the wheel
       toothCurrentCount =8;      //even number tooth are all high so choose one random for starters
   }
@@ -3861,27 +3862,23 @@ void triggerPri_HallDizzy() //called from interrupt at every primary trigger sig
       if(READ_PRI_TRIGGER() == true){ //re check the edge polarity(should be low)
           toothCurrentCount =8 ;      //and correct if nessesary, now we have at least half-sync maybe full-sync
           currentStatus.syncLossCounter++; //also indicate such happenings
-          currentStatus.hasSync =false ; //sync is achieved again at secondary trigger
+          currentStatus.hasSync =true ; //sync is achieved again at secondary trigger
       }      
-      else {toothCurrentCount = 1;} //all good. Reset the counter
+      else 
+      {toothCurrentCount = 1; //all good. Reset the counter
+      currentStatus.hasSync =true ;
+      }
 
       toothOneMinusOneTime = toothOneTime; //also save those
       toothOneTime = curTime;             //toothOneTime is used in RPM calculation
       currentStatus.startRevolutions++; //Counter      
     }    
-      //EXPERIMENTAL!
-      //New ignition mode is ONLY available on 4g63 when the trigger angle is set to the stock value of 0.
-      if( (configPage2.perToothIgn == true) && (configPage4.triggerAngle == 0) )
-      {
-        if( (configPage2.nCylinders == 4) && (currentStatus.advance > 0) )
-        {
-          uint16_t crankAngle = toothAngles[(toothCurrentCount-1)];
-
-          //Handle non-sequential tooth counts 
-          if( (configPage4.sparkMode != IGN_MODE_SEQUENTIAL) && (toothCurrentCount > configPage2.nCylinders) ) { checkPerToothTiming(crankAngle, (toothCurrentCount-configPage2.nCylinders) ); }
-          else { checkPerToothTiming(crankAngle, toothCurrentCount); }
-        }
-      }
+      //EXPERIMENTAL! new ignition mode
+    if(configPage2.perToothIgn == true)
+    {
+      uint16_t crankAngle = ( toothAngles[(toothCurrentCount-1)] ) + configPage4.triggerAngle;
+      checkPerToothTiming(crankAngle, toothCurrentCount);
+    }
   } 
 }
 
@@ -3997,25 +3994,22 @@ int getCrankAngle_HallDizzy() //returns crankshaft angle in degrees, from 0 to 7
 /*helper function for this trigger, used locally for crankangle and RPM calculations
   returns width of the passed tooth in degrees
 */
-uint8_t getToothAngle_HallDizzy(uint16_t toothCurrentCount) 
-{      
-        //determine the angle range of last passed tooth
-      if(toothCurrentCount > triggerActualTeeth)  //wrap around from exessive count when nessesary
-      {
-      toothCurrentCount=1;
-      }
+uint16_t getToothAngle_HallDizzy(uint16_t toothCurrentCount) //calculate angle for just passed single tooth. Used in RPM calculation
+{     
+      uint16_t angle;
+      constrain(toothCurrentCount,1,8); //8 teeth(edges) allowed at the moment
       if(toothCurrentCount==1)
       {
-        //calculate angle for just passed single tooth. Used in RPM calculation
-        return(toothAngles[0]+720-toothAngles[(triggerActualTeeth-1)]); //this is wrap around case
+        angle = toothAngles[0]+720-toothAngles[(triggerActualTeeth-1)]; //this is wrap around case
       }
       else
       {
-        //calculate angle for just passed single tooth. Used in RPM calculation
-        return(toothAngles[(toothCurrentCount-1)]-toothAngles[(toothCurrentCount-2)]); //this is normal case
-      }  
+        angle = toothAngles[(toothCurrentCount-1)]-toothAngles[(toothCurrentCount-2)]; //this is normal case
+      }
+      return angle;
 }
-     void triggerSetEndTeeth_HallDizzy()
+
+void triggerSetEndTeeth_HallDizzy()
 {
   if(configPage2.nCylinders == 4)
   {
@@ -4030,8 +4024,8 @@ uint8_t getToothAngle_HallDizzy(uint16_t toothCurrentCount)
     {
       ignition1EndTooth = 6;
       ignition2EndTooth = 8;
-      ignition3EndTooth = 6; //Not used
-      ignition4EndTooth = 8;
+      ignition3EndTooth = 2; //Not used
+      ignition4EndTooth = 4;
     }
   }
   lastToothCalcAdvance = currentStatus.advance;

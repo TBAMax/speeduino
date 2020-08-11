@@ -45,8 +45,8 @@
 #elif defined(STM32_MCU_SERIES) || defined(ARDUINO_ARCH_STM32) || defined(STM32)
   #define CORE_STM32
   #if defined(STM32F4) //F4 can do 8x8
-   #define INJ_CHANNELS 8
-   #define IGN_CHANNELS 8
+   #define INJ_CHANNELS 4
+   #define IGN_CHANNELS 4
   #else
    #define INJ_CHANNELS 4
    #define IGN_CHANNELS 5
