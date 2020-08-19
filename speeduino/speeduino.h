@@ -65,6 +65,17 @@ extern uint16_t staged_req_fuel_mult_pri;
 extern uint16_t staged_req_fuel_mult_sec;
 ///@}
 
+volatile unsigned int dwellLimit_uS;
+volatile uint16_t lastRPM_100ms; //Need to record this for rpmDOT calculation
+volatile uint16_t last250msLoopCount = 1000; //Set to effectively random number on startup. Just need this to be different to what mainLoopCount equals initially (Probably 0)
+
+//tacho things
+volatile bool tachoAlt = false;
+#define TACHO_PULSE_HIGH() *tach_pin_port |= (tach_pin_mask)
+#define TACHO_PULSE_LOW() *tach_pin_port &= ~(tach_pin_mask)
+enum TachoOutputStatus {DEACTIVE, READY, ACTIVE}; //The 3 statuses that the tacho output pulse can have
+volatile uint8_t tachoEndTime; //The time (in ms) that the tacho pulse needs to end at
+volatile TachoOutputStatus tachoOutputFlag;
 
 
 #endif

@@ -165,6 +165,7 @@
 #define BIT_TIMER_10HZ            2
 #define BIT_TIMER_15HZ            3
 #define BIT_TIMER_30HZ            4
+#define BIT_TIMER_1MS             5
 
 #define BIT_STATUS3_RESET_PREVENT 0 //Indicates whether reset prevention is enabled
 #define BIT_STATUS3_NITROUS       1
@@ -489,8 +490,7 @@ extern volatile byte HWTest_IGN_50pc; /**< Each bit in this variable represents 
 //This needs to be here because using the config page directly can prevent burning the setting
 extern byte resetControl;
 
-extern volatile byte TIMER_mask;
-extern volatile byte LOOP_TIMER;
+extern volatile byte TIMER_mask; //Holds interval timer flags. Flags are set inside timer interrupt
 
 //These functions all do checks on a pin to determine if it is already in use by another (higher importance) function
 #define pinIsInjector(pin)  ( ((pin) == pinInjector1) || ((pin) == pinInjector2) || ((pin) == pinInjector3) || ((pin) == pinInjector4) || ((pin) == pinInjector5) || ((pin) == pinInjector6) || ((pin) == pinInjector7) || ((pin) == pinInjector8) )
