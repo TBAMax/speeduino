@@ -31,7 +31,7 @@ void initialiseTimers()
 //Timer2 Overflow Interrupt Vector, called when the timer overflows.
 //Executes every ~1ms.
 #if defined(CORE_AVR) //AVR chips use the ISR for this
-ISR(TIMER2_OVF_vect)
+ISR(TIMER2_OVF_vect,ISR_NOBLOCK)
 #else
 void oneMSInterval() //Most ARM chips can simply call a function
 #endif
