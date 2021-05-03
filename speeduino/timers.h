@@ -23,7 +23,7 @@ Hence we will preload the timer with 131 cycles to leave 125 until overflow (1ms
 #if defined (CORE_TEENSY)
   IntervalTimer lowResTimer;
   void oneMSInterval();
-#elif defined(CORE_STM32_OFFICIAL) || defined(CORE_STM32_GENERIC)
+#elif defined (ARDUINO_ARCH_STM32)
   void oneMSInterval();
 #endif
 void initialiseTimers();

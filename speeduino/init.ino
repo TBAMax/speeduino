@@ -5,7 +5,7 @@
 #include "speeduino.h"
 #include "timers.h"
 #include "cancomms.h"
-#include "utils.h"
+#include "utilities.h"
 #include "scheduledIO.h"
 #include "scheduler.h"
 #include "auxiliaries.h"
@@ -14,35 +14,45 @@
 #include "corrections.h"
 #include "idle.h"
 #include "table.h"
+#include "acc_mc33810.h"
 #include BOARD_H //Note that this is not a real file, it is defined in globals.h. 
-#include EEPROM_LIB_H 
+#include EEPROM_LIB_H
+#ifdef SD_LOGGING
+  #include "SD_logger.h"
+  #include "rtc_common.h"
+#endif
 
 
 void initialiseAll()
 {   
     fpPrimed = false;
+    injPrimed = false;
 
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     table3D_setSize(&fuelTable, 16);
     table3D_setSize(&fuelTable2, 16);
     table3D_setSize(&ignitionTable, 16);
+    table3D_setSize(&ignitionTable2, 16);
     table3D_setSize(&afrTable, 16);
     table3D_setSize(&stagingTable, 8);
     table3D_setSize(&boostTable, 8);
     table3D_setSize(&vvtTable, 8);
+    table3D_setSize(&vvt2Table, 8);
     table3D_setSize(&wmiTable, 8);
     table3D_setSize(&trim1Table, 6);
     table3D_setSize(&trim2Table, 6);
     table3D_setSize(&trim3Table, 6);
     table3D_setSize(&trim4Table, 6);
+    table3D_setSize(&trim5Table, 6);
+    table3D_setSize(&trim6Table, 6);
+    table3D_setSize(&trim7Table, 6);
+    table3D_setSize(&trim8Table, 6);
+    table3D_setSize(&dwellTable, 4);
 
     #if defined(CORE_STM32)
     configPage9.intcan_available = 1;   // device has internal canbus
     //STM32 can not currently enabled
-    #endif
-    #if defined(CORE_TEENSY35)
-    configPage9.intcan_available = 1;   // device has internal canbus
     #endif
     
     loadConfig();
@@ -54,6 +64,10 @@ void initialiseAll()
     
     initBoard(); //This calls the current individual boards init function. See the board_xxx.ino files for these.
     initialiseTimers();
+  #ifdef SD_LOGGING
+    initSD();
+    initRTC();
+  #endif
 
     Serial.begin(115200);
     #if defined(CANSerial_AVAILABLE)
@@ -213,18 +227,32 @@ void initialiseAll()
     //Setup the calibration tables
     loadCalibration();
 
+    #if defined (NATIVE_CAN_AVAILABLE)
+      configPage9.intcan_available = 1;   // device has internal canbus
+      //Teensy uses the Flexcan_T4 library to use the internal canbus
+      //enable local can interface
+      //setup can interface to 500k   
+      Can0.begin();
+      Can0.setBaudRate(500000);
+      Can0.enableFIFO();
+    #endif
+
     //Set the pin mappings
-    if(configPage2.pinMapping == 255)
+    if((configPage2.pinMapping == 255) || (configPage2.pinMapping == 0)) //255 = EEPROM value in a blank AVR; 0 = EEPROM value in new FRAM
     {
-    //First time running on this board
-    setPinMapping(3); //Force board to v0.4
-    configPage2.flexEnabled = false; //Have to disable flex. If this isn't done and the wrong flex pin is interrupt attached below, system can hang.
+      //First time running on this board
+      resetConfigPages(); 
+      setPinMapping(3); //Force board to v0.4
     }
     else { setPinMapping(configPage2.pinMapping); }
 
-    //Need to check early on whether the coil charging is inverted. If this is not set straight away it can cause an unwanted spark at bootup
-    if(configPage4.IgInv == 1) { coilHIGH = LOW; coilLOW = HIGH; }
-    else { coilHIGH = HIGH; coilLOW = LOW; }
+    //Note: This must come after the call to setPinMapping() or else pins 29 and 30 will become unusable as outputs. Workaround for: https://github.com/tonton81/FlexCAN_T4/issues/14
+    #if defined(CORE_TEENSY35)
+      Can0.setRX(DEF);
+      Can0.setTX(DEF);
+    #endif
+
+    //End all coil charges to ensure no stray sparks on startup
     endCoil1Charge();
     endCoil2Charge();
     endCoil3Charge();
@@ -333,6 +361,11 @@ void initialiseAll()
     staged_req_fuel_mult_sec = (100 * totalInjector) / configPage10.stagedInjSizeSec;
     }
 
+    if (configPage4.trigPatternSec == SEC_TRIGGER_POLL)
+    { configPage4.TrigEdgeSec = configPage4.PollLevelPolarity; } // set the secondary trigger edge automatically to correct working value with poll level mode to enable cam angle detection in closed loop vvt.
+    //Explanation: currently cam trigger for VVT is only captured when revolution one == 1. So we need to make sure that the edge trigger happens on the first revoluiton. So now when we set the poll level to be low
+    //on revolution one and it's checked at tooth #1. This means that the cam signal needs to go high during the first revolution to be high on next revolution at tooth #1. So poll level low = cam trigger edge rising.
+
     //Begin the main crank trigger interrupt pin setup
     //The interrupt numbering is a bit odd - See here for reference: arduino.cc/en/Reference/AttachInterrupt
     //These assignments are based on the Arduino Mega AND VARY BETWEEN BOARDS. Please confirm the board you are using and update acordingly.
@@ -341,6 +374,7 @@ void initialiseAll()
     BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
     currentStatus.runSecs = 0;
     currentStatus.secl = 0;
+    //currentStatus.seclx10 = 0;
     currentStatus.startRevolutions = 0;
     currentStatus.syncLossCounter = 0;
     currentStatus.flatShiftingHard = false;
@@ -551,6 +585,9 @@ void initialiseAll()
             //Rotary uses the ign 3 and 4 schedules for the trailing spark. They are offset from the ign 1 and 2 channels respectively and so use the same degrees as them
             channel3IgnDegrees = 0;
             channel4IgnDegrees = 180;
+            maxIgnOutputs = 4;
+
+            configPage4.IgInv = GOING_LOW; //Force Going Low ignition mode (Going high is never used for rotary)
           }
         }
         else
@@ -1013,11 +1050,9 @@ void initialiseAll()
           ign2EndFunction = endCoil2and6Charge;
           ign3StartFunction = beginCoil3and7Charge;
           ign3EndFunction = endCoil3and7Charge;
-          ign3StartFunction = beginCoil4and8Charge;
-          ign3EndFunction = endCoil4and8Charge;
+          ign4StartFunction = beginCoil4and8Charge;
+          ign4EndFunction = endCoil4and8Charge;
 
-          ign4StartFunction = nullCallback;
-          ign4EndFunction = nullCallback;
           ign5StartFunction = nullCallback;
           ign5EndFunction = nullCallback;
           ign6StartFunction = nullCallback;
@@ -1147,72 +1182,14 @@ void initialiseAll()
 
 void setPinMapping(byte boardID)
 {
+  //Force set defaults. Will be overwritten below if needed.
+  injectorOutputControl = OUTPUT_CONTROL_DIRECT;
+  ignitionOutputControl = OUTPUT_CONTROL_DIRECT;
+
   switch (boardID)
   {
-    case 0:
-    #ifndef SMALL_FLASH_MODE //No support for bluepill here anyway
-      //Pin mappings as per the v0.1 shield
-      pinInjector1 = 8; //Output pin injector 1 is on
-      pinInjector2 = 9; //Output pin injector 2 is on
-      pinInjector3 = 11; //Output pin injector 3 is on
-      pinInjector4 = 10; //Output pin injector 4 is on
-      pinInjector5 = 12; //Output pin injector 5 is on
-      pinCoil1 = 6; //Pin for coil 1
-      pinCoil2 = 7; //Pin for coil 2
-      pinCoil3 = 12; //Pin for coil 3
-      pinCoil4 = 13; //Pin for coil 4
-      pinCoil5 = 14; //Pin for coil 5
-      pinTrigger = 2; //The CAS pin
-      pinTrigger2 = 3; //The CAS pin
-      pinTPS = A0; //TPS input pin
-      pinMAP = A1; //MAP sensor pin
-      pinIAT = A2; //IAT sensor pin
-      pinCLT = A3; //CLS sensor pin
-      pinO2 = A4; //O2 Sensor pin
-      pinIdle1 = 46; //Single wire idle control
-      pinIdle2 = 47; //2 wire idle control
-      pinStepperDir = 16; //Direction pin  for DRV8825 driver
-      pinStepperStep = 17; //Step pin for DRV8825 driver
-      pinFan = 47; //Pin for the fan output
-      pinFuelPump = 4; //Fuel pump output
-      pinTachOut = 49; //Tacho output pin
-      pinFlex = 19; // Flex sensor (Must be external interrupt enabled)
-      pinResetControl = 43; //Reset control output
-    #endif
-    //New FRAM chips reads 0
-    #if defined(CORE_STM32)
-      //https://github.com/stm32duino/Arduino_Core_STM32/blob/master/variants/Generic_F411Cx/variant.h#L28
-      //pins PA12, PA11 are used for USB or CAN couldn't be used for GPIO
-      //pins PB12, PB13, PB14 and PB15 are used to SPI FLASH
-      pinInjector1 = PB7; //Output pin injector 1 is on
-      pinInjector2 = PB6; //Output pin injector 2 is on
-      pinInjector3 = PB5; //Output pin injector 3 is on
-      pinInjector4 = PB4; //Output pin injector 4 is on
-      pinCoil1 = PB9; //Pin for coil 1
-      pinCoil2 = PB8; //Pin for coil 2
-      pinCoil3 = PB3; //Pin for coil 3
-      pinCoil4 = PA15; //Pin for coil 4
-      pinTPS = A2;//TPS input pin
-      pinMAP = A3; //MAP sensor pin
-      pinIAT = A0; //IAT sensor pin
-      pinCLT = A1; //CLS sensor pin
-      pinO2 = A8; //O2 Sensor pin
-      pinBat = A4; //Battery reference voltage pin
-      pinBaro = pinMAP;
-      pinIdle1 = PA5; //Single wire idle control
-      pinBoost = PA6; //Boost control
-      //pinVVT_1 = 4; //Default VVT output
-      //pinStepperDir = PC15; //Direction pin  for DRV8825 driver
-      //pinStepperStep = PC14; //Step pin for DRV8825 driver
-      //pinStepperEnable = PC13; //Enable pin for DRV8825
-      pinFuelPump = PB10; //Fuel pump output
-      pinTachOut = PC13; //Tacho output pin
-      //external interrupt enabled pins
-      //pinFlex = PB2; // Flex sensor (Must be external interrupt enabled)
-      pinTrigger = PB1; //The CAS pin
-      pinTrigger2 = PB10; //The Cam Sensor pin
-    #endif
-      break;
+    //Note: Case 0 (Speeduino v0.1) was removed in Nov 2020 to handle default case for blank FRAM modules
+
     case 1:
     #ifndef SMALL_FLASH_MODE //No support for bluepill here anyway
       //Pin mappings as per the v0.2 shield
@@ -1228,6 +1205,7 @@ void setPinMapping(byte boardID)
       pinCoil5 = 34; //Pin for coil 5 PLACEHOLDER value for now
       pinTrigger = 20; //The CAS pin
       pinTrigger2 = 21; //The Cam Sensor pin
+      pinTrigger3 = 3; //The Cam sensor 2 pin
       pinTPS = A2; //TPS input pin
       pinMAP = A3; //MAP sensor pin
       pinIAT = A0; //IAT sensor pin
@@ -1261,6 +1239,7 @@ void setPinMapping(byte boardID)
       pinCoil5 = 34; //Pin for coil 5 PLACEHOLDER value for now
       pinTrigger = 19; //The CAS pin
       pinTrigger2 = 18; //The Cam Sensor pin
+      pinTrigger3 = 3; //The Cam sensor 2 pin
       pinTPS = A2;//TPS input pin
       pinMAP = A3; //MAP sensor pin
       pinIAT = A0; //IAT sensor pin
@@ -1312,6 +1291,7 @@ void setPinMapping(byte boardID)
       pinCoil5 = 34; //Pin for coil 5 PLACEHOLDER value for now
       pinTrigger = 19; //The CAS pin
       pinTrigger2 = 18; //The Cam Sensor pin
+      pinTrigger3 = 3; //The Cam sensor 2 pin
       pinTPS = A2;//TPS input pin
       pinMAP = A3; //MAP sensor pin
       pinIAT = A0; //IAT sensor pin
@@ -1353,7 +1333,7 @@ void setPinMapping(byte boardID)
         pinCoil4 = 29;
         pinCoil3 = 30;
         pinO2 = A22;
-      #elif defined(ARDUINO_BLACK_F407VE)
+      #elif defined(STM32F407xx)
      //Pin definitions for experimental board Tjeerd 
         //Black F407VE wiki.stm32duino.com/index.php?title=STM32F407
 
@@ -1463,6 +1443,7 @@ void setPinMapping(byte boardID)
         //https://github.com/stm32duino/Arduino_Core_STM32/blob/master/variants/Generic_F411Cx/variant.h#L28
         //pins PA12, PA11 are used for USB or CAN couldn't be used for GPIO
         //pins PB12, PB13, PB14 and PB15 are used to SPI FLASH
+        //PB2 can't be used as input becuase is BOOT pin
         pinInjector1 = PB7; //Output pin injector 1 is on
         pinInjector2 = PB6; //Output pin injector 2 is on
         pinInjector3 = PB5; //Output pin injector 3 is on
@@ -1478,22 +1459,23 @@ void setPinMapping(byte boardID)
         pinO2 = A8; //O2 Sensor pin
         pinBat = A4; //Battery reference voltage pin
         pinBaro = pinMAP;
-        pinIdle1 = PA5; //Single wire idle control
+        pinTachOut = PB1; //Tacho output pin  (Goes to ULN2803)
+        pinIdle1 = PB2; //Single wire idle control
+        pinIdle2 = PB10; //2 wire idle control
         pinBoost = PA6; //Boost control
-        //pinVVT_1 = 4; //Default VVT output
-        pinStepperDir = PC15; //Direction pin  for DRV8825 driver
-        pinStepperStep = PC14; //Step pin for DRV8825 driver
-        //pinStepperEnable = PC13; //Enable pin for DRV8825
-        pinFuelPump = PB10; //Fuel pump output
-        pinTachOut = PC13; //Tacho output pin
+        pinStepperDir = PB10; //Direction pin  for DRV8825 driver
+        pinStepperStep = PB2; //Step pin for DRV8825 driver
+        pinFuelPump = PA8; //Fuel pump output
+        pinFan = PA5; //Pin for the fan output (Goes to ULN2803)
         //external interrupt enabled pins
-        pinFlex = PB2; // Flex sensor (Must be external interrupt enabled)
-        pinTrigger = PB1; //The CAS pin
-        pinTrigger2 = PB10; //The Cam Sensor pin
+        pinFlex = PC14; // Flex sensor (Must be external interrupt enabled)
+        pinTrigger = PC13; //The CAS pin also led pin so bad idea
+        pinTrigger2 = PC15; //The Cam Sensor pin
       #endif
       break;
 
     case 6:
+      #ifndef SMALL_FLASH_MODE
       //Pin mappings as per the 2001-05 MX5 PNP shield
       pinInjector1 = 44; //Output pin injector 1 is on
       pinInjector2 = 46; //Output pin injector 2 is on
@@ -1507,6 +1489,7 @@ void setPinMapping(byte boardID)
       pinCoil5 = 34; //Pin for coil 5 PLACEHOLDER value for now
       pinTrigger = 19; //The CAS pin
       pinTrigger2 = 18; //The Cam Sensor pin
+      pinTrigger3 = 2; //The Cam sensor 2 pin
       pinTPS = A2;//TPS input pin
       pinMAP = A5; //MAP sensor pin
       pinIAT = A0; //IAT sensor pin
@@ -1528,7 +1511,7 @@ void setPinMapping(byte boardID)
       pinLaunch = 12; //Can be overwritten below
       pinFlex = 3; // Flex sensor (Must be external interrupt enabled)
       pinResetControl = 39; //Reset control output
-
+      #endif
       //This is NOT correct. It has not yet been tested with this board
       #if defined(CORE_TEENSY35)
         pinTrigger = 23;
@@ -1546,6 +1529,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 8:
+      #ifndef SMALL_FLASH_MODE
       //Pin mappings as per the 1996-97 MX5 PNP shield
       pinInjector1 = 11; //Output pin injector 1 is on
       pinInjector2 = 10; //Output pin injector 2 is on
@@ -1593,9 +1577,11 @@ void setPinMapping(byte boardID)
         pinFan = 50; //Won't work (No mapping for pin 35)
         pinTachOut = 28; //Done
       #endif
+      #endif
       break;
 
     case 9:
+     #ifndef SMALL_FLASH_MODE
       //Pin mappings as per the 89-95 MX5 PNP shield
       pinInjector1 = 11; //Output pin injector 1 is on
       pinInjector2 = 10; //Output pin injector 2 is on
@@ -1628,7 +1614,7 @@ void setPinMapping(byte boardID)
       pinFlex = 3; // Flex sensor (Must be external interrupt enabled)
       pinResetControl = 44; //Reset control output
       pinVSS = 20;
-
+      #endif
       #if defined(CORE_TEENSY35)
         pinTrigger = 23;
         pinTrigger2 = 36;
@@ -1733,7 +1719,7 @@ void setPinMapping(byte boardID)
       pinCoil5 = 34; //Pin for coil 5 PLACEHOLDER value for now
       pinTrigger = 19; //The CAS pin
       pinTrigger2 = 18; //The Cam Sensor pin
-      pinTrigger3 = 17; // cam sensor 2 pin
+      pinTrigger3 = 17; // cam sensor 2 pin, pin17 isn't external trigger enabled in arduino mega??
       pinTPS = A2;//TPS input pin
       pinMAP = A3; //MAP sensor pin
       pinIAT = A0; //IAT sensor pin
@@ -1760,6 +1746,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 31:
+     #ifndef SMALL_FLASH_MODE
       //Pin mappings for the BMW PnP PCBs by pazi88. This is an AVR only module. At least for now
       pinInjector1 = 8; //Output pin injector 1
       pinInjector2 = 9; //Output pin injector 2
@@ -1772,22 +1759,24 @@ void setPinMapping(byte boardID)
       pinCoil3 = 52; //Pin for coil 3
       pinCoil4 = 48; //Pin for coil 4
       pinCoil5 = 36; //Pin for coil 5
-	  pinCoil6 = 34; //Pin for coil 6
+      pinCoil6 = 34; //Pin for coil 6
       pinTrigger = 19; //The CAS pin
       pinTrigger2 = 18; //The Cam Sensor pin
+      pinTrigger3 = 20; //The Cam sensor 2 pin
       pinTPS = A2;//TPS input pin
       pinMAP = A3; //MAP sensor pin
       pinIAT = A0; //IAT sensor pin
       pinCLT = A1; //CLS sensor pin
       pinO2 = A8; //O2 Sensor pin
       pinBat = A4; //Battery reference voltage pin
-      pinDisplayReset = 48; // OLED reset pin
+      pinBaro = A5; //Baro sensor pin
+      pinDisplayReset = 41; // OLED reset pin
       pinTachOut = 49; //Tacho output pin  (Goes to ULN2003)
       pinIdle1 = 5; //ICV pin1
       pinIdle2 = 6; //ICV pin3
       pinBoost = 7; //Boost control
-      pinVVT_1 = 4; //VVT output
-      pinVVT_2 = 48; //Default VVT2 output
+      pinVVT_1 = 4; //VVT1 output (intake vanos)
+      pinVVT_2 = 26; //VVT2 output (exhaust vanos)
       pinFuelPump = 45; //Fuel pump output  (Goes to ULN2003)
       pinStepperDir = 16; //Stepper valve isn't used with these
       pinStepperStep = 17; //Stepper valve isn't used with these
@@ -1796,9 +1785,12 @@ void setPinMapping(byte boardID)
       pinLaunch = 51; //Launch control pin
       pinFlex = 2; // Flex sensor
       pinResetControl = 43; //Reset control output
+      pinVSS = 3; //VSS input pin
+      #endif
       break;
 
     case 40:
+     #ifndef SMALL_FLASH_MODE
       //Pin mappings as per the NO2C shield
       pinInjector1 = 8; //Output pin injector 1 is on
       pinInjector2 = 9; //Output pin injector 2 is on
@@ -1812,6 +1804,7 @@ void setPinMapping(byte boardID)
       pinCoil5 = 46; //Placeholder only - NOT USED
       pinTrigger = 19; //The CAS pin
       pinTrigger2 = 18; //The Cam Sensor pin
+      pinTrigger3 = 21; //The Cam sensor 2 pin
       pinTPS = A3; //TPS input pin
       pinMAP = A0; //MAP sensor pin
       pinIAT = A5; //IAT sensor pin
@@ -1838,6 +1831,7 @@ void setPinMapping(byte boardID)
       pinSpareLOut2 = 34; //low current output spare2 - ONLY WITH DB
       pinSpareLOut3 = 36; //low current output spare3 - ONLY WITH DB
       pinResetControl = 26; //Reset control output
+      #endif
       break;
 
     case 41:
@@ -1855,6 +1849,7 @@ void setPinMapping(byte boardID)
       pinCoil5 = 44; //Pin for coil 5 PLACEHOLDER value for now
       pinTrigger = 19; //The CAS pin
       pinTrigger2 = 18; //The Cam Sensor pin
+      pinTrigger3 = 3; //The Cam sensor 2 pin
       pinFlex = 20; // Flex sensor
       pinTPS = A3; //TPS input pin
       pinMAP = A0; //MAP sensor pin
@@ -1901,6 +1896,7 @@ void setPinMapping(byte boardID)
       pinCoil5 = 26; //Placeholder  for coil 5
       pinTrigger = 19; //The CAS pin
       pinTrigger2 = 18; //The Cam Sensor pin
+      pinTrigger3 = 21;// The Cam sensor 2 pin
       pinFlex = 20; // Flex sensor
       pinTPS = A3; //TPS input pin
       pinMAP = A2; //MAP sensor pin
@@ -2006,9 +2002,54 @@ void setPinMapping(byte boardID)
       break;
     #endif
 
+    #if defined(CORE_TEENSY35)
+    case 53:
+      //Pin mappings for the Juice Box (ignition only board)
+      pinInjector1 = 2; //Output pin injector 1 is on - NOT USED
+      pinInjector2 = 56; //Output pin injector 2 is on - NOT USED
+      pinInjector3 = 6; //Output pin injector 3 is on - NOT USED
+      pinInjector4 = 50; //Output pin injector 4 is on - NOT USED
+      pinCoil1 = 29; //Pin for coil 1
+      pinCoil2 = 30; //Pin for coil 2
+      pinCoil3 = 31; //Pin for coil 3
+      pinCoil4 = 32; //Pin for coil 4
+      pinTrigger = 37; //The CAS pin
+      pinTrigger2 = 38; //The Cam Sensor pin - NOT USED
+      pinTPS = A2; //TPS input pin
+      pinMAP = A7; //MAP sensor pin
+      pinIAT = A1; //IAT sensor pin
+      pinCLT = A5; //CLT sensor pin
+      pinO2 = A0; //O2 sensor pin
+      pinO2_2 = A21; //O2 sensor pin (second sensor) - NOT USED
+      pinBat = A6; //Battery reference voltage pin
+      pinTachOut = 28; //Tacho output pin
+      pinIdle1 = 5; //Single wire idle control - NOT USED
+      pinBoost = 11; //Boost control - NOT USED
+      pinFuelPump = 24; //Fuel pump output
+      pinStepperDir = 3; //Direction pin for DRV8825 driver - NOT USED
+      pinStepperStep = 4; //Step pin for DRV8825 driver - NOT USED
+      pinStepperEnable = 6; //Enable pin for DRV8825 driver - NOT USED
+      pinLaunch = 26; //Can be overwritten below
+      pinFan = 25; //Pin for the fan output
+      pinSpareHOut1 = 26; // high current output spare1
+      pinSpareHOut2 = 27; // high current output spare2
+      pinSpareLOut1 = 55; //low current output spare1 - NOT USED
+      break;
+    #endif
+
     case 55:
       #if defined(CORE_TEENSY)
       //Pin mappings for the DropBear
+      injectorOutputControl = OUTPUT_CONTROL_MC33810;
+      ignitionOutputControl = OUTPUT_CONTROL_MC33810;
+
+      //The injector pins below are not used directly as the control is via SPI through the MC33810s, however the pin numbers are set to be the SPI pins (SCLK, MOSI, MISO and CS) so that nothing else will set them as inputs
+      pinInjector1 = 13; //SCLK
+      pinInjector2 = 11; //MOSI
+      pinInjector3 = 12; //MISO
+      pinInjector4 = 10; //CS for MC33810 1
+      pinInjector5 = 9; //CS for MC33810 2
+
       pinTrigger = 19; //The CAS pin
       pinTrigger2 = 18; //The Cam Sensor pin
       pinFlex = A16; // Flex sensor
@@ -2050,29 +2091,27 @@ void setPinMapping(byte boardID)
         pinLaunch = 34; //Can be overwritten below
       #endif
 
-      #if defined(USE_MC33810)
         pinMC33810_1_CS = 10;
         pinMC33810_2_CS = 9;
 
-        //Pin alignment to the MC33810 outputs
-        MC33810_BIT_INJ1 = 3;
-        MC33810_BIT_INJ2 = 1;
-        MC33810_BIT_INJ3 = 0;
-        MC33810_BIT_INJ4 = 2;
-        MC33810_BIT_IGN1 = 4;
-        MC33810_BIT_IGN2 = 5;
-        MC33810_BIT_IGN3 = 6;
-        MC33810_BIT_IGN4 = 7;
+      //Pin alignment to the MC33810 outputs
+      MC33810_BIT_INJ1 = 3;
+      MC33810_BIT_INJ2 = 1;
+      MC33810_BIT_INJ3 = 0;
+      MC33810_BIT_INJ4 = 2;
+      MC33810_BIT_IGN1 = 4;
+      MC33810_BIT_IGN2 = 5;
+      MC33810_BIT_IGN3 = 6;
+      MC33810_BIT_IGN4 = 7;
 
-        MC33810_BIT_INJ5 = 3;
-        MC33810_BIT_INJ6 = 1;
-        MC33810_BIT_INJ7 = 0;
-        MC33810_BIT_INJ8 = 2;
-        MC33810_BIT_IGN5 = 4;
-        MC33810_BIT_IGN6 = 5;
-        MC33810_BIT_IGN7 = 6;
-        MC33810_BIT_IGN8 = 7;
-      #endif
+      MC33810_BIT_INJ5 = 3;
+      MC33810_BIT_INJ6 = 1;
+      MC33810_BIT_INJ7 = 0;
+      MC33810_BIT_INJ8 = 2;
+      MC33810_BIT_IGN5 = 4;
+      MC33810_BIT_IGN6 = 5;
+      MC33810_BIT_IGN7 = 6;
+      MC33810_BIT_IGN8 = 7;
 
       //CS pin number is now set in a compile flag. 
       // #ifdef USE_SPI_EEPROM
@@ -2084,7 +2123,7 @@ void setPinMapping(byte boardID)
     
  
     case 60:
-        #if defined(ARDUINO_BLACK_F407VE)
+        #if defined(STM32F407xx)
         //Pin definitions for experimental board Tjeerd 
         //Black F407VE wiki.stm32duino.com/index.php?title=STM32F407
         //https://github.com/Tjeerdie/SPECTRE/tree/master/SPECTRE_V0.5
@@ -2191,11 +2230,43 @@ void setPinMapping(byte boardID)
         pinInjector8 = PE13; //
         pinInjector7 = PE14; //
         // = PE15;  //
-       
+     #elif (defined(STM32F411xE) || defined(STM32F401xC))
+        //pins PA12, PA11 are used for USB or CAN couldn't be used for GPIO
+        //PB2 can't be used as input becuase is BOOT pin
+        pinInjector1 = PB7; //Output pin injector 1 is on
+        pinInjector2 = PB6; //Output pin injector 2 is on
+        pinInjector3 = PB5; //Output pin injector 3 is on
+        pinInjector4 = PB4; //Output pin injector 4 is on
+        pinCoil1 = PB9; //Pin for coil 1
+        pinCoil2 = PB8; //Pin for coil 2
+        pinCoil3 = PB3; //Pin for coil 3
+        pinCoil4 = PA15; //Pin for coil 4
+        pinTPS = A2;//TPS input pin
+        pinMAP = A3; //MAP sensor pin
+        pinIAT = A0; //IAT sensor pin
+        pinCLT = A1; //CLS sensor pin
+        pinO2 = A8; //O2 Sensor pin
+        pinBat = A4; //Battery reference voltage pin
+        pinBaro = pinMAP;
+        pinTachOut = PB1; //Tacho output pin  (Goes to ULN2803)
+        pinIdle1 = PB2; //Single wire idle control
+        pinIdle2 = PB10; //2 wire idle control
+        pinBoost = PA6; //Boost control
+        pinStepperDir = PB10; //Direction pin  for DRV8825 driver
+        pinStepperStep = PB2; //Step pin for DRV8825 driver
+        pinFuelPump = PA8; //Fuel pump output
+        pinFan = PA5; //Pin for the fan output (Goes to ULN2803)
+
+        //external interrupt enabled pins
+        pinFlex = PC14; // Flex sensor (Must be external interrupt enabled)
+        pinTrigger = PC13; //The CAS pin also led pin so bad idea
+        pinTrigger2 = PC15; //The Cam Sensor pin
+
      #elif defined(CORE_STM32)
         //blue pill wiki.stm32duino.com/index.php?title=Blue_Pill
         //Maple mini wiki.stm32duino.com/index.php?title=Maple_Mini
         //pins PA12, PA11 are used for USB or CAN couldn't be used for GPIO
+        //PB2 can't be used as input becuase is BOOT pin
         pinInjector1 = PB7; //Output pin injector 1 is on
         pinInjector2 = PB6; //Output pin injector 2 is on
         pinInjector3 = PB5; //Output pin injector 3 is on
@@ -2232,7 +2303,7 @@ void setPinMapping(byte boardID)
     #endif
       break;
     default:
-      #if defined(ARDUINO_BLACK_F407VE)
+      #if defined(STM32F407xx)
       //Pin definitions for experimental board Tjeerd 
         //Black F407VE wiki.stm32duino.com/index.php?title=STM32F407
 
@@ -2379,27 +2450,31 @@ void setPinMapping(byte boardID)
 
   //Setup any devices that are using selectable pins
 
-  if ( (configPage6.launchPin != 0) && (configPage6.launchPin < BOARD_NR_GPIO_PINS) ) { pinLaunch = pinTranslate(configPage6.launchPin); }
-  if ( (configPage4.ignBypassPin != 0) && (configPage4.ignBypassPin < BOARD_NR_GPIO_PINS) ) { pinIgnBypass = pinTranslate(configPage4.ignBypassPin); }
-  if ( (configPage2.tachoPin != 0) && (configPage2.tachoPin < BOARD_NR_GPIO_PINS) ) { pinTachOut = pinTranslate(configPage2.tachoPin); }
-  if ( (configPage4.fuelPumpPin != 0) && (configPage4.fuelPumpPin < BOARD_NR_GPIO_PINS) ) { pinFuelPump = pinTranslate(configPage4.fuelPumpPin); }
-  if ( (configPage6.fanPin != 0) && (configPage6.fanPin < BOARD_NR_GPIO_PINS) ) { pinFan = pinTranslate(configPage6.fanPin); }
-  if ( (configPage6.boostPin != 0) && (configPage6.boostPin < BOARD_NR_GPIO_PINS) ) { pinBoost = pinTranslate(configPage6.boostPin); }
-  if ( (configPage6.vvt1Pin != 0) && (configPage6.vvt1Pin < BOARD_NR_GPIO_PINS) ) { pinVVT_1 = pinTranslate(configPage6.vvt1Pin); }
-  if ( (configPage6.useExtBaro != 0) && (configPage6.baroPin < BOARD_NR_GPIO_PINS) ) { pinBaro = configPage6.baroPin + A0; }
-  if ( (configPage6.useEMAP != 0) && (configPage10.EMAPPin < BOARD_NR_GPIO_PINS) ) { pinEMAP = configPage10.EMAPPin + A0; }
-  if ( (configPage10.fuel2InputPin != 0) && (configPage10.fuel2InputPin < BOARD_NR_GPIO_PINS) ) { pinFuel2Input = pinTranslate(configPage10.fuel2InputPin); }
-  if ( (configPage2.vssPin != 0) && (configPage2.vssPin < BOARD_NR_GPIO_PINS) ) { pinVSS = pinTranslate(configPage2.vssPin); }
-  if ( (configPage10.fuelPressurePin != 0) && (configPage10.fuelPressurePin < BOARD_NR_GPIO_PINS) ) { pinFuelPressure = configPage10.fuelPressurePin + A0; }
-  if ( (configPage10.oilPressurePin != 0) && (configPage10.oilPressurePin < BOARD_NR_GPIO_PINS) ) { pinOilPressure = configPage10.oilPressurePin + A0; }
+  if ( (configPage6.launchPin != 0) && (configPage6.launchPin < BOARD_MAX_IO_PINS) ) { pinLaunch = pinTranslate(configPage6.launchPin); }
+  if ( (configPage4.ignBypassPin != 0) && (configPage4.ignBypassPin < BOARD_MAX_IO_PINS) ) { pinIgnBypass = pinTranslate(configPage4.ignBypassPin); }
+  if ( (configPage2.tachoPin != 0) && (configPage2.tachoPin < BOARD_MAX_IO_PINS) ) { pinTachOut = pinTranslate(configPage2.tachoPin); }
+  if ( (configPage4.fuelPumpPin != 0) && (configPage4.fuelPumpPin < BOARD_MAX_IO_PINS) ) { pinFuelPump = pinTranslate(configPage4.fuelPumpPin); }
+  if ( (configPage6.fanPin != 0) && (configPage6.fanPin < BOARD_MAX_IO_PINS) ) { pinFan = pinTranslate(configPage6.fanPin); }
+  if ( (configPage6.boostPin != 0) && (configPage6.boostPin < BOARD_MAX_IO_PINS) ) { pinBoost = pinTranslate(configPage6.boostPin); }
+  if ( (configPage6.vvt1Pin != 0) && (configPage6.vvt1Pin < BOARD_MAX_IO_PINS) ) { pinVVT_1 = pinTranslate(configPage6.vvt1Pin); }
+  if ( (configPage6.useExtBaro != 0) && (configPage6.baroPin < BOARD_MAX_IO_PINS) ) { pinBaro = pinTranslateAnalog(configPage6.baroPin); }
+  if ( (configPage6.useEMAP != 0) && (configPage10.EMAPPin < BOARD_MAX_IO_PINS) ) { pinEMAP = pinTranslateAnalog(configPage10.EMAPPin); }
+  if ( (configPage10.fuel2InputPin != 0) && (configPage10.fuel2InputPin < BOARD_MAX_IO_PINS) ) { pinFuel2Input = pinTranslate(configPage10.fuel2InputPin); }
+  if ( (configPage10.spark2InputPin != 0) && (configPage10.spark2InputPin < BOARD_MAX_IO_PINS) ) { pinSpark2Input = pinTranslate(configPage10.spark2InputPin); }
+  if ( (configPage2.vssPin != 0) && (configPage2.vssPin < BOARD_MAX_IO_PINS) ) { pinVSS = pinTranslate(configPage2.vssPin); }
+  if ( (configPage10.fuelPressureEnable) && (configPage10.fuelPressurePin < BOARD_MAX_IO_PINS) ) { pinFuelPressure = pinTranslateAnalog(configPage10.fuelPressurePin); }
+  if ( (configPage10.oilPressureEnable) && (configPage10.oilPressurePin < BOARD_MAX_IO_PINS) ) { pinOilPressure = pinTranslateAnalog(configPage10.oilPressurePin); }
   
-  if ( (configPage10.wmiEmptyPin != 0) && (configPage10.wmiEmptyPin < BOARD_NR_GPIO_PINS) ) { pinWMIEmpty = pinTranslate(configPage10.wmiEmptyPin); }
-  if ( (configPage10.wmiIndicatorPin != 0) && (configPage10.wmiIndicatorPin < BOARD_NR_GPIO_PINS) ) { pinWMIIndicator = pinTranslate(configPage10.wmiIndicatorPin); }
-  if ( (configPage10.wmiEnabledPin != 0) && (configPage10.wmiEnabledPin < BOARD_NR_GPIO_PINS) ) { pinWMIEnabled = pinTranslate(configPage10.wmiEnabledPin); }
-  if ( (configPage10.vvt2Pin != 0) && (configPage10.vvt2Pin < BOARD_NR_GPIO_PINS) ) { pinVVT_2 = pinTranslate(configPage10.vvt2Pin); }
+  if ( (configPage10.wmiEmptyPin != 0) && (configPage10.wmiEmptyPin < BOARD_MAX_IO_PINS) ) { pinWMIEmpty = pinTranslate(configPage10.wmiEmptyPin); }
+  if ( (configPage10.wmiIndicatorPin != 0) && (configPage10.wmiIndicatorPin < BOARD_MAX_IO_PINS) ) { pinWMIIndicator = pinTranslate(configPage10.wmiIndicatorPin); }
+  if ( (configPage10.wmiEnabledPin != 0) && (configPage10.wmiEnabledPin < BOARD_MAX_IO_PINS) ) { pinWMIEnabled = pinTranslate(configPage10.wmiEnabledPin); }
+  if ( (configPage10.vvt2Pin != 0) && (configPage10.vvt2Pin < BOARD_MAX_IO_PINS) ) { pinVVT_2 = pinTranslate(configPage10.vvt2Pin); }
 
   //Currently there's no default pin for Idle Up
   pinIdleUp = pinTranslate(configPage2.idleUpPin);
+
+  //Currently there's no default pin for Idle Up Output
+  pinIdleUpOutput = pinTranslate(configPage2.idleUpOutputPin);
 
   //Currently there's no default pin for closed throttle position sensor
   pinCTPS = pinTranslate(configPage2.CTPSPin);
@@ -2407,7 +2482,7 @@ void setPinMapping(byte boardID)
   /* Reset control is a special case. If reset control is enabled, it needs its initial state set BEFORE its pinMode.
      If that doesn't happen and reset control is in "Serial Command" mode, the Arduino will end up in a reset loop
      because the control pin will go low as soon as the pinMode is set to OUTPUT. */
-  if ( (configPage4.resetControlConfig != 0) && (configPage4.resetControlPin < BOARD_NR_GPIO_PINS) )
+  if ( (configPage4.resetControlConfig != 0) && (configPage4.resetControlPin < BOARD_MAX_IO_PINS) )
   {
     resetControl = configPage4.resetControlConfig;
     pinResetControl = pinTranslate(configPage4.resetControlPin);
@@ -2419,6 +2494,7 @@ void setPinMapping(byte boardID)
   pinMode(pinTachOut, OUTPUT);
   pinMode(pinIdle1, OUTPUT);
   pinMode(pinIdle2, OUTPUT);
+  pinMode(pinIdleUpOutput, OUTPUT);
   pinMode(pinFuelPump, OUTPUT);
   pinMode(pinIgnBypass, OUTPUT);
   pinMode(pinFan, OUTPUT);
@@ -2432,40 +2508,24 @@ void setPinMapping(byte boardID)
   //This is a legacy mode option to revert the MAP reading behaviour to match what was in place prior to the 201905 firmware
   if(configPage2.legacyMAP > 0) { digitalWrite(pinMAP, HIGH); }
 
-  #ifndef USE_MC33810
+  if(ignitionOutputControl == OUTPUT_CONTROL_DIRECT)
+  {
     pinMode(pinCoil1, OUTPUT);
     pinMode(pinCoil2, OUTPUT);
     pinMode(pinCoil3, OUTPUT);
     pinMode(pinCoil4, OUTPUT);
+    #if (IGN_CHANNELS >= 5)
     pinMode(pinCoil5, OUTPUT);
+    #endif
+    #if (IGN_CHANNELS >= 6)
     pinMode(pinCoil6, OUTPUT);
+    #endif
+    #if (IGN_CHANNELS >= 7)
     pinMode(pinCoil7, OUTPUT);
+    #endif
+    #if (IGN_CHANNELS >= 8)
     pinMode(pinCoil8, OUTPUT);
-    pinMode(pinInjector1, OUTPUT);
-    pinMode(pinInjector2, OUTPUT);
-    pinMode(pinInjector3, OUTPUT);
-    pinMode(pinInjector4, OUTPUT);
-    pinMode(pinInjector5, OUTPUT);
-    pinMode(pinInjector6, OUTPUT);
-    pinMode(pinInjector7, OUTPUT);
-    pinMode(pinInjector8, OUTPUT);
-
-    inj1_pin_port = portOutputRegister(digitalPinToPort(pinInjector1));
-    inj1_pin_mask = digitalPinToBitMask(pinInjector1);
-    inj2_pin_port = portOutputRegister(digitalPinToPort(pinInjector2));
-    inj2_pin_mask = digitalPinToBitMask(pinInjector2);
-    inj3_pin_port = portOutputRegister(digitalPinToPort(pinInjector3));
-    inj3_pin_mask = digitalPinToBitMask(pinInjector3);
-    inj4_pin_port = portOutputRegister(digitalPinToPort(pinInjector4));
-    inj4_pin_mask = digitalPinToBitMask(pinInjector4);
-    inj5_pin_port = portOutputRegister(digitalPinToPort(pinInjector5));
-    inj5_pin_mask = digitalPinToBitMask(pinInjector5);
-    inj6_pin_port = portOutputRegister(digitalPinToPort(pinInjector6));
-    inj6_pin_mask = digitalPinToBitMask(pinInjector6);
-    inj7_pin_port = portOutputRegister(digitalPinToPort(pinInjector7));
-    inj7_pin_mask = digitalPinToBitMask(pinInjector7);
-    inj8_pin_port = portOutputRegister(digitalPinToPort(pinInjector8));
-    inj8_pin_mask = digitalPinToBitMask(pinInjector8);
+    #endif
 
     ign1_pin_port = portOutputRegister(digitalPinToPort(pinCoil1));
     ign1_pin_mask = digitalPinToBitMask(pinCoil1);
@@ -2483,14 +2543,54 @@ void setPinMapping(byte boardID)
     ign7_pin_mask = digitalPinToBitMask(pinCoil7);
     ign8_pin_port = portOutputRegister(digitalPinToPort(pinCoil8));
     ign8_pin_mask = digitalPinToBitMask(pinCoil8);
-  #else
+  } 
+
+  if(injectorOutputControl == OUTPUT_CONTROL_DIRECT)
+  {
+    pinMode(pinInjector1, OUTPUT);
+    pinMode(pinInjector2, OUTPUT);
+    pinMode(pinInjector3, OUTPUT);
+    pinMode(pinInjector4, OUTPUT);
+    #if (INJ_CHANNELS >= 5)
+    pinMode(pinInjector5, OUTPUT);
+    #endif
+    #if (INJ_CHANNELS >= 6)
+    pinMode(pinInjector6, OUTPUT);
+    #endif
+    #if (INJ_CHANNELS >= 7)
+    pinMode(pinInjector7, OUTPUT);
+    #endif
+    #if (INJ_CHANNELS >= 8)
+    pinMode(pinInjector8, OUTPUT);
+    #endif
+
+    inj1_pin_port = portOutputRegister(digitalPinToPort(pinInjector1));
+    inj1_pin_mask = digitalPinToBitMask(pinInjector1);
+    inj2_pin_port = portOutputRegister(digitalPinToPort(pinInjector2));
+    inj2_pin_mask = digitalPinToBitMask(pinInjector2);
+    inj3_pin_port = portOutputRegister(digitalPinToPort(pinInjector3));
+    inj3_pin_mask = digitalPinToBitMask(pinInjector3);
+    inj4_pin_port = portOutputRegister(digitalPinToPort(pinInjector4));
+    inj4_pin_mask = digitalPinToBitMask(pinInjector4);
+    inj5_pin_port = portOutputRegister(digitalPinToPort(pinInjector5));
+    inj5_pin_mask = digitalPinToBitMask(pinInjector5);
+    inj6_pin_port = portOutputRegister(digitalPinToPort(pinInjector6));
+    inj6_pin_mask = digitalPinToBitMask(pinInjector6);
+    inj7_pin_port = portOutputRegister(digitalPinToPort(pinInjector7));
+    inj7_pin_mask = digitalPinToBitMask(pinInjector7);
+    inj8_pin_port = portOutputRegister(digitalPinToPort(pinInjector8));
+    inj8_pin_mask = digitalPinToBitMask(pinInjector8);
+  }
+
+  if( (ignitionOutputControl == OUTPUT_CONTROL_MC33810) || (injectorOutputControl == OUTPUT_CONTROL_MC33810) )
+  {
     mc33810_1_pin_port = portOutputRegister(digitalPinToPort(pinMC33810_1_CS));
     mc33810_1_pin_mask = digitalPinToBitMask(pinMC33810_1_CS);
     mc33810_2_pin_port = portOutputRegister(digitalPinToPort(pinMC33810_2_CS));
     mc33810_2_pin_mask = digitalPinToBitMask(pinMC33810_2_CS);
 
     initMC33810();
-  #endif
+  }
 
 //CS pin number is now set in a compile flag. 
 // #ifdef USE_SPI_EEPROM
@@ -2558,6 +2658,11 @@ void setPinMapping(byte boardID)
     if (configPage10.fuel2InputPullup == true) { pinMode(pinFuel2Input, INPUT_PULLUP); } //With pullup
     else { pinMode(pinFuel2Input, INPUT); } //Normal input
   }
+  if(configPage10.spark2Mode == SPARK2_MODE_INPUT_SWITCH)
+  {
+    if (configPage10.spark2InputPullup == true) { pinMode(pinSpark2Input, INPUT_PULLUP); } //With pullup
+    else { pinMode(pinSpark2Input, INPUT); } //Normal input
+  }
   if(configPage10.fuelPressureEnable > 0)
   {
     pinMode(pinFuelPressure, INPUT);
@@ -2595,6 +2700,7 @@ void initialiseTriggers()
 {
   byte triggerInterrupt = 0; // By default, use the first interrupt
   byte triggerInterrupt2 = 1;
+  byte triggerInterrupt3 = 2;
 
   #if defined(CORE_AVR)
     switch (pinTrigger) {
@@ -2640,24 +2746,49 @@ void initialiseTriggers()
     triggerInterrupt2 = pinTrigger2;
   #endif
 
+  #if defined(CORE_AVR)
+    switch (pinTrigger3) {
+      //Arduino Mega 2560 mapping
+      case 2:
+        triggerInterrupt3 = 0; break;
+      case 3:
+        triggerInterrupt3 = 1; break;
+      case 18:
+        triggerInterrupt3 = 5; break;
+      case 19:
+        triggerInterrupt3 = 4; break;
+      case 20:
+        triggerInterrupt3 = 3; break;
+      case 21:
+        triggerInterrupt3 = 2; break;
+      default:
+        triggerInterrupt3 = 0; break; //This should NEVER happen
+    }
+  #else
+    triggerInterrupt3 = pinTrigger3;
+  #endif
+
   pinMode(pinTrigger, INPUT);
   pinMode(pinTrigger2, INPUT);
   pinMode(pinTrigger3, INPUT);
   //digitalWrite(pinTrigger, HIGH);
   detachInterrupt(triggerInterrupt);
   detachInterrupt(triggerInterrupt2);
+  detachInterrupt(triggerInterrupt3);
   //The default values for edges
   primaryTriggerEdge = 0; //This should ALWAYS be changed below
   secondaryTriggerEdge = 0; //This is optional and may not be changed below, depending on the decoder in use
+  tertiaryTriggerEdge = 0; //This is even more optional and may not be changed below, depending on the decoder in use
 
   //Set the trigger function based on the decoder in the config
   switch (configPage4.TrigPattern)
   {
-    case 0:
+    case DECODER_MISSING_TOOTH:
       //Missing tooth decoder
       triggerSetup_missingTooth();
       triggerHandler = triggerPri_missingTooth;
       triggerSecondaryHandler = triggerSec_missingTooth;
+      triggerTertiaryHandler = triggerThird_missingTooth;
       decoderHasSecondary = true;
       getRPM = getRPM_missingTooth;
       getCrankAngle = getCrankAngle_missingTooth;
@@ -2667,9 +2798,12 @@ void initialiseTriggers()
       else { primaryTriggerEdge = FALLING; }
       if(configPage4.TrigEdgeSec == 0) { secondaryTriggerEdge = RISING; }
       else { secondaryTriggerEdge = FALLING; }
+      if(configPage10.TrigEdgeThrd == 0) { tertiaryTriggerEdge = RISING; }
+      else { tertiaryTriggerEdge = FALLING; }
 
       attachInterrupt(triggerInterrupt, triggerHandler, primaryTriggerEdge);
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
+      if(configPage10.vvt2Enabled > 0) { attachInterrupt(triggerInterrupt3, triggerTertiaryHandler, tertiaryTriggerEdge); } // we only need this for vvt2, so not really needed if it's not used
 
       /*
       if(configPage4.TrigEdge == 0) { attachInterrupt(triggerInterrupt, triggerHandler, RISING); }
@@ -2679,7 +2813,7 @@ void initialiseTriggers()
       */
       break;
 
-    case 1:
+    case DECODER_BASIC_DISTRIBUTOR:
       // Basic distributor
       triggerSetup_BasicDistributor();
       triggerHandler = triggerPri_BasicDistributor;
@@ -2711,7 +2845,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case 3:
+    case DECODER_GM7X:
       triggerSetup_GM7X();
       triggerHandler = triggerPri_GM7X;
       getRPM = getRPM_GM7X;
@@ -2727,7 +2861,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt, triggerHandler, primaryTriggerEdge);
       break;
 
-    case 4:
+    case DECODER_4G63:
       triggerSetup_4G63();
       triggerHandler = triggerPri_4G63;
       triggerSecondaryHandler = triggerSec_4G63;
@@ -2743,7 +2877,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case 5:
+    case DECODER_24X:
       triggerSetup_24X();
       triggerHandler = triggerPri_24X;
       triggerSecondaryHandler = triggerSec_24X;
@@ -2760,7 +2894,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case 6:
+    case DECODER_JEEP2000:
       triggerSetup_Jeep2000();
       triggerHandler = triggerPri_Jeep2000;
       triggerSecondaryHandler = triggerSec_Jeep2000;
@@ -2777,7 +2911,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case 7:
+    case DECODER_AUDI135:
       triggerSetup_Audi135();
       triggerHandler = triggerPri_Audi135;
       triggerSecondaryHandler = triggerSec_Audi135;
@@ -2794,7 +2928,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case 8:
+    case DECODER_HONDA_D17:
       triggerSetup_HondaD17();
       triggerHandler = triggerPri_HondaD17;
       triggerSecondaryHandler = triggerSec_HondaD17;
@@ -2811,7 +2945,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case 9:
+    case DECODER_MIATA_9905:
       triggerSetup_Miata9905();
       triggerHandler = triggerPri_Miata9905;
       triggerSecondaryHandler = triggerSec_Miata9905;
@@ -2830,7 +2964,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case 10:
+    case DECODER_MAZDA_AU:
       triggerSetup_MazdaAU();
       triggerHandler = triggerPri_MazdaAU;
       triggerSecondaryHandler = triggerSec_MazdaAU;
@@ -2847,7 +2981,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case 11:
+    case DECODER_NON360:
       triggerSetup_non360();
       triggerHandler = triggerPri_DualWheel; //Is identical to the dual wheel decoder, so that is used. Same goes for the secondary below
       triggerSecondaryHandler = triggerSec_DualWheel; //Note the use of the Dual Wheel trigger function here. No point in having the same code in twice.
@@ -2864,7 +2998,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case 12:
+    case DECODER_NISSAN_360:
       triggerSetup_Nissan360();
       triggerHandler = triggerPri_Nissan360;
       triggerSecondaryHandler = triggerSec_Nissan360;
@@ -2881,7 +3015,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case 13:
+    case DECODER_SUBARU_67:
       triggerSetup_Subaru67();
       triggerHandler = triggerPri_Subaru67;
       triggerSecondaryHandler = triggerSec_Subaru67;
@@ -2898,7 +3032,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case 14:
+    case DECODER_DAIHATSU_PLUS1:
       triggerSetup_Daihatsu();
       triggerHandler = triggerPri_Daihatsu;
       getRPM = getRPM_Daihatsu;
@@ -2912,7 +3046,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt, triggerHandler, primaryTriggerEdge);
       break;
 
-    case 15:
+    case DECODER_HARLEY:
       triggerSetup_Harley();
       triggerHandler = triggerPri_Harley;
       //triggerSecondaryHandler = triggerSec_Harley;
@@ -2924,7 +3058,7 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt, triggerHandler, primaryTriggerEdge);
       break;
 
-    case 16:
+    case DECODER_36_2_2_2:
       //36-2-2-2
       triggerSetup_ThirtySixMinus222();
       triggerHandler = triggerPri_ThirtySixMinus222;
@@ -2943,12 +3077,11 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case 17:
+    case DECODER_36_2_1:
       //36-2-1
-      //NOT YET WRITTEN
       break;
 
-    case 18:
+    case DECODER_420A:
       //DSM 420a
       triggerSetup_420a();
       triggerHandler = triggerPri_420a;
@@ -2966,7 +3099,44 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    
+    case DECODER_WEBER:
+      //Weber-Marelli
+      triggerSetup_DualWheel();
+      triggerHandler = triggerPri_Webber;
+      triggerSecondaryHandler = triggerSec_Webber;
+      decoderHasSecondary = true;
+      getRPM = getRPM_DualWheel;
+      getCrankAngle = getCrankAngle_DualWheel;
+      triggerSetEndTeeth = triggerSetEndTeeth_DualWheel;
+
+      if(configPage4.TrigEdge == 0) { primaryTriggerEdge = RISING; } // Attach the crank trigger wheel interrupt (Hall sensor drags to ground when triggering)
+      else { primaryTriggerEdge = FALLING; }
+      if(configPage4.TrigEdgeSec == 0) { secondaryTriggerEdge = RISING; }
+      else { secondaryTriggerEdge = FALLING; }
+
+      attachInterrupt(triggerInterrupt, triggerHandler, primaryTriggerEdge);
+      attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
+      break;
+
+    case DECODER_ST170:
+      //Ford ST170
+      triggerSetup_FordST170();
+      triggerHandler = triggerPri_missingTooth;
+      triggerSecondaryHandler = triggerSec_FordST170;
+      decoderHasSecondary = true;
+      getRPM = getRPM_FordST170;
+      getCrankAngle = getCrankAngle_FordST170;
+      triggerSetEndTeeth = triggerSetEndTeeth_FordST170;
+
+      if(configPage4.TrigEdge == 0) { primaryTriggerEdge = RISING; } // Attach the crank trigger wheel interrupt (Hall sensor drags to ground when triggering)
+      else { primaryTriggerEdge = FALLING; }
+      if(configPage4.TrigEdgeSec == 0) { secondaryTriggerEdge = RISING; }
+      else { secondaryTriggerEdge = FALLING; }
+
+      attachInterrupt(triggerInterrupt, triggerHandler, primaryTriggerEdge);
+      attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
+
+      break;
 
     default:
       triggerHandler = triggerPri_missingTooth;

@@ -17,6 +17,7 @@ Timers are typically low resolution (Compared to Schedulers), with maximum frequ
 #include "speeduino.h"
 #include "scheduler.h"
 #include "auxiliaries.h"
+#include "comms.h"
 
 #if defined(CORE_AVR)
   #include <avr/wdt.h>
@@ -54,7 +55,39 @@ void oneMSInterval() //Most ARM chips can simply call a function
   //1000Hz loop flag, just set this every time
   BIT_SET(TIMER_mask, BIT_TIMER_1MS);
 
-  //30Hz loop flag
+  //Tacho output check
+  //Tacho is flagged as being ready for a pulse by the ignition outputs. 
+  if(tachoOutputFlag == READY)
+  {
+    //Check for half speed tacho
+    if( (configPage2.tachoDiv == 0) || (tachoAlt == true) ) 
+    { 
+      TACHO_PULSE_LOW();
+      //ms_counter is cast down to a byte as the tacho duration can only be in the range of 1-6, so no extra resolution above that is required
+      tachoEndTime = (uint8_t)ms_counter + configPage2.tachoDuration;
+      tachoOutputFlag = ACTIVE;
+    }
+    else
+    {
+      //Don't run on this pulse (Half speed tacho)
+      tachoOutputFlag = DEACTIVE;
+    }
+    tachoAlt = !tachoAlt; //Flip the alternating value incase half speed tacho is in use. 
+  }
+  else if(tachoOutputFlag == ACTIVE)
+  {
+    //If the tacho output is already active, check whether it's reached it's end time
+    if((uint8_t)ms_counter == tachoEndTime)
+    {
+      TACHO_PULSE_HIGH();
+      tachoOutputFlag = DEACTIVE;
+    }
+  }
+  // Tacho sweep
+  
+
+
+  //30Hz loop
   if (loop33ms == 33)
   {
     loop33ms = 0;
@@ -68,21 +101,30 @@ void oneMSInterval() //Most ARM chips can simply call a function
     BIT_SET(TIMER_mask, BIT_TIMER_15HZ);
   }
 
-  //10Hz loop flag
+  //10Hz loop
   if (loop100ms == 100)
   {
     loop100ms = 0; //Reset counter
     BIT_SET(TIMER_mask, BIT_TIMER_10HZ);
+
+    currentStatus.rpmDOT = (currentStatus.RPM - lastRPM_100ms) * 10; //This is the RPM per second that the engine has accelerated/decelleratedin the last loop
+    lastRPM_100ms = currentStatus.RPM; //Record the current RPM for next calc
+
+    if ( BIT_CHECK(currentStatus.engine, BIT_ENGINE_RUN) ) { runSecsX10++; }
+    else { runSecsX10 = 0; }
+
+    if ( (injPrimed == false) && (seclx10 == configPage2.primingDelay) && (currentStatus.RPM == 0) ) { beginInjectorPriming(); injPrimed = true; }
+    seclx10++;
   }
 
-  //4Hz loop flag
+  //4Hz loop
   if (loop250ms == 250)
   {
     loop250ms = 0; //Reset Counter
     BIT_SET(TIMER_mask, BIT_TIMER_4HZ);
   }
 
-  //every 1 second flag (1ms x 1000 = 1000ms)
+  //1Hz loop
   if (loopSec == 1000)
   {
     loopSec = 0; //Reset counter.
