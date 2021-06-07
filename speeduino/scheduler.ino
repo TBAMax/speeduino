@@ -1005,7 +1005,6 @@ void ignitionScheduleInterrupt(struct Schedule *ignitionSchedule) // common func
     {
       ignitionSchedule->StartCallback();
       ignitionSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
-      ignitionSchedule->startTime = micros();
       ignitionSchedule->setIgnitionCompare(ignitionSchedule->endCompare); // Set end callback interrupt time
     }
     else if (ignitionSchedule->Status == RUNNING) //Check to see if its time for spark
