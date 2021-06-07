@@ -123,7 +123,6 @@ byte fpPrimeTime = 0; //The time (in seconds, based on currentStatus.secl) that 
 volatile uint16_t mainLoopCount;
 unsigned long revolutionTime; //The time in uS that one revolution would take at current speed (The time tooth 1 was last seen, minus the time it was seen prior to that)
 volatile unsigned long timer5_overflow_count = 0; //Increments every time counter 5 overflows. Used for the fast version of micros()
-volatile unsigned long ms_counter = 0; //A counter that increments once per ms
 uint16_t fixedCrankingOverride = 0;
 bool clutchTrigger;
 bool previousClutchTrigger;
