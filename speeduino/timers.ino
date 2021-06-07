@@ -138,7 +138,6 @@ void oneMSInterval() //Most ARM chips can simply call a function
     loopSec = 0; //Reset counter.
     BIT_SET(TIMER_mask, BIT_TIMER_1HZ);
 
-    dwellLimit_uS = (1000 * configPage4.dwellLimit); //Update uS value incase setting has changed
     currentStatus.crankRPM = ((unsigned int)configPage4.crankRPM * 10);
 
     //**************************************************************************************************************************************************
