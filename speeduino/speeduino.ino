@@ -353,6 +353,12 @@ void loop()
       currentStatus.crankRPM = ((unsigned int)configPage4.crankRPM * 10); //Infrequent crankRPM treshold updates are not an issue.
       readBaro(); //Infrequent baro readings are not an issue.
 
+          //Check the fan output status... Infrequent fan on/off status updates are not an issue.
+      if (configPage6.fanEnable == 1)
+      {
+         fanControl();            // Fucntion to turn the cooling fan on/off
+      }
+
       if ( (configPage10.wmiEnabled > 0) && (configPage10.wmiIndicatorEnabled > 0) )
       {
         // water tank empty
