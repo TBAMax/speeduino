@@ -349,6 +349,8 @@ void loop()
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_1HZ)) //Once per second)
     {
       BIT_CLEAR(TIMER_mask, BIT_TIMER_1HZ);
+
+      currentStatus.crankRPM = ((unsigned int)configPage4.crankRPM * 10); //Infrequent crankRPM treshold updates are not an issue.
       readBaro(); //Infrequent baro readings are not an issue.
 
       if ( (configPage10.wmiEnabled > 0) && (configPage10.wmiIndicatorEnabled > 0) )

@@ -138,7 +138,6 @@ void oneMSInterval() //Most ARM chips can simply call a function
     loopSec = 0; //Reset counter.
     BIT_SET(TIMER_mask, BIT_TIMER_1HZ);
 
-    currentStatus.crankRPM = ((unsigned int)configPage4.crankRPM * 10);
 
     //**************************************************************************************************************************************************
     //This updates the runSecs variable
