@@ -51,6 +51,7 @@ volatile byte toothSystemCount = 0; //Used for decoders such as Audi 135 where n
 volatile unsigned long toothSystemLastToothTime = 0; //As below, but used for decoders where not every tooth count is used for calculation
 volatile unsigned long toothLastToothTime = 0; //The time (micros()) that the last tooth was registered
 volatile unsigned long toothLastSecToothTime = 0; //The time (micros()) that the last tooth was registered on the secondary input
+volatile unsigned long lastSecActiveEdgeTime =0; //The time (micros()) that the last active edge was registered on the secondary input, still to be filtered
 volatile unsigned long toothLastThirdToothTime = 0; //The time (micros()) that the last tooth was registered on the second cam input
 volatile unsigned long toothLastMinusOneToothTime = 0; //The time (micros()) that the tooth before the last tooth was registered
 volatile unsigned long toothLastMinusOneSecToothTime = 0; //The time (micros()) that the tooth before the last tooth was registered on secondary input
@@ -680,78 +681,134 @@ void triggerSetup_DualWheel()
   decoderIsSequential = true;
   triggerToothAngleIsCorrect = true; //This is always true for this pattern
   MAX_STALL_TIME = (3333UL * triggerToothAngle); //Minimum 50rpm. (3333uS is the time per degree at 50rpm)
+  triggerFilterTime=160;//high frequency filter
+  triggerSecFilterTime=160;
 }
 
-
 void triggerPri_DualWheel()
-{
-    curTime = micros();
-    curGap = curTime - toothLastToothTime;
-    if ( curGap >= triggerFilterTime )
-    {
+{  
+  byte trig2;
+  static byte lastEdge; //indicates that the last detected edge was RISING or FALLING or unknown(0) (to detect missing edges)   
+  static unsigned long lastInterruptTime;
+  static unsigned long lastActiveEdgeTime;
+
+  curTime = micros();  //take timestamp    
+  curGap = curTime - lastInterruptTime;
+  lastInterruptTime = curTime;
+  curGap2 = curTime -lastSecActiveEdgeTime; //gap with the secondary trigger, used for sync
+
+  //Confirm secondary trigger. For filtering secondary properly
+  if(curGap2 >= triggerSecFilterTime && toothLastSecToothTime!=lastSecActiveEdgeTime){ //apply high frequency filter on secondary trigger
+    trig2=READ_SEC_TRIGGER();
+    if ((secondaryTriggerEdge==RISING && trig2==HIGH) || (secondaryTriggerEdge==FALLING && trig2==LOW) ){ //check if there is uncorfimed edge on the secondary
+      toothLastSecToothTime=lastSecActiveEdgeTime; //confirm new noise free tooth on the secondary
+    }
+  }
+
+  validTrigger = false;//(set that again later)
+
+  bool a=READ_PRI_TRIGGER();       //Determine edge type
+  bool b=READ_PRI_TRIGGER();
+  bool c=READ_PRI_TRIGGER();
+  
+  if((a&&b&&c)){      //rising edge    
+    if(curGap >= triggerFilterTime && lastEdge == FALLING ){ //High frequency filter
+      if (primaryTriggerEdge == RISING){
+      lastActiveEdgeTime=curTime; //Save timestamp. Rising edge gets identified as tooth on the next falling edge to avoid instantaneous uptate on the noise.      
+      }
+      else{
+      toothLastMinusOneToothTime = toothLastToothTime; //promote falling edge timestamp to tooth.
+      toothLastToothTime = lastActiveEdgeTime;
+      toothCurrentCount++; //Increment the tooth counter
+      validTrigger = true; //Flag this pulse as being a valid trigger (ie that it passed filters)        
+      }
+    }
+    lastEdge = RISING;     
+  }
+  else if (!(a|b|c)){ //falling edge
+    if(curGap >= triggerFilterTime && lastEdge == RISING){ //High frequency filter
+      if (primaryTriggerEdge == FALLING){
+      lastActiveEdgeTime=curTime; //Save timestamp. Rising edge gets identified as tooth on the next falling edge to avoid instantaneous uptate on the noise.      
+      }
+      else{    
+      toothLastMinusOneToothTime = toothLastToothTime; //promote rising edge timestamp to tooth.
+      toothLastToothTime = lastActiveEdgeTime;
       toothCurrentCount++; //Increment the tooth counter
       validTrigger = true; //Flag this pulse as being a valid trigger (ie that it passed filters)
-
-      toothLastMinusOneToothTime = toothLastToothTime;
-      toothLastToothTime = curTime;
-
-      if ( currentStatus.hasSync == true )
-      {
-        if ( (toothCurrentCount == 1) || (toothCurrentCount > configPage4.triggerTeeth) )
-        {
-          toothCurrentCount = 1;
-          revolutionOne = !revolutionOne; //Flip sequential revolution tracker
-          toothOneMinusOneTime = toothOneTime;
-          toothOneTime = curTime;
-          currentStatus.startRevolutions++; //Counter
-        }
-
-        setFilter(curGap); //Recalc the new filter value
       }
-
-      //NEW IGNITION MODE
-      if( (configPage2.perToothIgn == true) && (!BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK)) ) 
-      {
-        int16_t crankAngle = ( (toothCurrentCount-1) * triggerToothAngle ) + configPage4.triggerAngle;
-        if( (configPage4.sparkMode == IGN_MODE_SEQUENTIAL) && (revolutionOne == true) && (configPage4.TrigSpeed == CRANK_SPEED) )
-        {
-          crankAngle += 360;
-          checkPerToothTiming(crankAngle, (configPage4.triggerTeeth + toothCurrentCount)); 
-        }
-        else{ checkPerToothTiming(crankAngle, toothCurrentCount); }
+    }
+    lastEdge = FALLING;
+  }
+  else{ //unstable state on the port, this means high frequency noise.
+    lastEdge = 0;
+  }
+  //loop back tooth count if needed 
+  if (toothCurrentCount > configPage4.triggerTeeth){      
+    toothCurrentCount = 1;
+    revolutionOne = !revolutionOne; //Flip sequential revolution tracker
+    toothOneMinusOneTime = toothOneTime;
+    toothOneTime = toothLastToothTime;
+    currentStatus.startRevolutions++; //Counter
+    //check for sync loss          
+    if(revolutionOne==0){ 
+      if((curTime-toothLastToothTime) < (curTime-toothLastSecToothTime) && (curTime-toothLastSecToothTime)< (curTime-toothLastMinusOneToothTime) ){ //Check if secondary trigger happened within this primary tooth interval
+        currentStatus.hasSync = true;          
       }
-   } //Trigger filter
+      else{
+        currentStatus.syncLossCounter++;//indicates sync loss
+        currentStatus.hasSync = false; 
+      } 
+    }      
+  }
+  //pure resync stuff
+  else if ((configPage4.useResync == 1 || currentStatus.hasSync == false) && validTrigger==true){ 
+    if((curTime-toothLastToothTime) < (curTime-toothLastSecToothTime) && (curTime-toothLastSecToothTime)< (curTime-toothLastMinusOneToothTime) ){ //Check if secondary trigger happened within this primary tooth interval(overflow proof)
+    //      gap to last tooth       <    gap to last secondary tooth  &&    gap to last secondary tooth <   gap to last minus one tooth
+      if(toothCurrentCount != 1){currentStatus.syncLossCounter++;}//indicates sync loss
+      toothCurrentCount = 1;
+      revolutionOne = 0;
+      currentStatus.hasSync = true;
+    }        
+  }  
 }
 
 void triggerSec_DualWheel()
 {
+  static unsigned long lastSecInterruptTime;
+  static byte lastEdge; //indicates that the last detected edge was RISING or FALLING (to detect missing edges)
+
   curTime2 = micros();
-  curGap2 = curTime2 - toothLastSecToothTime;
-  if ( curGap2 >= triggerSecFilterTime )
-  {
-    toothLastSecToothTime = curTime2;
-    triggerSecFilterTime = curGap2 >> 2; //Set filter at 25% of the current speed
+  curGap2 = curTime2 - lastSecInterruptTime;
+  lastSecInterruptTime = curTime2;
 
-    if(currentStatus.hasSync == false)
-    {
-      toothLastToothTime = micros();
-      toothLastMinusOneToothTime = micros() - (6000000 / configPage4.triggerTeeth); //Fixes RPM at 10rpm until a full revolution has taken place
-      toothCurrentCount = configPage4.triggerTeeth;
+  bool a=digitalRead(pinTrigger2);       //Determine edge type
+  bool b=digitalRead(pinTrigger2);
+  bool c=digitalRead(pinTrigger2);
 
-      currentStatus.hasSync = true;
+  if((a&&b&&c)){      //rising edge    
+    if ( curGap2 >= triggerSecFilterTime && lastEdge == FALLING ){ //High frequency filter
+      if (secondaryTriggerEdge == RISING){
+        lastSecActiveEdgeTime=curTime2;
+      }
+      else{
+        toothLastSecToothTime=lastSecActiveEdgeTime; //noise free tooth confirm
+      }        
     }
-    else 
-    {
-      if ( (toothCurrentCount != configPage4.triggerTeeth) && (currentStatus.startRevolutions > 2)) { currentStatus.syncLossCounter++; } //Indicates likely sync loss.
-      if (configPage4.useResync == 1) { toothCurrentCount = configPage4.triggerTeeth; }
-    }
-
-    revolutionOne = 1; //Sequential revolution reset
+    lastEdge=RISING;
   }
-  else 
-  {
-    triggerSecFilterTime = revolutionTime >> 1; //Set filter at 25% of the current cam speed. This needs to be performed here to prevent a situation where the RPM and triggerSecFilterTime get out of alignment and curGap2 never exceeds the filter value
-  } //Trigger filter
+  else if (!(a|b|c)){ //falling edge    
+    if ( curGap2 >= triggerSecFilterTime && lastEdge == RISING ){ //High frequency filter
+      if (secondaryTriggerEdge == FALLING){
+        lastSecActiveEdgeTime=curTime2;
+      }
+      else{
+        toothLastSecToothTime=lastSecActiveEdgeTime; //noise free tooth confirm
+      }
+    }
+    lastEdge=FALLING;
+  }
+  else{lastEdge=0;} //unstable state on the port, this means high frequency noise.
+//  {currentStatus.syncLossCounter++;} //Indicates likely sync loss.
 }
 
 uint16_t getRPM_DualWheel()

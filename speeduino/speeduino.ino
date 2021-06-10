@@ -358,7 +358,20 @@ void loop()
       {
          fanControl();            // Fucntion to turn the cooling fan on/off
       }
+          //Infrequent trigger setting updates are not an issue
+      switch (configPage4.TrigPattern)
+      {
+        case DECODER_DUAL_WHEEL:
+        //triggerSetup_DualWheel();
+          if(configPage4.TrigEdge == 0) { primaryTriggerEdge = RISING; } // Attach the crank trigger wheel interrupt (Hall sensor drags to ground when triggering)
+          else { primaryTriggerEdge = FALLING; }
+          if(configPage4.TrigEdgeSec == 0) { secondaryTriggerEdge = RISING; }
+          else { secondaryTriggerEdge = FALLING; }
 
+        break;
+        default:
+        break;
+      }
       if ( (configPage10.wmiEnabled > 0) && (configPage10.wmiIndicatorEnabled > 0) )
       {
         // water tank empty
