@@ -368,6 +368,12 @@ void loop()
           if(configPage4.TrigEdgeSec == 0) { secondaryTriggerEdge = RISING; }
           else { secondaryTriggerEdge = FALLING; }
 
+            if(configPage4.triggerFilter == 0) { triggerFilterTime = 0; triggerSecFilterTime=0;} //trigger filter is turned off.
+            else if(configPage4.triggerFilter == 1) {triggerFilterTime = (1000000 / (MAX_RPM / 60 * configPage4.triggerTeeth))/8;triggerSecFilterTime=20;} //Lite filter level is 25% of shortest possible time
+            else if(configPage4.triggerFilter == 2) {triggerFilterTime = (1000000 / (MAX_RPM / 60 * configPage4.triggerTeeth))/2;triggerSecFilterTime=40;} //Medium filter level: Trigger filter time is the shortest possible time (in uS) that there can be between crank teeth (ie at max RPM). Any pulses that occur faster than this time will be disgarded as noise
+            else if (configPage4.triggerFilter == 3) {triggerSecFilterTime=40;} //Aggressive filter level(primary configured in separate function)
+            else { triggerFilterTime = 0; } //trigger filter is turned off.
+
         break;
         default:
         break;

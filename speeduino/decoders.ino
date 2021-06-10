@@ -681,8 +681,6 @@ void triggerSetup_DualWheel()
   decoderIsSequential = true;
   triggerToothAngleIsCorrect = true; //This is always true for this pattern
   MAX_STALL_TIME = (3333UL * triggerToothAngle); //Minimum 50rpm. (3333uS is the time per degree at 50rpm)
-  triggerFilterTime=50;//high frequency filter
-  triggerSecFilterTime=50;
 }
 
 void triggerPri_DualWheel()
@@ -715,14 +713,14 @@ void triggerPri_DualWheel()
     if(curGap >= triggerFilterTime && lastEdge == FALLING ){ //High frequency filter
       if (primaryTriggerEdge == RISING){
       lastActiveEdgeTime=curTime; //Save timestamp. Rising edge gets identified as tooth on the next falling edge to avoid instantaneous uptate on the noise.      
-      validTrigger = true;
       }
       else{
       toothLastMinusOneToothTime = toothLastToothTime; //promote falling edge timestamp to tooth.
       toothLastToothTime = lastActiveEdgeTime;
-      toothCurrentCount++; //Increment the tooth counter
-      validTrigger = true; //Flag this pulse as being a valid trigger (ie that it passed filters)        
+      toothCurrentCount++; //Increment the tooth counter             
       }
+      validTrigger = true; //Flag this pulse as being a valid trigger (ie that it passed filters) 
+      setFilter_DualWheel(curGap);
     }
     lastEdge = RISING;     
   }
@@ -730,14 +728,14 @@ void triggerPri_DualWheel()
     if(curGap >= triggerFilterTime && lastEdge == RISING){ //High frequency filter
       if (primaryTriggerEdge == FALLING){
       lastActiveEdgeTime=curTime; //Save timestamp. Rising edge gets identified as tooth on the next falling edge to avoid instantaneous uptate on the noise.      
-      validTrigger = true;
       }
       else{    
       toothLastMinusOneToothTime = toothLastToothTime; //promote rising edge timestamp to tooth.
       toothLastToothTime = lastActiveEdgeTime;
       toothCurrentCount++; //Increment the tooth counter
-      validTrigger = true; //Flag this pulse as being a valid trigger (ie that it passed filters)
       }
+      validTrigger = true; //Flag this pulse as being a valid trigger (ie that it passed filters) 
+      setFilter_DualWheel(curGap);
     }
     lastEdge = FALLING;
   }
@@ -769,6 +767,7 @@ void triggerPri_DualWheel()
       if(toothCurrentCount != 1 || revolutionOne != 0 ){currentStatus.syncLossCounter++;}//indicates sync loss
       toothCurrentCount = 1;
       revolutionOne = 0;
+      toothOneTime = toothLastToothTime;
       currentStatus.hasSync = true;
     }        
   }  
@@ -813,6 +812,13 @@ void triggerSec_DualWheel()
 //  {currentStatus.syncLossCounter++;} //Indicates likely sync loss.
 }
 
+void setFilter_DualWheel(unsigned long curGap) //only continously variable cap level filters are set here (others in the main loop).
+{
+  if (configPage4.triggerFilter == 3) {
+    triggerFilterTime = curGap >> 1;  //Aggressive filter level is 50% of previous gap
+    if (triggerFilterTime<10 ){triggerFilterTime=10;} //also set minimum limit
+  } 
+}
 uint16_t getRPM_DualWheel()
 {
   uint16_t tempRPM = 0;
