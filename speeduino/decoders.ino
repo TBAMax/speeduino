@@ -681,8 +681,8 @@ void triggerSetup_DualWheel()
   decoderIsSequential = true;
   triggerToothAngleIsCorrect = true; //This is always true for this pattern
   MAX_STALL_TIME = (3333UL * triggerToothAngle); //Minimum 50rpm. (3333uS is the time per degree at 50rpm)
-  triggerFilterTime=160;//high frequency filter
-  triggerSecFilterTime=160;
+  triggerFilterTime=50;//high frequency filter
+  triggerSecFilterTime=50;
 }
 
 void triggerPri_DualWheel()
@@ -715,6 +715,7 @@ void triggerPri_DualWheel()
     if(curGap >= triggerFilterTime && lastEdge == FALLING ){ //High frequency filter
       if (primaryTriggerEdge == RISING){
       lastActiveEdgeTime=curTime; //Save timestamp. Rising edge gets identified as tooth on the next falling edge to avoid instantaneous uptate on the noise.      
+      validTrigger = true;
       }
       else{
       toothLastMinusOneToothTime = toothLastToothTime; //promote falling edge timestamp to tooth.
@@ -729,6 +730,7 @@ void triggerPri_DualWheel()
     if(curGap >= triggerFilterTime && lastEdge == RISING){ //High frequency filter
       if (primaryTriggerEdge == FALLING){
       lastActiveEdgeTime=curTime; //Save timestamp. Rising edge gets identified as tooth on the next falling edge to avoid instantaneous uptate on the noise.      
+      validTrigger = true;
       }
       else{    
       toothLastMinusOneToothTime = toothLastToothTime; //promote rising edge timestamp to tooth.
@@ -764,7 +766,7 @@ void triggerPri_DualWheel()
   else if ((configPage4.useResync == 1 || currentStatus.hasSync == false) && validTrigger==true){ 
     if((curTime-toothLastToothTime) < (curTime-toothLastSecToothTime) && (curTime-toothLastSecToothTime)< (curTime-toothLastMinusOneToothTime) ){ //Check if secondary trigger happened within this primary tooth interval(overflow proof)
     //      gap to last tooth       <    gap to last secondary tooth  &&    gap to last secondary tooth <   gap to last minus one tooth
-      if(toothCurrentCount != 1){currentStatus.syncLossCounter++;}//indicates sync loss
+      if(toothCurrentCount != 1 || revolutionOne != 0 ){currentStatus.syncLossCounter++;}//indicates sync loss
       toothCurrentCount = 1;
       revolutionOne = 0;
       currentStatus.hasSync = true;
