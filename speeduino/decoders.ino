@@ -712,7 +712,7 @@ void triggerPri_DualWheel()
   if((a&&b&&c)){      //rising edge    
     if(curGap >= triggerFilterTime && lastEdge == FALLING ){ //High frequency filter
       if (primaryTriggerEdge == RISING){
-      lastActiveEdgeTime=curTime; //Save timestamp. Rising edge gets identified as tooth on the next falling edge to avoid instantaneous uptate on the noise.      
+      lastActiveEdgeTime=curTime; //Save timestamp. Rising edge gets identified as tooth on the next falling edge to avoid instantaneous update on the noise.      
       }
       else{
       toothLastMinusOneToothTime = toothLastToothTime; //promote falling edge timestamp to tooth.
@@ -727,7 +727,7 @@ void triggerPri_DualWheel()
   else if (!(a|b|c)){ //falling edge
     if(curGap >= triggerFilterTime && lastEdge == RISING){ //High frequency filter
       if (primaryTriggerEdge == FALLING){
-      lastActiveEdgeTime=curTime; //Save timestamp. Rising edge gets identified as tooth on the next falling edge to avoid instantaneous uptate on the noise.      
+      lastActiveEdgeTime=curTime; //Save timestamp. Edge gets identified as tooth on the next rising edge to avoid instantaneous update on the noise.      
       }
       else{    
       toothLastMinusOneToothTime = toothLastToothTime; //promote rising edge timestamp to tooth.
@@ -750,14 +750,14 @@ void triggerPri_DualWheel()
     toothOneTime = toothLastToothTime;
     currentStatus.startRevolutions++; //Counter
     //check for sync loss          
-    if(revolutionOne==0){ 
+    if(revolutionOne==0 && configPage4.useResync == 0){ 
       if((curTime-toothLastToothTime) < (curTime-toothLastSecToothTime) && (curTime-toothLastSecToothTime)< (curTime-toothLastMinusOneToothTime) ){ //Check if secondary trigger happened within this primary tooth interval
-        currentStatus.hasSync = true;          
-      }
+        currentStatus.hasSync = true;
+     }
       else{
         currentStatus.syncLossCounter++;//indicates sync loss
-        currentStatus.hasSync = false; 
-      } 
+         currentStatus.hasSync = false;
+        }
     }      
   }
   //pure resync stuff
@@ -834,24 +834,28 @@ int getCrankAngle_DualWheel()
 {
     //This is the current angle ATDC the engine is at. This is the last known position based on what tooth was last 'seen'. It is only accurate to the resolution of the trigger wheel (Eg 36-1 is 10 degrees)
     unsigned long tempToothLastToothTime;
+    unsigned long tempToothOneTime;
+    unsigned long tempToothOneMinusOneTime;
     int tempToothCurrentCount;
+    int extraCrankAngle; // crank angle past the latest tooth
     bool tempRevolutionOne;
     //Grab some variables that are used in the trigger code and assign them to temp variables.
     noInterrupts();
     tempToothCurrentCount = toothCurrentCount;
     tempToothLastToothTime = toothLastToothTime;
-    tempRevolutionOne = revolutionOne;
+    tempToothOneTime=toothOneTime;
+    tempToothOneMinusOneTime=toothOneMinusOneTime;
+    tempRevolutionOne = revolutionOne; //revolutionOne=0 during the first revolution, revolutionOne=1 during the second revoluiton
     lastCrankAngleCalc = micros();
     interrupts();
-
-    //Handle case where the secondary tooth was the last one seen
-    if(tempToothCurrentCount == 0) { tempToothCurrentCount = configPage4.triggerTeeth; }
 
     int crankAngle = ((tempToothCurrentCount - 1) * triggerToothAngle) + configPage4.triggerAngle; //Number of teeth that have passed since tooth 1, multiplied by the angle each tooth represents, plus the angle that tooth 1 is ATDC. This gives accuracy only to the nearest tooth.
 
     elapsedTime = (lastCrankAngleCalc - tempToothLastToothTime);
-    crankAngle += timeToAngle(elapsedTime, CRANKMATH_METHOD_INTERVAL_REV);
-
+    revolutionTime= (tempToothOneMinusOneTime-tempToothOneTime);
+//old    crankAngle += timeToAngle(elapsedTime, CRANKMATH_METHOD_INTERVAL_REV);
+    extraCrankAngle=360*elapsedTime/revolutionTime;
+    crankAngle +=extraCrankAngle;
     //Sequential check (simply sets whether we're on the first or 2nd revoltuion of the cycle)
     if (tempRevolutionOne) { crankAngle += 360; }
 
