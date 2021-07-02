@@ -179,6 +179,7 @@ struct Schedule {
   uint32_t (*getIgnCounter)(); //Function for getting counter value
   void (*setIgnitionCompare)(COMPARE_TYPE); //Function for setting counter compare value
   void (*ignTimerEnable)(); //Function to enable timer for specific channel
+  int channelIgnDegrees=0; // The number of crank degrees until corresponding cylinder is at TDC (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones)
 };
 
 //Fuel schedules don't use the callback pointers, or the startTime/endScheduleSetByDecoder variables. They are removed in this struct to save RAM
