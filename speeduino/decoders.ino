@@ -852,10 +852,10 @@ int getCrankAngle_DualWheel()
     int crankAngle = ((tempToothCurrentCount - 1) * triggerToothAngle) + configPage4.triggerAngle; //Number of teeth that have passed since tooth 1, multiplied by the angle each tooth represents, plus the angle that tooth 1 is ATDC. This gives accuracy only to the nearest tooth.
 
     elapsedTime = (lastCrankAngleCalc - tempToothLastToothTime);
-    revolutionTime= (tempToothOneMinusOneTime-tempToothOneTime);
-//old    crankAngle += timeToAngle(elapsedTime, CRANKMATH_METHOD_INTERVAL_REV);
-    extraCrankAngle=360*elapsedTime/revolutionTime;
-    crankAngle +=extraCrankAngle;
+//    revolutionTime= (tempToothOneMinusOneTime-tempToothOneTime);
+    crankAngle += timeToAngle(elapsedTime, CRANKMATH_METHOD_INTERVAL_REV);
+//    extraCrankAngle=360*elapsedTime/revolutionTime;
+//    crankAngle +=extraCrankAngle;
     //Sequential check (simply sets whether we're on the first or 2nd revoltuion of the cycle)
     if (tempRevolutionOne) { crankAngle += 360; }
 
