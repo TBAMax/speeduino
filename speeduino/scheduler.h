@@ -6,15 +6,15 @@ It functions by waiting for the overflow vectors from each of the timers in use 
 
 ## Technical
 
-Currently I am prescaling the 16-bit timers to 256 for injection and 64 for ignition.
-This means that the counter increments every 16us (injection) / 4uS (ignition) and will overflow every 1048576uS.
+Currently prescaling the 16-bit timers to 64 for injection and 64 for ignition.
+This means that the counter increments every 4us (injection) / 4uS (ignition) and will overflow every 262140uS.
 
     Max Period = (Prescale)*(1/Frequency)*(2^17)
 
 For more details see https://playground.arduino.cc/Code/Timer1/ (OLD: http://playground.arduino.cc/code/timer1 ).
 This means that the precision of the scheduler is:
 
-- 16uS (+/- 8uS of target) for fuel
+- 4uS for fuel
 - 4uS (+/- 2uS) for ignition
 
 ## Features
@@ -34,8 +34,8 @@ Arduino timers usage for injection and ignition schedules:
 Timers 3,4 and 5 are 16-bit timers (ie count to 65536).
 See page 136 of the processors datasheet: http://www.atmel.com/Images/doc2549.pdf .
 
-256 prescale gives tick every 16uS.
-256 prescale gives overflow every 1048576uS (This means maximum wait time is 1.0485 seconds).
+64 prescale gives tick every 4uS.
+64 prescale gives overflow every 262140uS (This means maximum wait time is 0.26214 seconds).
 
 */
 #ifndef SCHEDULER_H
@@ -47,7 +47,7 @@ See page 136 of the processors datasheet: http://www.atmel.com/Images/doc2549.pd
 #define IGNITION_REFRESH_THRESHOLD  230U //Time in uS that the refresh functions will check to ensure there is enough time before changing the end compare
 #define INJECTION_REFRESH_TRESHOLD  230U //Time in us that the refresh functions will check to ensure there is enough time before changing the start or end compare
 
-//(convert macros to inline functions for now)
+//(convert macros to functions for now)
 inline void setFuel1Compare(COMPARE_TYPE compareValue);
 inline void setFuel2Compare(COMPARE_TYPE compareValue);
 inline void setFuel3Compare(COMPARE_TYPE compareValue);
@@ -67,7 +67,7 @@ inline COMPARE_TYPE getFuel6Counter();
 inline COMPARE_TYPE getFuel7Counter();
 inline COMPARE_TYPE getFuel8Counter();
 
-//(convert macros to inline functions for now)
+//(convert macros to functions for now)
 inline void fuel1TimerDisable();//fuel timer disable functions 
 inline void fuel2TimerDisable();//fuel timer disable functions 
 inline void fuel3TimerDisable();//fuel timer disable functions 
@@ -77,7 +77,7 @@ inline void fuel6TimerDisable();//fuel timer disable functions
 inline void fuel7TimerDisable();//fuel timer disable functions 
 inline void fuel8TimerDisable();//fuel timer disable functions 
 
-//(convert macros to inline functions for now)
+//(convert macros to functions for now)
 inline void fuel1TimerEnable();//fuel timer enable functions 
 inline void fuel2TimerEnable();//fuel timer enable functions
 inline void fuel3TimerEnable();//fuel timer enable functions 
@@ -128,7 +128,6 @@ inline void setIgnition8Compare(COMPARE_TYPE value);
 void setFuelSchedule (struct FuelSchedule *targetSchedule, unsigned long duration);
 void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long duration);
 
-inline void refreshIgnitionSchedule1(unsigned long timeToEnd) __attribute__((always_inline));
 
 //The ARM cores use seprate functions for their ISRs
 #if defined(ARDUINO_ARCH_STM32) || defined(CORE_TEENSY)
