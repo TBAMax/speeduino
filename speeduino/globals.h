@@ -103,7 +103,7 @@
     #endif
   #elif defined(STM32F407xx)
     #ifndef NUM_DIGITAL_PINS
-      #define NUM_DIGITAL_PINS 75
+      #define NUM_DIGITAL_PINS 110
     #endif
   #endif
 
@@ -363,7 +363,7 @@
 #define GOING_LOW         0
 #define GOING_HIGH        1
 
-#define MAX_RPM 18000 /**< The maximum rpm that the ECU will attempt to run at. It is NOT related to the rev limiter, but is instead dictates how fast certain operations will be allowed to run. Lower number gives better performance */
+#define MAX_RPM 13000 /**< The maximum rpm that the ECU will attempt to run at. It is NOT related to the rev limiter, but is instead dictates how fast certain operations will be allowed to run. Lower number gives better performance */
 
 #define BATTV_COR_MODE_WHOLE 0
 #define BATTV_COR_MODE_OPENTIME 1
@@ -531,6 +531,10 @@ extern volatile PORT_TYPE *triggerPri_pin_port;
 extern volatile PINMASK_TYPE triggerPri_pin_mask;
 extern volatile PORT_TYPE *triggerSec_pin_port;
 extern volatile PINMASK_TYPE triggerSec_pin_mask;
+
+extern volatile PORT_TYPE *oilSensorOPSt_pin_port;
+extern volatile PINMASK_TYPE oilSensorOPSt_pin_mask;
+
 
 extern byte triggerInterrupt;
 extern byte triggerInterrupt2;
@@ -728,6 +732,7 @@ struct statuses {
   byte gear;         /**< Current gear (Calculated from vss) */
   byte fuelPressure; /**< Fuel pressure in PSI */
   byte oilPressure;  /**< Oil pressure in PSI */
+  byte oilTemperature;
   byte engineProtectStatus;
   byte fanDuty;
   byte wmiPW;
@@ -1130,10 +1135,13 @@ struct config9 {
   uint16_t canoutput_param_group[8];
   uint8_t canoutput_param_start_byte[8];
   byte canoutput_param_num_bytes[8];
+  byte oilTemperatureEnable : 1;
+  byte oilTemperaturePin : 4;
+  byte oilTemperatureFault : 1;
+  byte unused10_110 : 2;
+  int8_t oilTemperatureMin;
+  byte oilTemperatureMax;
 
-  byte unused10_110;
-  byte unused10_111;
-  byte unused10_112;
   byte unused10_113;
   byte speeduino_tsCanId:4;         //speeduino TS canid (0-14)
   uint16_t true_address;            //speeduino 11bit can address
@@ -1161,7 +1169,8 @@ struct config9 {
   byte coolantProtEnbl : 1;
   byte coolantProtRPM[6];
   byte coolantProtTemp[6];
-  byte unused10_179;
+  byte oilSensorOPStPin : 7;
+  byte unused10_179 : 1;
   byte unused10_180;
   byte unused10_181;
   byte unused10_182;
@@ -1291,11 +1300,11 @@ struct config10 {
   byte crankingEnrichTaper; //Byte 134
 
   byte fuelPressureEnable : 1; ///< Enable fuel pressure sensing from an analog pin (@ref pinFuelPressure)
-  byte oilPressureEnable : 1;  ///< Enable oil pressure sensing from an analog pin (@ref pinOilPressure)
+  byte oilPressureEnable : 2;  ///< Enable oil pressure sensing from an analog pin (@ref pinOilPressure)
   byte oilPressureProtEnbl : 1;
-  byte oilPressurePin : 5;
+  byte unused10_135 : 4;
 
-  byte fuelPressurePin : 5;
+  byte oilPressurePin : 5;
   byte unused11_165 : 3;
   
   int8_t fuelPressureMin;
@@ -1353,8 +1362,10 @@ struct config10 {
   byte spark2InputPolarity : 1;
   byte spark2InputPullup : 1;
 
-  byte unused11_187_191[2]; //Bytes 187-191
+  byte fuelPressurePin : 5;
+  byte unused10_190 : 3; 
 
+  byte unused10_191; //Byte 191
 #if defined(CORE_AVR)
   };
 #else
@@ -1491,6 +1502,7 @@ extern byte pinBaro; //Pin that an external barometric pressure sensor is attach
 extern byte pinResetControl; // Output pin used control resetting the Arduino
 extern byte pinFuelPressure;
 extern byte pinOilPressure;
+extern byte pinOilSensorOPSt;
 extern byte pinWMIEmpty; // Water tank empty sensor
 extern byte pinWMIIndicator; // No water indicator bulb
 extern byte pinWMIEnabled; // ON-OFF ouput to relay/pump/solenoid 
