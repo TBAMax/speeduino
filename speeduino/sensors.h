@@ -92,6 +92,7 @@ void initializeFlex();
 void initBaro();         //initialize baro
 ADCstates readTPS(bool useFilter, ADCstates adcState); //this is to be called repeatedly //Allows the option to override the use of the filter
 void flexPulse();
+void getFlex();
 uint32_t vssGetPulseGap(byte);
 void vssPulse();
 uint16_t getSpeed();
