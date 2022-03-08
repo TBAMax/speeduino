@@ -129,7 +129,7 @@ void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, i
     //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
     injectorEndAngle += CRANK_ANGLE_MAX_INJ;
     timeout=(injectorEndAngle - crankAngle) * (unsigned long)timePerDegree;
-      if(timeout < MAX_TIMER_PERIOD)
+      if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + INJECTION_REFRESH_TRESHOLD)&&((COMPARE_TYPE)(targetSchedule->endCompare-targetSchedule->getFuelCounter())>400U))
       {
       noInterrupts();
       targetSchedule->nextEndCompare = targetSchedule->getFuelCounter() + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout));
@@ -332,30 +332,44 @@ fuelScheduleInterrupt(&fuelSchedule8);
 
 void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
 {
-    if (fuelSchedule->Status == PENDING) //Check to see if this schedule is turn on
+  if (fuelSchedule->Status == PENDING) //Check to see if this schedule is turn on
+  {
+    fuelSchedule->setFuelCompare(fuelSchedule->endCompare);
+    fuelSchedule->injStartFunction();
+    fuelSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)    
+  }
+  else if (fuelSchedule->Status == RUNNING)
+  {
+    //If there is a next schedule queued up, activate it
+    if(fuelSchedule->hasNextSchedule == true)
     {
-      fuelSchedule->injStartFunction();
-      fuelSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
-      fuelSchedule->setFuelCompare(fuelSchedule->endCompare);
+      if((fuelSchedule->nextEndCompare-fuelSchedule->nextStartCompare)+ uS_TO_TIMER_COMPARE(INJECTION_OVERLAP_TRESHOLD)>=(fuelSchedule->nextEndCompare-fuelSchedule->endCompare)) //check for possible overlap
+      {
+        fuelSchedule->setFuelCompare(fuelSchedule->nextEndCompare);
+        fuelSchedule->endCompare = fuelSchedule->nextEndCompare;
+        fuelSchedule->Status = RUNNING;
+        fuelSchedule->hasNextSchedule = false;
+      }
+      else //no overlap
+      {
+        fuelSchedule->injEndFunction();
+        fuelSchedule->setFuelCompare(fuelSchedule->nextStartCompare);
+        fuelSchedule->endCompare = fuelSchedule->nextEndCompare;
+        fuelSchedule->Status = PENDING;
+        fuelSchedule->hasNextSchedule = false;
+      }
     }
-    else if (fuelSchedule->Status == RUNNING)
+    else //no next schedule
     {
-       fuelSchedule->injEndFunction();
-       fuelSchedule->Status = OFF; //Turn off the schedule
-
-       //If there is a next schedule queued up, activate it
-       if(fuelSchedule->hasNextSchedule == true)
-       {
-         fuelSchedule->setFuelCompare(fuelSchedule->nextStartCompare);
-         fuelSchedule->endCompare = fuelSchedule->nextEndCompare;
-         fuelSchedule->Status = PENDING;
-         fuelSchedule->hasNextSchedule = false;
-       }
-       else {fuelSchedule->fuelTimerDisable(); }
+    fuelSchedule->injEndFunction();
+    fuelSchedule->Status = OFF; //Turn off the schedule        
     }
-    else {
-      fuelSchedule->injEndFunction();
-      fuelSchedule->fuelTimerDisable(); } //Safety check. Turn off this output compare unit and return without performing any action
+  }
+  else //(fuelSchedule->Status == OFF)
+  {
+    fuelSchedule->injEndFunction();
+    fuelSchedule->fuelTimerDisable(); //Safety check. Turn off this output compare unit and return without performing any action
+  } 
 }
 
 #if IGN_CHANNELS >= 1
