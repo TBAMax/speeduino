@@ -916,10 +916,20 @@ void initialiseAll()
         //Semi-Sequential injection. Currently possible with 4, 6 and 8 cylinders. 5 cylinder is a special case
         if( configPage2.nCylinders == 4 )
         {
-          fuelSchedule1.injStartFunction = openInjector1and4;
-          fuelSchedule1.injEndFunction = closeInjector1and4;
-          fuelSchedule2.injStartFunction = openInjector2and3;
-          fuelSchedule2.injEndFunction = closeInjector2and3;
+          if(configPage4.inj4cylPairing == INJ_PAIR_13_24)
+          {
+            fuelSchedule1.injStartFunction = openInjector1and3;
+            fuelSchedule1.injEndFunction = closeInjector1and3;
+            fuelSchedule2.injStartFunction = openInjector2and4;
+            fuelSchedule2.injEndFunction = closeInjector2and4;
+          }
+          else
+          {
+            fuelSchedule1.injStartFunction = openInjector1and4;
+            fuelSchedule1.injEndFunction = closeInjector1and4;
+            fuelSchedule2.injStartFunction = openInjector2and3;
+            fuelSchedule2.injEndFunction = closeInjector2and3;
+          }
         }
         else if( configPage2.nCylinders == 5 ) //This is similar to the paired injection but uses five injector outputs instead of four
         {
