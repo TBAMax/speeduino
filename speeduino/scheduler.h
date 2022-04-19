@@ -20,7 +20,7 @@ This means that the precision of the scheduler is:
 ## Features
 
 This differs from most other schedulers in that its calls are non-recurring (ie when you schedule an event at a certain time and once it has occurred,
-it will not reoccur unless you explicitely ask/re-register for it).
+it will not reoccur unless you explicitly ask/re-register for it).
 Each timer can have only 1 callback associated with it at any given time. If you call the setCallback function a 2nd time,
 the original schedule will be overwritten and not occur.
 

@@ -348,7 +348,7 @@ ADCstates readMAP(ADCstates adcState)
     case 1:
       //Average of a cycle
 
-      if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && (currentStatus.hasSync == true) && (currentStatus.startRevolutions > 1) ) //If the engine isn't running and RPM below switch point, fall back to instantaneous reads
+      if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && ((currentStatus.hasSync == true) || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) && (currentStatus.startRevolutions > 1) ) //If the engine isn't running and RPM below switch point, fall back to instantaneous reads
       {
         if( (MAPcurRev == currentStatus.startRevolutions) || ( (MAPcurRev+1) == currentStatus.startRevolutions) ) //2 revolutions are looked at for 4 stroke. 2 stroke not currently catered for.
         {
@@ -363,7 +363,7 @@ ADCstates readMAP(ADCstates adcState)
         }
         else
         {
-          //Reaching here means that the last cylce has completed and the MAP value should be calculated
+          //Reaching here means that the last cycle has completed and the MAP value should be calculated
           //Sanity check
           if( (MAPrunningValue != 0) && (MAPcount != 0) )
           {
@@ -406,7 +406,7 @@ ADCstates readMAP(ADCstates adcState)
         }
         else
         {
-          //Reaching here means that the last cylce has completed and the MAP value should be calculated
+          //Reaching here means that the last cycle has completed and the MAP value should be calculated
 
           //Update the calculation times and last value. These are used by the MAP based Accel enrich
           MAPlast = currentStatus.MAP;
@@ -430,7 +430,7 @@ ADCstates readMAP(ADCstates adcState)
 
     case 3:
       //Average of an ignition event
-      if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && (currentStatus.hasSync == true) && (currentStatus.startRevolutions > 1) && (! currentStatus.engineProtectStatus) ) //If the engine isn't running, fall back to instantaneous reads
+      if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && ((currentStatus.hasSync == true) || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) && (currentStatus.startRevolutions > 1) && (! currentStatus.engineProtectStatus) ) //If the engine isn't running, fall back to instantaneous reads
       {
         if( (MAPcurRev == ignitionCount) ) //Watch for a change in the ignition counter to determine whether we're still on the same event
         {
@@ -446,7 +446,7 @@ ADCstates readMAP(ADCstates adcState)
         }
         else
         {
-          //Reaching here means that the  next ignition event has occured and the MAP value should be calculated
+          //Reaching here means that the  next ignition event has occurred and the MAP value should be calculated
           //Sanity check
           if( (MAPrunningValue != 0) && (MAPcount != 0) && (MAPcurRev < ignitionCount) )
           {
@@ -894,10 +894,10 @@ ADCstates readBat(ADCstates adcState)
 
   //The following is a check for if the voltage has jumped up from under 5.5v to over 7v.
   //If this occurs, it's very likely that the system has gone from being powered by USB to being powered from the 12v power source.
-  //Should that happen, we retrigger the fuel pump priming and idle homing (If using a stepper)
+  //Should that happen, we re-trigger the fuel pump priming and idle homing (If using a stepper)
   if( (currentStatus.battery10 < 55) && (tempReading > 70) && (currentStatus.RPM == 0) )
   {
-    //Reprime the fuel pump
+    //Re-prime the fuel pump
     fpPrimeTime = currentStatus.secl;
     fpPrimed = false;
     FUEL_PUMP_ON();
@@ -976,7 +976,7 @@ byte getGear()
     //If the speed is non-zero, default to the last calculated gear
     tempGear = currentStatus.gear;
 
-    uint16_t pulsesPer1000rpm = (currentStatus.vss * 10000UL) / currentStatus.RPM; //Gives the current pulses per 1000RPM, multipled by 10 (10x is the multiplication factor for the ratios in TS)
+    uint16_t pulsesPer1000rpm = (currentStatus.vss * 10000UL) / currentStatus.RPM; //Gives the current pulses per 1000RPM, multiplied by 10 (10x is the multiplication factor for the ratios in TS)
     //Begin gear detection
     if( (pulsesPer1000rpm > (configPage2.vssRatio1 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio1 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 1; }
     else if( (pulsesPer1000rpm > (configPage2.vssRatio2 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio2 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 2; }
