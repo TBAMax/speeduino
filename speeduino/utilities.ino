@@ -13,7 +13,9 @@
 #include "decoders.h"
 #include "comms.h"
 #include "logger.h"
+#include "scheduler.h"
 #include "scheduledIO.h"
+#include "speeduino.h"
 
 uint8_t ioDelay[sizeof(configPage13.outputPin)];
 uint8_t ioOutDelay[sizeof(configPage13.outputPin)];
@@ -116,6 +118,191 @@ void setResetControlPinState()
 }
 
 
+/** Change injectors or/and ignition angles to 720deg.
+ * Roll back req_fuel size and set number of outputs equal to cylinder count.
+* */
+void changeHalfToFullSync(void)
+{
+  //Need to do another check for injLayout as this function can be called from ignition
+  if( (configPage2.injLayout == INJ_SEQUENTIAL) && (CRANK_ANGLE_MAX_INJ != 720) )
+  {
+    CRANK_ANGLE_MAX_INJ = 720;
+    maxIgnOutputs = configPage2.nCylinders;
+    req_fuel_uS *= 2;
+    switch (configPage2.nCylinders)
+    {
+      case 4:
+        fuelSchedule1.injStartFunction = openInjector1;
+        fuelSchedule1.injEndFunction = closeInjector1;
+        fuelSchedule2.injStartFunction = openInjector2;
+        fuelSchedule2.injEndFunction = closeInjector2;
+        channel3InjEnabled = true;
+        channel4InjEnabled = true;
+        break;
+            
+      case 6:
+        fuelSchedule1.injStartFunction = openInjector1;
+        fuelSchedule1.injEndFunction = closeInjector1;
+        fuelSchedule2.injStartFunction = openInjector2;
+        fuelSchedule2.injEndFunction = closeInjector2;
+        fuelSchedule3.injStartFunction = openInjector3;
+        fuelSchedule3.injEndFunction = closeInjector3;
+        channel4InjEnabled = true;
+        channel5InjEnabled = true;
+        channel6InjEnabled = true;
+        break;
+
+      case 8:
+        fuelSchedule1.injStartFunction = openInjector1;
+        fuelSchedule1.injEndFunction = closeInjector1;
+        fuelSchedule2.injStartFunction = openInjector2;
+        fuelSchedule2.injEndFunction = closeInjector2;
+        fuelSchedule3.injStartFunction = openInjector3;
+        fuelSchedule3.injEndFunction = closeInjector3;
+        fuelSchedule4.injStartFunction = openInjector4;
+        fuelSchedule4.injEndFunction = closeInjector4;
+        channel5InjEnabled = true;
+        channel6InjEnabled = true;
+        channel7InjEnabled = true;
+        channel8InjEnabled = true;
+        break;
+
+    }
+  }
+
+  //Need to do another check for sparkMode as this function can be called from injection
+  if( (configPage4.sparkMode == IGN_MODE_SEQUENTIAL) && (CRANK_ANGLE_MAX_IGN != 720) )
+  {
+    CRANK_ANGLE_MAX_IGN = 720;
+    maxIgnOutputs = configPage2.nCylinders;
+    switch (configPage2.nCylinders)
+    {
+    case 4:
+      ignitionSchedule1.StartFunction = beginCoil1Charge;
+      ignitionSchedule1.EndFunction = endCoil1Charge;
+      ignitionSchedule2.StartFunction = beginCoil2Charge;
+      ignitionSchedule2.EndFunction = endCoil2Charge;
+      break;
+
+    case 6:
+      ignitionSchedule1.StartFunction = beginCoil1Charge;
+      ignitionSchedule1.EndFunction = endCoil1Charge;
+      ignitionSchedule2.StartFunction = beginCoil2Charge;
+      ignitionSchedule2.EndFunction = endCoil2Charge;
+      ignitionSchedule3.StartFunction = beginCoil3Charge;
+      ignitionSchedule3.EndFunction = endCoil3Charge;
+      break;
+
+    case 8:
+      ignitionSchedule1.StartFunction = beginCoil1Charge;
+      ignitionSchedule1.EndFunction = endCoil1Charge;
+      ignitionSchedule2.StartFunction = beginCoil2Charge;
+      ignitionSchedule2.EndFunction = endCoil2Charge;
+      ignitionSchedule3.StartFunction = beginCoil3Charge;
+      ignitionSchedule3.EndFunction = endCoil3Charge;
+      ignitionSchedule4.StartFunction = beginCoil4Charge;
+      ignitionSchedule4.EndFunction = endCoil4Charge;
+      break;
+    }
+  }
+}
+
+/** Change injectors or/and ignition angles to 360deg.
+ * In semi sequentiol mode req_fuel size is half.
+ * Set number of outputs equal to half cylinder count.
+* */
+void changeFullToHalfSync(void)
+{
+  if(configPage2.injLayout == INJ_SEQUENTIAL)
+  {
+    CRANK_ANGLE_MAX_INJ = 360;
+    maxIgnOutputs = configPage2.nCylinders / 2;
+    req_fuel_uS /= 2;
+    switch (configPage2.nCylinders)
+    {
+      case 4:
+        if(configPage4.inj4cylPairing == INJ_PAIR_13_24)
+        {
+          fuelSchedule1.injStartFunction = openInjector1and3;
+          fuelSchedule1.injEndFunction = closeInjector1and3;
+          fuelSchedule2.injStartFunction = openInjector2and4;
+          fuelSchedule2.injEndFunction = closeInjector2and4;
+        }
+        else
+        {
+          fuelSchedule1.injStartFunction = openInjector1and4;
+          fuelSchedule1.injEndFunction = closeInjector1and4;
+          fuelSchedule2.injStartFunction = openInjector2and3;
+          fuelSchedule2.injEndFunction = closeInjector2and3;
+        }
+        channel3InjEnabled = false;
+        channel4InjEnabled = false;
+        break;
+            
+      case 6:
+        fuelSchedule1.injStartFunction = openInjector1and4;
+        fuelSchedule1.injEndFunction = closeInjector1and4;
+        fuelSchedule2.injStartFunction = openInjector2and5;
+        fuelSchedule2.injEndFunction = closeInjector2and5;
+        fuelSchedule3.injStartFunction = openInjector3and6;
+        fuelSchedule3.injEndFunction = closeInjector3and6;
+        channel4InjEnabled = false;
+        channel5InjEnabled = false;
+        channel6InjEnabled = false;
+        break;
+
+      case 8:
+        fuelSchedule1.injStartFunction = openInjector1and5;
+        fuelSchedule1.injEndFunction = closeInjector1and5;
+        fuelSchedule2.injStartFunction = openInjector2and6;
+        fuelSchedule2.injEndFunction = closeInjector2and6;
+        fuelSchedule3.injStartFunction = openInjector3and7;
+        fuelSchedule3.injEndFunction = closeInjector3and7;
+        fuelSchedule4.injStartFunction = openInjector4and8;
+        fuelSchedule4.injEndFunction = closeInjector4and8;
+        channel5InjEnabled = false;
+        channel6InjEnabled = false;
+        channel7InjEnabled = false;
+        channel8InjEnabled = false;
+        break;
+    }
+  }
+
+  if(configPage4.sparkMode == IGN_MODE_SEQUENTIAL)
+  {
+    CRANK_ANGLE_MAX_IGN = 360;
+    maxIgnOutputs = configPage2.nCylinders / 2;
+    switch (configPage2.nCylinders)
+    {
+      case 4:
+        ignitionSchedule1.StartFunction = beginCoil1and3Charge;
+        ignitionSchedule1.EndFunction = endCoil1and3Charge;
+        ignitionSchedule2.StartFunction = beginCoil2and4Charge;
+        ignitionSchedule2.EndFunction = endCoil2and4Charge;
+        break;
+            
+      case 6:
+        ignitionSchedule1.StartFunction = beginCoil1and4Charge;
+        ignitionSchedule1.EndFunction = endCoil1and4Charge;
+        ignitionSchedule2.StartFunction = beginCoil2and5Charge;
+        ignitionSchedule2.EndFunction = endCoil2and5Charge;
+        ignitionSchedule3.StartFunction = beginCoil3and6Charge;
+        ignitionSchedule3.EndFunction = endCoil3and6Charge;
+        break;
+
+      case 8:
+        ignitionSchedule1.StartFunction = beginCoil1and5Charge;
+        ignitionSchedule1.EndFunction = endCoil1and5Charge;
+        ignitionSchedule2.StartFunction = beginCoil2and6Charge;
+        ignitionSchedule2.EndFunction = endCoil2and6Charge;
+        ignitionSchedule3.StartFunction = beginCoil3and7Charge;
+        ignitionSchedule3.EndFunction = endCoil3and7Charge;
+        ignitionSchedule4.StartFunction = beginCoil4and8Charge;
+        ignitionSchedule4.EndFunction = endCoil4and8Charge;
+        break;
+    }
+  }
+}
 //*********************************************************************************************************************************************************************************
 void initialiseProgrammableIO()
 {
