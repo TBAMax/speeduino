@@ -107,9 +107,16 @@ void setFuelSchedule (struct Schedule *targetSchedule, int16_t crankAngle, int16
  * - OFF - Schedule turned off and there is no scheduled plan
  * - PENDING - There's a scheduled plan, but is has not started to run yet
  * - STAGED - (???, Not used)
- * - RUNNING - Schedule is currently running
+ * - RUNNING - Schedule is currently running,
+ * - RUNNINGHASNEXT - Schedule is currently running, but has a next schedule to run
  */
-enum ScheduleStatus {OFF, PENDING, STAGED, RUNNING}; //The statuses that a schedule can have
+enum ScheduleStatus {
+  OFF, 
+  PENDING,
+  STAGED,
+  RUNNING,
+  RUNNINGHASNEXT,  
+}; //The statuses that a schedule can have
 
 /** Ignition schedule.
  */
@@ -130,20 +137,26 @@ struct Schedule {
   {
   }
 
-  volatile ScheduleStatus Status; ///< Schedule status: OFF, PENDING, STAGED, RUNNING
+  volatile ScheduleStatus Status; ///< Schedule status: OFF, PENDING, STAGED, RUNNING, RUNNINGHASNEXT
   void (*pStartFunction)();        ///< Start Callback function for schedule
   void (*pEndFunction)();          ///< End Callback function for schedule
   volatile COMPARE_TYPE endCompare;   ///< The counter value of the timer when this will end
 
-  volatile COMPARE_TYPE nextStartCompare;      ///< Planned start of next schedule (when current schedule is RUNNING)
-  volatile COMPARE_TYPE nextEndCompare;        ///< Planned end of next schedule (when current schedule is RUNNING)
-  volatile bool hasNextSchedule = false; ///< Enable flag for planned next schedule (when current schedule is RUNNING)
+  volatile COMPARE_TYPE nextStartCompare;      ///< Planned start of next schedule (when current schedule is RUNNINGHASNEXT)
+  volatile COMPARE_TYPE nextEndCompare;        ///< Planned end of next schedule (when current schedule is RUNNINGHASNEXT)
 
   counter_t &counter;  // Reference to the counter register. E.g. TCNT3
   compare_t &compare;  // Reference to the compare register. E.g. OCR3A
   void (&pTimerDisable)();    // Reference to the timer disable function
   void (&pTimerEnable)();     // Reference to the timer enable function
 };
+
+inline bool isRunning(const Schedule &schedule) {
+  return schedule.Status==RUNNING || schedule.Status==RUNNINGHASNEXT;
+}
+inline bool isPending(const Schedule &schedule) {
+  return schedule.Status==PENDING;
+}
 
 struct FuelSchedule: public Schedule {
   FuelSchedule(counter_t &counter, compare_t &compare,
