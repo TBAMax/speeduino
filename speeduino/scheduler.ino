@@ -142,7 +142,7 @@ void initialiseSchedulers()
 /*
 New generic function.
 */
-void setFuelSchedule (struct Schedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long duration)
+void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long duration)
 {
   unsigned long timeout;
 
@@ -182,7 +182,7 @@ void setFuelSchedule (struct Schedule *targetSchedule, int16_t crankAngle, int16
 }
 
 //separate function for setting the fuel schedules at priming
-void setFuelSchedule (struct Schedule *targetSchedule, unsigned long duration)
+void setFuelSchedule (struct FuelSchedule *targetSchedule, unsigned long duration)
 {
   if(!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
   {      
@@ -196,7 +196,7 @@ void setFuelSchedule (struct Schedule *targetSchedule, unsigned long duration)
 }
 
 //New generic function
-void setIgnitionSchedule(struct Schedule *targetSchedule ,  int16_t crankAngle, int ignitionEndAngle, unsigned long duration)
+void setIgnitionSchedule(struct IgnSchedule *targetSchedule ,  int16_t crankAngle, int ignitionEndAngle, unsigned long duration)
 {
   unsigned long timeout;
 
@@ -223,19 +223,19 @@ void setIgnitionSchedule(struct Schedule *targetSchedule ,  int16_t crankAngle, 
     ignitionEndAngle += CRANK_ANGLE_MAX_IGN;
     //timeout=(tempEndAngle - crankAngle) * (unsigned long)timePerDegree;
     timeout= angleToTime((ignitionEndAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
-      if(timeout < MAX_TIMER_PERIOD)
-      {
+    if(timeout < MAX_TIMER_PERIOD)
+    {
       noInterrupts();
       targetSchedule->nextEndCompare = targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout));
       targetSchedule->nextStartCompare = targetSchedule->nextEndCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration));      
       targetSchedule->Status = RUNNINGHASNEXT;
       interrupts();
-      }
+    }
   }
 }
 
 //overload function for starting schedule(dwell) immediately, this is used in the fixed cranking ignition
-void setIgnitionSchedule(struct Schedule *ignitionSchedule)
+void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule)
 {            
   ignitionSchedule->pStartFunction(); //start coil charging
   ignitionSchedule->compare = ignitionSchedule->counter+ (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(currentStatus.dwell));
@@ -281,6 +281,48 @@ void beginInjectorPriming()
 * - startCallback - change scheduler into RUNNING state
 * - endCallback - change scheduler into OFF state (or PENDING if schedule.hasNextSchedule is set)
 */
+
+
+static void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
+{
+  if (isPending(*fuelSchedule)) //Check to see if this schedule is turn on
+  {
+    fuelSchedule->compare = fuelSchedule->endCompare;
+    fuelSchedule->pStartFunction();
+    fuelSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)    
+  }
+  else if (isRunning(*fuelSchedule))
+  {
+    //If there is a next schedule queued up, activate it
+    if(fuelSchedule->Status == RUNNINGHASNEXT)
+    {
+      if((fuelSchedule->nextEndCompare-fuelSchedule->nextStartCompare)+ uS_TO_TIMER_COMPARE(INJECTION_OVERLAP_TRESHOLD)>=(fuelSchedule->nextEndCompare-fuelSchedule->endCompare)) //check for possible overlap
+      {
+        fuelSchedule->compare = fuelSchedule->nextEndCompare;
+        fuelSchedule->endCompare = fuelSchedule->nextEndCompare;
+        fuelSchedule->Status = RUNNING;
+      }
+      else //no overlap
+      {
+        fuelSchedule->pEndFunction();
+        fuelSchedule->compare = fuelSchedule->nextStartCompare;
+        fuelSchedule->endCompare = fuelSchedule->nextEndCompare;
+        fuelSchedule->Status = PENDING;
+      }
+    }
+    else //no next schedule
+    {
+    fuelSchedule->pEndFunction();
+    fuelSchedule->Status = OFF; //Turn off the schedule        
+    }
+  }
+  else //(fuelSchedule->Status == OFF)
+  {
+    fuelSchedule->pEndFunction();
+    fuelSchedule->pTimerDisable(); //Safety check. Turn off this output compare unit and return without performing any action
+  } 
+}
+
 //Timer3A (fuel schedule 1) Compare Vector
 #if (INJ_CHANNELS >= 1)
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__) //AVR chips use the ISR for this
@@ -370,43 +412,36 @@ fuelScheduleInterrupt(&fuelSchedule8);
 }
 #endif
 
-void fuelScheduleInterrupt(struct Schedule *fuelSchedule)
+
+static void ignitionScheduleInterrupt(struct IgnSchedule *targetSchedule) // common function that all ignition channel interrupts use
 {
-  if (isPending(*fuelSchedule)) //Check to see if this schedule is turn on
+  if (isPending(*targetSchedule)) //Check to see if this schedule is turn on
   {
-    fuelSchedule->compare = fuelSchedule->endCompare;
-    fuelSchedule->pStartFunction();
-    fuelSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)    
+    targetSchedule->pStartFunction();
+    targetSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
+    targetSchedule->compare = targetSchedule->endCompare;
   }
-  else if (isRunning(*fuelSchedule))
+  else if (isRunning(*targetSchedule))
   {
-    //If there is a next schedule queued up, activate it
-    if(fuelSchedule->Status == RUNNINGHASNEXT)
+    targetSchedule->pEndFunction(); //Moment of spark 
+
+      //If there is a next schedule queued up, activate it
+    if(targetSchedule->Status == RUNNINGHASNEXT)
     {
-      if((fuelSchedule->nextEndCompare-fuelSchedule->nextStartCompare)+ uS_TO_TIMER_COMPARE(INJECTION_OVERLAP_TRESHOLD)>=(fuelSchedule->nextEndCompare-fuelSchedule->endCompare)) //check for possible overlap
-      {
-        fuelSchedule->compare = fuelSchedule->nextEndCompare;
-        fuelSchedule->endCompare = fuelSchedule->nextEndCompare;
-        fuelSchedule->Status = RUNNING;
-      }
-      else //no overlap
-      {
-        fuelSchedule->pEndFunction();
-        fuelSchedule->compare = fuelSchedule->nextStartCompare;
-        fuelSchedule->endCompare = fuelSchedule->nextEndCompare;
-        fuelSchedule->Status = PENDING;
-      }
+      targetSchedule->compare = targetSchedule->nextStartCompare;
+      targetSchedule->endCompare = targetSchedule->nextEndCompare;
+      targetSchedule->Status = PENDING;
     }
-    else //no next schedule
+    else
     {
-    fuelSchedule->pEndFunction();
-    fuelSchedule->Status = OFF; //Turn off the schedule        
+      targetSchedule->pTimerDisable();
+      targetSchedule->Status = OFF; //Turn off the schedule
     }
   }
-  else //(fuelSchedule->Status == OFF)
+  else //Safety check. Turn off this output compare unit and return without performing any action
   {
-    fuelSchedule->pEndFunction();
-    fuelSchedule->pTimerDisable(); //Safety check. Turn off this output compare unit and return without performing any action
+    targetSchedule->pEndFunction();
+    targetSchedule->pTimerDisable(); 
   } 
 }
 
@@ -497,35 +532,3 @@ static inline void ignitionSchedule8Interrupt() //Most ARM chips can simply call
 ignitionScheduleInterrupt(&ignitionSchedule8);
 }
 #endif
-
-void ignitionScheduleInterrupt(struct Schedule *targetSchedule) // common function that all ignition channel interrupts use
-{
-    if (isPending(*targetSchedule)) //Check to see if this schedule is turn on
-    {
-      targetSchedule->pStartFunction();
-      targetSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
-      targetSchedule->compare = targetSchedule->endCompare;
-    }
-    else if (isRunning(*targetSchedule))
-    {
-      targetSchedule->pEndFunction(); //Moment of spark 
-
-       //If there is a next schedule queued up, activate it
-      if(targetSchedule->Status == RUNNINGHASNEXT)
-      {
-        targetSchedule->compare = targetSchedule->nextStartCompare;
-        targetSchedule->endCompare = targetSchedule->nextEndCompare;
-        targetSchedule->Status = PENDING;
-      }
-      else
-      {
-        targetSchedule->pTimerDisable();
-        targetSchedule->Status = OFF; //Turn off the schedule
-      }
-    }
-    else //Safety check. Turn off this output compare unit and return without performing any action
-    {
-      targetSchedule->pEndFunction();
-      targetSchedule->pTimerDisable(); 
-      } 
-}

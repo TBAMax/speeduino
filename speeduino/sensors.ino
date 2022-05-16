@@ -114,6 +114,17 @@ void initializeAux()         //The following checks the aux inputs and initialis
   } //For loop iterating through aux in lines
 }
 
+//Get the TPS change rate 
+void readTPSdot(){
+  int TPSrateOfChange;
+  static uint8_t TPSlast; //The previous TPS reading  
+  //note here that TPS read frequency is specially chosen 40Hz to get optimally fast and accurate tpsDOT calculation(to have whole numbers in integer multiplication)
+  TPSrateOfChange = (TPS_READ_FREQUENCY/20) * (currentStatus.TPS-TPSlast); //This is the % per second that the TPS has moved
+  //The TAE bins are divided by 10 in order to allow them to be stored in a byte and then by 2 due to TPS being 0.5% resolution (0-200)
+  currentStatus.tpsDOT=constrain(TPSrateOfChange, 0, 255); // cap the range to 8bit unsigned and store. Can it be any more simpler!?
+  TPSlast = currentStatus.TPS;
+}
+
 /** ADC sequencer.
  *  Should be called repeatedly.
  *  Starts ADC coversions in sequence, 
@@ -710,16 +721,7 @@ ADCstates readTPS(bool useFilter, ADCstates adcState) //this is to be called rep
   
   return adcState;
 }
-//Get the TPS change rate 
-void readTPSdot(){
-  int TPSrateOfChange;
-  static uint8_t TPSlast; //The previous TPS reading  
-  //note here that TPS read frequency is specially chosen 40Hz to get optimally fast and accurate tpsDOT calculation(to have whole numbers in integer multiplication)
-  TPSrateOfChange = (TPS_READ_FREQUENCY/20) * (currentStatus.TPS-TPSlast); //This is the % per second that the TPS has moved
-  //The TAE bins are divided by 10 in order to allow them to be stored in a byte and then by 2 due to TPS being 0.5% resolution (0-200)
-  currentStatus.tpsDOT=constrain(TPSrateOfChange, 0, 255); // cap the range to 8bit unsigned and store. Can it be any more simpler!?
-  TPSlast = currentStatus.TPS;
-}
+
 
 ADCstates readCLT(bool useFilter,ADCstates adcState)
 {

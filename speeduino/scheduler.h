@@ -48,18 +48,6 @@ See page 136 of the processors datasheet: http://www.atmel.com/Images/doc2549.pd
 #define INJECTION_REFRESH_TRESHOLD  230U //Time in us that the refresh functions will check to ensure there is enough time before changing the start or end compare
 #define INJECTION_OVERLAP_TRESHOLD  96U //Time in us, basically minimum injector off time that is allowed.
 
-void initialiseSchedulers();
-void beginInjectorPriming();
-
-void setIgnitionSchedule(struct Schedule *ignitionSchedule , int16_t crankAngle,int ignitionEndAngle, unsigned long duration);
-void setIgnitionSchedule(struct Schedule *ignitionSchedule); //overload function for starting schedule(dwell) immediately, this is used in the fixed cranking ignition
-
-void ignitionScheduleInterrupt(struct Schedule *ignitionSchedule);
-
-void setFuelSchedule (struct Schedule *targetSchedule, unsigned long duration);
-void setFuelSchedule (struct Schedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long duration);
-
-
 //The ARM cores use seprate functions for their ISRs
 #if defined(ARDUINO_ARCH_STM32) || defined(CORE_TEENSY)
   static inline void fuelSchedule1Interrupt();
@@ -207,5 +195,13 @@ extern IgnSchedule ignitionSchedule7;
 extern IgnSchedule ignitionSchedule8;
 #endif
 
+void initialiseSchedulers();
+void beginInjectorPriming();
+
+void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule , int16_t crankAngle,int ignitionEndAngle, unsigned long duration);
+void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule); //overload function for starting schedule(dwell) immediately, this is used in the fixed cranking ignition
+
+void setFuelSchedule (struct FuelSchedule *targetSchedule, unsigned long duration);
+void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long duration);
 
 #endif // SCHEDULER_H
