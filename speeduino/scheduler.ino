@@ -243,7 +243,7 @@ void setIgnitionSchedule(struct Schedule *ignitionSchedule)
   ignitionSchedule->pTimerEnable();
 }
 
-extern void beginInjectorPriming()
+void beginInjectorPriming()
 {
   unsigned long primingValue = table2D_getValue(&PrimingPulseTable, currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET);
   if( (primingValue > 0) && (currentStatus.TPS < configPage4.floodClear) )
