@@ -144,14 +144,19 @@ New generic function.
 */
 void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long duration)
 {
-  unsigned long timeout;
+  while (injectorEndAngle <= crankAngle)   { injectorEndAngle += CRANK_ANGLE_MAX_INJ; } //calculate into the next cycle
+  if (isRunning(*targetSchedule))
+  {
+    //If the schedule is already running, we can set the next schedule so it is ready to go
+    //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
+    injectorEndAngle += CRANK_ANGLE_MAX_INJ;
+  }
+  unsigned long timeout = (injectorEndAngle - crankAngle) * (unsigned long)timePerDegree; 
+  setFuelSchedule(targetSchedule, timeout, duration);
+}
 
-  while (injectorEndAngle <= crankAngle)   
-    { 
-      injectorEndAngle += CRANK_ANGLE_MAX_INJ; //calculate into the next cycle
-    } 
-  timeout=(injectorEndAngle - crankAngle) * (unsigned long)timePerDegree;
-  
+void setFuelSchedule(struct FuelSchedule *targetSchedule, unsigned long timeout, unsigned long duration)
+{
   if (!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
   {
     if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + INJECTION_REFRESH_TRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
@@ -166,10 +171,6 @@ void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, i
   }
   else 
   {
-    //If the schedule is already running, we can set the next schedule so it is ready to go
-    //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
-    injectorEndAngle += CRANK_ANGLE_MAX_INJ;
-    timeout=(injectorEndAngle - crankAngle) * (unsigned long)timePerDegree;
     if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + INJECTION_REFRESH_TRESHOLD)&&((COMPARE_TYPE)(targetSchedule->endCompare-targetSchedule->counter)>400U))
     {
       noInterrupts();
