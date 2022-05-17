@@ -199,6 +199,7 @@ void initialiseSchedulers();
 void beginInjectorPriming();
 
 void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule , int16_t crankAngle,int ignitionEndAngle, unsigned long duration);
+void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule , unsigned long timeout, unsigned long duration);
 void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule); //overload function for starting schedule(dwell) immediately, this is used in the fixed cranking ignition
 
 void setFuelSchedule (struct FuelSchedule *targetSchedule, unsigned long duration);

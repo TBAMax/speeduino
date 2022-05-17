@@ -198,12 +198,19 @@ void setFuelSchedule (struct FuelSchedule *targetSchedule, unsigned long duratio
 //New generic function
 void setIgnitionSchedule(struct IgnSchedule *targetSchedule ,  int16_t crankAngle, int ignitionEndAngle, unsigned long duration)
 {
-  unsigned long timeout;
-
   while (ignitionEndAngle <= crankAngle)   { ignitionEndAngle += CRANK_ANGLE_MAX_IGN; } //calculate into the next cycle
-//  timeout=(tempEndAngle - crankAngle) * (unsigned long)timePerDegree;
-  timeout= angleToTime((ignitionEndAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
-  
+  if (isRunning(*targetSchedule))
+  {
+    //If the schedule is already running, we can set the next schedule so it is ready to go
+    //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
+    ignitionEndAngle += CRANK_ANGLE_MAX_IGN;
+  }
+  unsigned long timeout = angleToTime((ignitionEndAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
+  setIgnitionSchedule(targetSchedule, timeout, duration);
+}
+
+void setIgnitionSchedule(struct IgnSchedule *targetSchedule , unsigned long timeout, unsigned long duration)
+{
   if (!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
   {
     if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + IGNITION_REFRESH_THRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
@@ -218,11 +225,6 @@ void setIgnitionSchedule(struct IgnSchedule *targetSchedule ,  int16_t crankAngl
   }
   else 
   {
-    //If the schedule is already running, we can set the next schedule so it is ready to go
-    //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
-    ignitionEndAngle += CRANK_ANGLE_MAX_IGN;
-    //timeout=(tempEndAngle - crankAngle) * (unsigned long)timePerDegree;
-    timeout= angleToTime((ignitionEndAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
     if(timeout < MAX_TIMER_PERIOD)
     {
       noInterrupts();

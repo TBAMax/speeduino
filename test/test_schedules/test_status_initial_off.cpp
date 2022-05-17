@@ -1,4 +1,3 @@
-
 #include <Arduino.h>
 #include <unity.h>
 
@@ -30,26 +29,34 @@ void test_status_initial_off_inj4(void)
 
 void test_status_initial_off_inj5(void)
 {
+#if INJ_CHANNELS >= 5
     initialiseSchedulers();
     TEST_ASSERT_EQUAL(OFF, fuelSchedule5.Status);
+#endif
 }
 
 void test_status_initial_off_inj6(void)
 {
+#if INJ_CHANNELS >= 6
     initialiseSchedulers();
     TEST_ASSERT_EQUAL(OFF, fuelSchedule6.Status);
+#endif
 }
 
 void test_status_initial_off_inj7(void)
 {
+#if INJ_CHANNELS >= 7
     initialiseSchedulers();
     TEST_ASSERT_EQUAL(OFF, fuelSchedule7.Status);
+#endif
 }
 
 void test_status_initial_off_inj8(void)
 {
+#if INJ_CHANNELS >= 8
     initialiseSchedulers();
     TEST_ASSERT_EQUAL(OFF, fuelSchedule8.Status);
+#endif
 }
 
 
@@ -85,20 +92,26 @@ void test_status_initial_off_ign5(void)
 
 void test_status_initial_off_ign6(void)
 {
+#if IGN_CHANNELS >= 6
     initialiseSchedulers();
     TEST_ASSERT_EQUAL(OFF, ignitionSchedule6.Status);
+#endif
 }
 
 void test_status_initial_off_ign7(void)
 {
+#if IGN_CHANNELS >= 7
     initialiseSchedulers();
     TEST_ASSERT_EQUAL(OFF, ignitionSchedule7.Status);
+#endif
 }
 
 void test_status_initial_off_ign8(void)
 {
+#if IGN_CHANNELS >= 8
     initialiseSchedulers();
     TEST_ASSERT_EQUAL(OFF, ignitionSchedule8.Status);
+#endif
 }
 
 void test_status_initial_off(void)
