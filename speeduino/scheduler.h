@@ -145,33 +145,39 @@ struct Schedule {
   void (&pTimerEnable)();     // Reference to the timer enable function
 };
 
+struct FuelSchedule: public Schedule {
+  FuelSchedule(counter_t &counter, compare_t &compare,
+              void (&_pTimerDisable)(), void (&_pTimerEnable)())
+  : Schedule(counter, compare, _pTimerDisable, _pTimerEnable)
+  {    
+  }
+};
+
+extern FuelSchedule fuelSchedule1;
+extern FuelSchedule fuelSchedule2;
+extern FuelSchedule fuelSchedule3;
+extern FuelSchedule fuelSchedule4;
+#if (INJ_CHANNELS >= 5)
+extern FuelSchedule fuelSchedule5;
+#endif
+#if (INJ_CHANNELS >= 6)
+extern FuelSchedule fuelSchedule6;
+#endif
+#if (INJ_CHANNELS >= 7)
+extern FuelSchedule fuelSchedule7;
+#endif
+#if (INJ_CHANNELS >= 8)
+extern FuelSchedule fuelSchedule8;
+#endif
+
 struct IgnSchedule: public Schedule {
   IgnSchedule(counter_t &counter, compare_t &compare,
               void (&_pTimerDisable)(), void (&_pTimerEnable)())
   : Schedule(counter, compare, _pTimerDisable, _pTimerEnable)
-  {
-    
+  {    
   }
   int channelIgnDegrees=0; // The number of crank degrees until corresponding cylinder is at TDC (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones)
-  volatile bool endScheduleSetByDecoder = false;
 };
-
-extern Schedule fuelSchedule1;
-extern Schedule fuelSchedule2;
-extern Schedule fuelSchedule3;
-extern Schedule fuelSchedule4;
-#if (INJ_CHANNELS >= 5)
-extern Schedule fuelSchedule5;
-#endif
-#if (INJ_CHANNELS >= 6)
-extern Schedule fuelSchedule6;
-#endif
-#if (INJ_CHANNELS >= 7)
-extern Schedule fuelSchedule7;
-#endif
-#if (INJ_CHANNELS >= 8)
-extern Schedule fuelSchedule8;
-#endif
 
 extern IgnSchedule ignitionSchedule1;
 extern IgnSchedule ignitionSchedule2;
