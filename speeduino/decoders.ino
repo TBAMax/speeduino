@@ -283,63 +283,69 @@ static inline int crankingGetRPM(byte totalTeeth, uint16_t degreesOver)
   return tempRPM;
 }
 
+static inline void setToothTiming(IgnSchedule &schedule, int16_t crankAngle, int endAngle)
+{
+  constexpr uint8_t MIN_CYCLES_FOR_ENDCOMPARE = 6;
+  
+  if( isRunning(schedule) ) 
+  { 
+    SET_COMPARE(schedule.compare, schedule.counter + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (endAngle - crankAngle) ) ) ) ); 
+  }
+  else if(currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE)
+  { 
+    schedule.endCompare = schedule.counter + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (endAngle - crankAngle) ) ) ); 
+  }
+}
+
+
 /**
 On decoders that are enabled for per tooth based timing adjustments, this function performs the timer compare changes on the schedules themselves
 For each ignition channel, a check is made whether we're at the relevant tooth and whether that ignition schedule is currently running
 Only if both these conditions are met will the schedule be updated with the latest timing information.
 If it's the correct tooth, but the schedule is not yet started, calculate and an end compare value (This situation occurs when both the start and end of the ignition pulse happen after the end tooth, but before the next tooth)
 */
-#define MIN_CYCLES_FOR_ENDCOMPARE 6
 static inline void checkPerToothTiming(int16_t crankAngle, uint16_t currentTooth)
 {
   if ( (fixedCrankingOverride == 0) && (currentStatus.RPM > 0) )
   {
     if ( (currentTooth == ignition1EndTooth) )
     {
-      if( isRunning(ignitionSchedule1) ) { SET_COMPARE(IGN1_COMPARE, IGN1_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition1EndAngle - crankAngle) ) ) ) ); }
-      else if(currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE) { ignitionSchedule1.endCompare = IGN1_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition1EndAngle - crankAngle) ) ) ); }
+      setToothTiming(ignitionSchedule1, crankAngle, ignition1EndAngle);
     }
     else if ( (currentTooth == ignition2EndTooth) )
     {
-      if( isRunning(ignitionSchedule2) ) { SET_COMPARE(IGN2_COMPARE, IGN2_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition2EndAngle - crankAngle) ) ) ) ); }
-      else if(currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE) { ignitionSchedule2.endCompare = IGN2_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition2EndAngle - crankAngle) ) ) ); }
+      setToothTiming(ignitionSchedule2, crankAngle, ignition2EndAngle);
     }
     else if ( (currentTooth == ignition3EndTooth) )
     {
-      if( isRunning(ignitionSchedule3) ) { SET_COMPARE(IGN3_COMPARE, IGN3_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition3EndAngle - crankAngle) ) ) ) ); }
-      else if(currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE) { ignitionSchedule3.endCompare = IGN3_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition3EndAngle - crankAngle) ) ) ); }
+      setToothTiming(ignitionSchedule3, crankAngle, ignition3EndAngle);
     }
     else if ( (currentTooth == ignition4EndTooth) )
     {
-      if( isRunning(ignitionSchedule4) ) { SET_COMPARE(IGN4_COMPARE, IGN4_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition4EndAngle - crankAngle) ) ) ) ); }
-      else if(currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE) { ignitionSchedule4.endCompare = IGN4_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition4EndAngle - crankAngle) ) ) ); }
+      setToothTiming(ignitionSchedule4, crankAngle, ignition4EndAngle);
     }
 #if IGN_CHANNELS >= 5
     else if ( (currentTooth == ignition5EndTooth) )
     {
-      if( isRunning(ignitionSchedule5) ) { SET_COMPARE(IGN5_COMPARE, IGN5_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition5EndAngle - crankAngle) ) ) ) ); }
-      else if(currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE) { ignitionSchedule5.endCompare = IGN5_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition5EndAngle - crankAngle) ) ) ); }
+      setToothTiming(ignitionSchedule5, crankAngle, ignition5EndAngle);
     }
 #endif
 #if IGN_CHANNELS >= 6
     else if ( (currentTooth == ignition6EndTooth) )
     {
-      if( isRunning(ignitionSchedule6) ) { SET_COMPARE(IGN6_COMPARE, IGN6_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition6EndAngle - crankAngle) ) ) ) ); }
-      else if(currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE) { ignitionSchedule6.endCompare = IGN6_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition6EndAngle - crankAngle) ) ) ); }
+      setToothTiming(ignitionSchedule6, crankAngle, ignition6EndAngle);
     }
 #endif
 #if IGN_CHANNELS >= 7
     else if ( (currentTooth == ignition7EndTooth) )
     {
-      if( isRunning(ignitionSchedule7) ) { SET_COMPARE(IGN7_COMPARE, IGN7_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition7EndAngle - crankAngle) ) ) ) ); }
-      else if(currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE) { ignitionSchedule7.endCompare = IGN7_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition7EndAngle - crankAngle) ) ) ); }
+      setToothTiming(ignitionSchedule7, crankAngle, ignition7EndAngle);
     }
 #endif
 #if IGN_CHANNELS >= 8
     else if ( (currentTooth == ignition8EndTooth) )
     {
-      if( isRunning(ignitionSchedule8) ) { SET_COMPARE(IGN8_COMPARE, IGN8_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition8EndAngle - crankAngle) ) ) ) ); }
-      else if(currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE) { ignitionSchedule8.endCompare = IGN8_COUNTER + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (ignition8EndAngle - crankAngle) ) ) ); }
+      setToothTiming(ignitionSchedule8, crankAngle, ignition8EndAngle);
     }
 #endif
   }
