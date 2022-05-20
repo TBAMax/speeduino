@@ -43,11 +43,6 @@ See page 136 of the processors datasheet: http://www.atmel.com/Images/doc2549.pd
 
 #include "globals.h"
 
-#define USE_IGN_REFRESH
-#define IGNITION_REFRESH_THRESHOLD  230U //Time in uS that the refresh functions will check to ensure there is enough time before changing the end compare
-#define INJECTION_REFRESH_TRESHOLD  230U //Time in us that the refresh functions will check to ensure there is enough time before changing the start or end compare
-#define INJECTION_OVERLAP_TRESHOLD  96U //Time in us, basically minimum injector off time that is allowed.
-
 //The ARM cores use seprate functions for their ISRs
 #if defined(ARDUINO_ARCH_STM32) || defined(CORE_TEENSY)
   void fuelSchedule1Interrupt();
@@ -91,6 +86,7 @@ See page 136 of the processors datasheet: http://www.atmel.com/Images/doc2549.pd
   void ignitionSchedule8Interrupt();
 #endif
 #endif
+
 /** Schedule statuses.
  * - OFF - Schedule turned off and there is no scheduled plan
  * - PENDING - There's a scheduled plan, but is has not started to run yet

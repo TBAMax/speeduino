@@ -135,8 +135,7 @@ void initialiseSchedulers()
     #endif
     #if IGN_CHANNELS >= 8
     ignitionSchedule8.Status = OFF; 
-    #endif   
-
+    #endif 
 }
 
 /*
@@ -157,6 +156,9 @@ void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, i
 
 void setFuelSchedule(struct FuelSchedule *targetSchedule, unsigned long timeout, unsigned long duration)
 {
+  //Time in uS that the refresh functions will check to ensure there is enough time before changing the start or end compare
+  constexpr uint8_t INJECTION_REFRESH_TRESHOLD = 230U; 
+
   if (!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
   {
     if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + INJECTION_REFRESH_TRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
@@ -212,6 +214,8 @@ void setIgnitionSchedule(struct IgnSchedule *targetSchedule ,  int16_t crankAngl
 
 void setIgnitionSchedule(struct IgnSchedule *targetSchedule , unsigned long timeout, unsigned long duration)
 {
+  constexpr COMPARE_TYPE IGNITION_REFRESH_THRESHOLD = 230U; //Time in uS that the refresh functions will check to ensure there is enough time before changing the end compare
+
   if (!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
   {
     if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + IGNITION_REFRESH_THRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
@@ -288,6 +292,8 @@ void beginInjectorPriming()
 
 static void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
 {
+  constexpr uint8_t INJECTION_OVERLAP_TRESHOLD  = 96U; //Time in us, basically minimum injector off time that is allowed.
+
   if (isPending(*fuelSchedule)) //Check to see if this schedule is turn on
   {
     fuelSchedule->compare = fuelSchedule->endCompare;
