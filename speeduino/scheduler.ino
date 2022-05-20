@@ -28,6 +28,7 @@ A full copy of the license may be found in the projects root directory
 #include "scheduler.h"
 #include "scheduledIO.h"
 #include "crankMaths.h"
+#include "timers.h"
 
 static void fun_FUEL1_TIMER_DISABLE() { FUEL1_TIMER_DISABLE(); }
 static void fun_FUEL1_TIMER_ENABLE() { FUEL1_TIMER_ENABLE(); }
@@ -165,7 +166,7 @@ void setFuelSchedule(struct FuelSchedule *targetSchedule, unsigned long timeout,
     {      
       noInterrupts(); // make sure start and end values are updated simultaneously
       targetSchedule->endCompare = targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout)); //As there is a tick every 4uS, there are timeout/4 ticks until the interrupt should be triggered ( >>2 divides by 4)   
-      targetSchedule->compare = (targetSchedule->endCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration))); // previously startCompare
+      SET_COMPARE(targetSchedule->compare, targetSchedule->endCompare - uS_TO_TIMER_COMPARE(duration)); // previously startCompare
       targetSchedule->Status = PENDING; //Turn this schedule on
       interrupts(); 
       targetSchedule->pTimerEnable();
@@ -191,7 +192,7 @@ void setFuelSchedule (struct FuelSchedule *targetSchedule, unsigned long duratio
   {      
       targetSchedule->pStartFunction();
       noInterrupts(); // make sure start and end values are updated simultaneously
-      targetSchedule->compare = targetSchedule->counter + (COMPARE_TYPE)uS_TO_TIMER_COMPARE(duration);
+      SET_COMPARE(targetSchedule->compare, targetSchedule->counter + (COMPARE_TYPE)uS_TO_TIMER_COMPARE(duration));
       targetSchedule->Status = RUNNING; //RUN this schedule immediately
       interrupts(); 
       targetSchedule->pTimerEnable();
@@ -221,8 +222,8 @@ void setIgnitionSchedule(struct IgnSchedule *targetSchedule , unsigned long time
     if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + IGNITION_REFRESH_THRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
     {      
       noInterrupts(); // make sure start and end values are updated simultaneously
-      targetSchedule->endCompare = targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout)); //As there is a tick every 4uS, there are timeout/4 ticks until the interrupt should be triggered ( >>2 divides by 4)   
-      targetSchedule->compare = (targetSchedule->endCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration))); // previously startCompare
+      targetSchedule->endCompare =  (COMPARE_TYPE)targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout)); //As there is a tick every 4uS, there are timeout/4 ticks until the interrupt should be triggered ( >>2 divides by 4)   
+      SET_COMPARE(targetSchedule->compare, (targetSchedule->endCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration)))); // previously startCompare
       targetSchedule->Status = PENDING; //Turn this schedule on
       interrupts(); 
       targetSchedule->pTimerEnable();
@@ -233,8 +234,8 @@ void setIgnitionSchedule(struct IgnSchedule *targetSchedule , unsigned long time
     if(timeout < MAX_TIMER_PERIOD)
     {
       noInterrupts();
-      targetSchedule->nextEndCompare = targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout));
-      targetSchedule->nextStartCompare = targetSchedule->nextEndCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration));      
+      targetSchedule->nextEndCompare = (COMPARE_TYPE)targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout));
+      targetSchedule->nextStartCompare = targetSchedule->nextEndCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration)); 
       targetSchedule->Status = RUNNINGHASNEXT;
       interrupts();
     }
@@ -245,8 +246,8 @@ void setIgnitionSchedule(struct IgnSchedule *targetSchedule , unsigned long time
 void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule)
 {            
   ignitionSchedule->pStartFunction(); //start coil charging
-  ignitionSchedule->compare = ignitionSchedule->counter+ (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(currentStatus.dwell));
-  ignitionSchedule->Status=RUNNING;
+  SET_COMPARE(ignitionSchedule->compare, (COMPARE_TYPE)ignitionSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(currentStatus.dwell)));
+  ignitionSchedule->Status = RUNNING;
   ignitionSchedule->pTimerEnable();
 }
 
@@ -296,7 +297,7 @@ static void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
 
   if (isPending(*fuelSchedule)) //Check to see if this schedule is turn on
   {
-    fuelSchedule->compare = fuelSchedule->endCompare;
+    SET_COMPARE(fuelSchedule->compare, fuelSchedule->endCompare);
     fuelSchedule->pStartFunction();
     fuelSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)    
   }
@@ -307,14 +308,14 @@ static void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
     {
       if((fuelSchedule->nextEndCompare-fuelSchedule->nextStartCompare)+ uS_TO_TIMER_COMPARE(INJECTION_OVERLAP_TRESHOLD)>=(fuelSchedule->nextEndCompare-fuelSchedule->endCompare)) //check for possible overlap
       {
-        fuelSchedule->compare = fuelSchedule->nextEndCompare;
+        SET_COMPARE(fuelSchedule->compare, fuelSchedule->nextEndCompare);
         fuelSchedule->endCompare = fuelSchedule->nextEndCompare;
         fuelSchedule->Status = RUNNING;
       }
       else //no overlap
       {
         fuelSchedule->pEndFunction();
-        fuelSchedule->compare = fuelSchedule->nextStartCompare;
+        SET_COMPARE(fuelSchedule->compare, fuelSchedule->nextStartCompare);
         fuelSchedule->endCompare = fuelSchedule->nextEndCompare;
         fuelSchedule->Status = PENDING;
       }
@@ -428,7 +429,7 @@ static void ignitionScheduleInterrupt(struct IgnSchedule *targetSchedule) // com
   {
     targetSchedule->pStartFunction();
     targetSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
-    targetSchedule->compare = targetSchedule->endCompare;
+    SET_COMPARE(targetSchedule->compare, targetSchedule->endCompare);
   }
   else if (isRunning(*targetSchedule))
   {
@@ -437,7 +438,7 @@ static void ignitionScheduleInterrupt(struct IgnSchedule *targetSchedule) // com
       //If there is a next schedule queued up, activate it
     if(targetSchedule->Status == RUNNINGHASNEXT)
     {
-      targetSchedule->compare = targetSchedule->nextStartCompare;
+      SET_COMPARE(targetSchedule->compare, targetSchedule->nextStartCompare);
       targetSchedule->endCompare = targetSchedule->nextEndCompare;
       targetSchedule->Status = PENDING;
     }

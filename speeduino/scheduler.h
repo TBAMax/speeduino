@@ -108,7 +108,7 @@ struct Schedule {
 
   // Deduce the real types of the counter and compare registers.
   // COMPARE_TYPE is NOT the same - it's just an integer type wide enough to
-  // store counter/compare calculation results.
+  // store 16-bit counter/compare calculation results.
   typedef decltype(FUEL1_COUNTER /* <-- Arbitrary choice of macro, assumes all have the same type */) counter_t;
   typedef decltype(FUEL1_COMPARE /* <-- Arbitrary choice of macro, assumes all have the same type */) compare_t;
 
