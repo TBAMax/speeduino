@@ -14,7 +14,7 @@ static void endCallback(void) { end_time = micros(); }
 void test_accuracy_duration_inj1(void)
 {
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule1, DURATION);
+    runSchedule(&fuelSchedule1, DURATION);
     while(isPending(fuelSchedule1)) /*Wait*/ ;
     start_time = micros();
     while(isRunning(fuelSchedule1)) /*Wait*/ ;
@@ -25,7 +25,7 @@ void test_accuracy_duration_inj1(void)
 void test_accuracy_duration_inj2(void)
 {
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule2, DURATION);
+    runSchedule(&fuelSchedule2, DURATION);
     while(isPending(fuelSchedule2)) /*Wait*/ ;
     start_time = micros();
     while(isRunning(fuelSchedule2)) /*Wait*/ ;
@@ -36,7 +36,7 @@ void test_accuracy_duration_inj2(void)
 void test_accuracy_duration_inj3(void)
 {
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule3, DURATION);
+    runSchedule(&fuelSchedule3, DURATION);
     while(isPending(fuelSchedule3)) /*Wait*/ ;
     start_time = micros();
     while(isRunning(fuelSchedule3)) /*Wait*/ ;
@@ -47,7 +47,7 @@ void test_accuracy_duration_inj3(void)
 void test_accuracy_duration_inj4(void)
 {
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule4, DURATION);
+    runSchedule(&fuelSchedule4, DURATION);
     while(isPending(fuelSchedule4)) /*Wait*/ ;
     start_time = micros();
     while(isRunning(fuelSchedule4)) /*Wait*/ ;
@@ -59,7 +59,7 @@ void test_accuracy_duration_inj5(void)
 {
 #if INJ_CHANNELS >= 5
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule5, DURATION);
+    runSchedule(&fuelSchedule5, DURATION);
     while(isPending(fuelSchedule5)) /*Wait*/ ;
     start_time = micros();
     while(isRunning(fuelSchedule5)) /*Wait*/ ;
@@ -72,7 +72,7 @@ void test_accuracy_duration_inj6(void)
 {
 #if INJ_CHANNELS >= 6
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule6, DURATION);
+    runSchedule(&fuelSchedule6, DURATION);
     while(isPending(fuelSchedule6)) /*Wait*/ ;
     start_time = micros();
     while(isRunning(fuelSchedule6)) /*Wait*/ ;
@@ -85,7 +85,7 @@ void test_accuracy_duration_inj7(void)
 {
 #if INJ_CHANNELS >= 7
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule7, DURATION);
+    runSchedule(&fuelSchedule7, DURATION);
     while(isPending(fuelSchedule7)) /*Wait*/ ;
     start_time = micros();
     while(isRunning(fuelSchedule7)) /*Wait*/ ;
@@ -98,7 +98,7 @@ void test_accuracy_duration_inj8(void)
 {
 #if INJ_CHANNELS >= 8
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule8, DURATION);
+    runSchedule(&fuelSchedule8, DURATION);
     while(isPending(fuelSchedule8)) /*Wait*/ ;
     start_time = micros();
     while(isRunning(fuelSchedule8)) /*Wait*/ ;

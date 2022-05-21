@@ -11,28 +11,28 @@ static void emptyCallback(void) {  }
 void test_status_off_to_pending_inj1(void)
 {
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule1, DURATION);
+    runSchedule(&fuelSchedule1, DURATION);
     TEST_ASSERT_TRUE(isPending(fuelSchedule1));
 }
 
 void test_status_off_to_pending_inj2(void)
 {
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule2, DURATION);
+    runSchedule(&fuelSchedule2, DURATION);
     TEST_ASSERT_TRUE(isPending(fuelSchedule2));
 }
 
 void test_status_off_to_pending_inj3(void)
 {
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule3, DURATION);
+    runSchedule(&fuelSchedule3, DURATION);
     TEST_ASSERT_TRUE(isPending(fuelSchedule3));
 }
 
 void test_status_off_to_pending_inj4(void)
 {
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule4, DURATION);
+    runSchedule(&fuelSchedule4, DURATION);
     TEST_ASSERT_TRUE(isPending(fuelSchedule4));
 }
 
@@ -40,7 +40,7 @@ void test_status_off_to_pending_inj5(void)
 {
 #if INJ_CHANNELS >= 5
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule5, DURATION);
+    runSchedule(&fuelSchedule5, DURATION);
     TEST_ASSERT_TRUE(isPending(fuelSchedule5))
 #endif
 }
@@ -49,7 +49,7 @@ void test_status_off_to_pending_inj6(void)
 {
 #if INJ_CHANNELS >= 6
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule6, DURATION);
+    runSchedule(&fuelSchedule6, DURATION);
     TEST_ASSERT_TRUE(isPending(fuelSchedule6))
 #endif
 }
@@ -58,7 +58,7 @@ void test_status_off_to_pending_inj7(void)
 {
 #if INJ_CHANNELS >= 7
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule7, DURATION);
+    runSchedule(&fuelSchedule7, DURATION);
     TEST_ASSERT_TRUE(isPending(fuelSchedule7))
 #endif
 }
@@ -67,7 +67,7 @@ void test_status_off_to_pending_inj8(void)
 {
 #if INJ_CHANNELS >= 8
     initialiseSchedulers();
-    setFuelSchedule(&fuelSchedule8, DURATION);
+    runSchedule(&fuelSchedule8, DURATION);
     TEST_ASSERT_TRUE(isPending(fuelSchedule8))
 #endif
 }

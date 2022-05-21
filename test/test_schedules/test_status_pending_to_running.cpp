@@ -11,7 +11,7 @@ static void emptyCallback(void) {  }
 void test_status_pending_to_running_inj(FuelSchedule *pSchedule)
 {
     initialiseSchedulers();
-    setFuelSchedule(pSchedule, DURATION);
+    runSchedule(pSchedule, DURATION);
     while(isPending(*pSchedule)) /*Wait*/ ;
     TEST_ASSERT_TRUE(isRunning(*pSchedule));
 }

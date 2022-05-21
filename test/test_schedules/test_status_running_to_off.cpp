@@ -12,7 +12,7 @@ static void emptyCallback(void) {  }
 void test_status_running_to_off_inj(FuelSchedule *pSchedule)
 {
     initialiseSchedulers();
-    setFuelSchedule(pSchedule, DURATION);
+    runSchedule(pSchedule, DURATION);
     while( (isPending(*pSchedule)) || isRunning(*pSchedule) ) /*Wait*/ ;
     TEST_ASSERT_EQUAL(OFF, pSchedule->Status);
 }

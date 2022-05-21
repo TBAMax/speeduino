@@ -30,6 +30,20 @@ A full copy of the license may be found in the projects root directory
 #include "crankMaths.h"
 #include "timers.h"
 
+// Immediately run the schedule if not already running.
+void runSchedule (struct Schedule *targetSchedule, unsigned long duration)
+{
+  if(!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
+  {      
+      targetSchedule->pStartFunction();
+      noInterrupts(); // make sure start and end values are updated simultaneously
+      SET_COMPARE(targetSchedule->compare, targetSchedule->counter + (COMPARE_TYPE)uS_TO_TIMER_COMPARE(duration));
+      targetSchedule->Status = RUNNING; //RUN this schedule immediately
+      interrupts(); 
+      targetSchedule->pTimerEnable();
+  }
+}
+
 static void fun_FUEL1_TIMER_DISABLE() { FUEL1_TIMER_DISABLE(); }
 static void fun_FUEL1_TIMER_ENABLE() { FUEL1_TIMER_ENABLE(); }
 FuelSchedule fuelSchedule1(FUEL1_COUNTER, FUEL1_COMPARE, fun_FUEL1_TIMER_DISABLE, fun_FUEL1_TIMER_ENABLE);
@@ -185,19 +199,6 @@ void setFuelSchedule(struct FuelSchedule *targetSchedule, unsigned long timeout,
   }
 }
 
-//separate function for setting the fuel schedules at priming
-void setFuelSchedule (struct FuelSchedule *targetSchedule, unsigned long duration)
-{
-  if(!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
-  {      
-      targetSchedule->pStartFunction();
-      noInterrupts(); // make sure start and end values are updated simultaneously
-      SET_COMPARE(targetSchedule->compare, targetSchedule->counter + (COMPARE_TYPE)uS_TO_TIMER_COMPARE(duration));
-      targetSchedule->Status = RUNNING; //RUN this schedule immediately
-      interrupts(); 
-      targetSchedule->pTimerEnable();
-  }
-}
 
 //New generic function
 void setIgnitionSchedule(struct IgnSchedule *targetSchedule ,  int16_t crankAngle, int ignitionEndAngle, unsigned long duration)
@@ -257,27 +258,27 @@ void beginInjectorPriming()
   if( (primingValue > 0) && (currentStatus.TPS < configPage4.floodClear) )
   {
     primingValue = primingValue * 100 * 5; //to acheive long enough priming pulses, the values in tuner studio are divided by 0.5 instead of 0.1, so multiplier of 5 is required.
-    if ( channel1InjEnabled == true ) { setFuelSchedule(&fuelSchedule1, primingValue); }
+    if ( channel1InjEnabled == true ) { runSchedule(&fuelSchedule1, primingValue); }
 #if (INJ_CHANNELS >= 2)
-    if ( channel2InjEnabled == true ) { setFuelSchedule(&fuelSchedule2, primingValue); }
+    if ( channel2InjEnabled == true ) { runSchedule(&fuelSchedule2, primingValue); }
 #endif
 #if (INJ_CHANNELS >= 3)
-    if ( channel3InjEnabled == true ) { setFuelSchedule(&fuelSchedule3, primingValue); }
+    if ( channel3InjEnabled == true ) { runSchedule(&fuelSchedule3, primingValue); }
 #endif
 #if (INJ_CHANNELS >= 4)
-    if ( channel4InjEnabled == true ) { setFuelSchedule(&fuelSchedule4, primingValue); }
+    if ( channel4InjEnabled == true ) { runSchedule(&fuelSchedule4, primingValue); }
 #endif
 #if (INJ_CHANNELS >= 5)
-    if ( channel5InjEnabled == true ) { setFuelSchedule(&fuelSchedule5, primingValue); }
+    if ( channel5InjEnabled == true ) { runSchedule(&fuelSchedule5, primingValue); }
 #endif
 #if (INJ_CHANNELS >= 6)
-    if ( channel6InjEnabled == true ) { setFuelSchedule(&fuelSchedule6, primingValue); }
+    if ( channel6InjEnabled == true ) { runSchedule(&fuelSchedule6, primingValue); }
 #endif
 #if (INJ_CHANNELS >= 7)
-    if ( channel7InjEnabled == true) { setFuelSchedule(&fuelSchedule7, primingValue); }
+    if ( channel7InjEnabled == true ) { runSchedule(&fuelSchedule7, primingValue); }
 #endif
 #if (INJ_CHANNELS >= 8)
-    if ( channel8InjEnabled == true ) { setFuelSchedule(&fuelSchedule8, primingValue); }
+    if ( channel8InjEnabled == true ) { runSchedule(&fuelSchedule8, primingValue); }
 #endif
   }
 }
