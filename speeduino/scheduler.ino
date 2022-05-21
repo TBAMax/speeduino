@@ -50,6 +50,27 @@ void forceRunSchedule(struct Schedule *targetSchedule, unsigned long duration)
   targetSchedule->pTimerEnable(); 
 }
 
+// Setup the schedule to run on the next cycle
+static inline void setPending(struct Schedule *targetSchedule, unsigned long timeout, unsigned long duration)
+{
+  noInterrupts(); // make sure start and end values are updated simultaneously
+  targetSchedule->endCompare = targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout)); //As there is a tick every 4uS, there are timeout/4 ticks until the interrupt should be triggered ( >>2 divides by 4)   
+  SET_COMPARE(targetSchedule->compare, targetSchedule->endCompare - uS_TO_TIMER_COMPARE(duration)); // previously startCompare
+  targetSchedule->Status = PENDING; //Turn this schedule on
+  interrupts(); 
+  targetSchedule->pTimerEnable();
+}
+
+// Setup the schedule to run after the current cycle
+static inline void setNext(struct Schedule *targetSchedule, unsigned long timeout, unsigned long duration)
+{
+  noInterrupts();
+  targetSchedule->nextEndCompare = targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout));
+  targetSchedule->nextStartCompare = targetSchedule->nextEndCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration));
+  targetSchedule->Status = RUNNINGHASNEXT;
+  interrupts();
+}
+
 static void fun_FUEL1_TIMER_DISABLE() { FUEL1_TIMER_DISABLE(); }
 static void fun_FUEL1_TIMER_ENABLE() { FUEL1_TIMER_ENABLE(); }
 FuelSchedule fuelSchedule1(FUEL1_COUNTER, FUEL1_COMPARE, fun_FUEL1_TIMER_DISABLE, fun_FUEL1_TIMER_ENABLE);
@@ -177,30 +198,21 @@ void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, i
 
 void setFuelSchedule(struct FuelSchedule *targetSchedule, unsigned long timeout, unsigned long duration)
 {
-  //Time in uS that the refresh functions will check to ensure there is enough time before changing the start or end compare
+  // Time in uS that the refresh functions will check to ensure there is enough time before changing the start or end compare
   constexpr uint8_t INJECTION_REFRESH_TRESHOLD = 230U; 
 
   if (!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
   {
     if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + INJECTION_REFRESH_TRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
-    {      
-      noInterrupts(); // make sure start and end values are updated simultaneously
-      targetSchedule->endCompare = targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout)); //As there is a tick every 4uS, there are timeout/4 ticks until the interrupt should be triggered ( >>2 divides by 4)   
-      SET_COMPARE(targetSchedule->compare, targetSchedule->endCompare - uS_TO_TIMER_COMPARE(duration)); // previously startCompare
-      targetSchedule->Status = PENDING; //Turn this schedule on
-      interrupts(); 
-      targetSchedule->pTimerEnable();
+    {
+      setPending(targetSchedule, timeout, duration);
     }
   }
   else 
   {
     if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + INJECTION_REFRESH_TRESHOLD)&&((COMPARE_TYPE)(targetSchedule->endCompare-targetSchedule->counter)>400U))
     {
-      noInterrupts();
-      targetSchedule->nextEndCompare = targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout));
-      targetSchedule->nextStartCompare = targetSchedule->nextEndCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration));
-      targetSchedule->Status = RUNNINGHASNEXT;
-      interrupts();
+      setNext(targetSchedule, timeout, duration);
     }
   }
 }
@@ -227,24 +239,15 @@ void setIgnitionSchedule(struct IgnSchedule *targetSchedule , unsigned long time
   if (!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
   {
     if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + IGNITION_REFRESH_THRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
-    {      
-      noInterrupts(); // make sure start and end values are updated simultaneously
-      targetSchedule->endCompare =  (COMPARE_TYPE)targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout)); //As there is a tick every 4uS, there are timeout/4 ticks until the interrupt should be triggered ( >>2 divides by 4)   
-      SET_COMPARE(targetSchedule->compare, (targetSchedule->endCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration)))); // previously startCompare
-      targetSchedule->Status = PENDING; //Turn this schedule on
-      interrupts(); 
-      targetSchedule->pTimerEnable();
+    {
+      setPending(targetSchedule, timeout, duration);
     }
   }
   else 
   {
     if(timeout < MAX_TIMER_PERIOD)
     {
-      noInterrupts();
-      targetSchedule->nextEndCompare = (COMPARE_TYPE)targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout));
-      targetSchedule->nextStartCompare = targetSchedule->nextEndCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration)); 
-      targetSchedule->Status = RUNNINGHASNEXT;
-      interrupts();
+      setNext(targetSchedule, timeout, duration);
     }
   }
 }
