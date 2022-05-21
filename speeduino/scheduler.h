@@ -145,6 +145,9 @@ inline bool isPending(const Schedule &schedule) {
 // Immediately run the schedule if not already running.
 void runSchedule(struct Schedule *schedule, unsigned long duration);
 
+// Immediately run the schedule - regardless of current state.
+void forceRunSchedule(struct Schedule *schedule, unsigned long duration);
+
 struct FuelSchedule: public Schedule {
   FuelSchedule(counter_t &counter, compare_t &compare,
               void (&_pTimerDisable)(), void (&_pTimerEnable)())
@@ -199,7 +202,6 @@ void beginInjectorPriming();
 
 void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule , int16_t crankAngle,int ignitionEndAngle, unsigned long duration);
 void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule , unsigned long timeout, unsigned long duration);
-void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule); //overload function for starting schedule(dwell) immediately, this is used in the fixed cranking ignition
 
 void setFuelSchedule(struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long duration);
 void setFuelSchedule(struct FuelSchedule *targetSchedule , unsigned long timeout, unsigned long duration);

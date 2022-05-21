@@ -35,13 +35,19 @@ void runSchedule (struct Schedule *targetSchedule, unsigned long duration)
 {
   if(!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
   {      
-      targetSchedule->pStartFunction();
-      noInterrupts(); // make sure start and end values are updated simultaneously
-      SET_COMPARE(targetSchedule->compare, targetSchedule->counter + (COMPARE_TYPE)uS_TO_TIMER_COMPARE(duration));
-      targetSchedule->Status = RUNNING; //RUN this schedule immediately
-      interrupts(); 
-      targetSchedule->pTimerEnable();
+    forceRunSchedule(targetSchedule, duration);
   }
+}
+
+// Immediately run the schedule - regardless of current state.
+void forceRunSchedule(struct Schedule *targetSchedule, unsigned long duration)
+{
+  targetSchedule->pStartFunction();
+  noInterrupts(); // make sure start and end values are updated simultaneously
+  SET_COMPARE(targetSchedule->compare, targetSchedule->counter + (COMPARE_TYPE)uS_TO_TIMER_COMPARE(duration));
+  targetSchedule->Status = RUNNING; //RUN this schedule immediately
+  interrupts(); 
+  targetSchedule->pTimerEnable(); 
 }
 
 static void fun_FUEL1_TIMER_DISABLE() { FUEL1_TIMER_DISABLE(); }
@@ -241,15 +247,6 @@ void setIgnitionSchedule(struct IgnSchedule *targetSchedule , unsigned long time
       interrupts();
     }
   }
-}
-
-//overload function for starting schedule(dwell) immediately, this is used in the fixed cranking ignition
-void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule)
-{            
-  ignitionSchedule->pStartFunction(); //start coil charging
-  SET_COMPARE(ignitionSchedule->compare, (COMPARE_TYPE)ignitionSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(currentStatus.dwell)));
-  ignitionSchedule->Status = RUNNING;
-  ignitionSchedule->pTimerEnable();
 }
 
 void beginInjectorPriming()

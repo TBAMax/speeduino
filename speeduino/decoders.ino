@@ -975,10 +975,10 @@ void triggerPri_BasicDistributor()
 
     if ( configPage4.ignCranklock && BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK) )
     {
-      setIgnitionSchedule(&ignitionSchedule1);
-      setIgnitionSchedule(&ignitionSchedule2);
-      setIgnitionSchedule(&ignitionSchedule3);
-      setIgnitionSchedule(&ignitionSchedule4);
+      forceRunSchedule(&ignitionSchedule1, currentStatus.dwell);
+      forceRunSchedule(&ignitionSchedule2, currentStatus.dwell);
+      forceRunSchedule(&ignitionSchedule3, currentStatus.dwell);
+      forceRunSchedule(&ignitionSchedule4, currentStatus.dwell);
     }
     else if(configPage2.perToothIgn == true)
     {
@@ -1287,17 +1287,18 @@ void triggerPri_4G63()
         {
           //This operates in forced wasted spark mode during cranking to align with crank teeth
           if( (toothCurrentCount == 1) || (toothCurrentCount == 5) ) {
-            setIgnitionSchedule(&ignitionSchedule1);
-            setIgnitionSchedule(&ignitionSchedule3);
+            forceRunSchedule(&ignitionSchedule1, currentStatus.dwell);
+            forceRunSchedule(&ignitionSchedule3, currentStatus.dwell);
             }
           else if( (toothCurrentCount == 3) || (toothCurrentCount == 7) ) {
-            setIgnitionSchedule(&ignitionSchedule2); setIgnitionSchedule(&ignitionSchedule4); }
+            forceRunSchedule(&ignitionSchedule2, currentStatus.dwell); 
+            forceRunSchedule(&ignitionSchedule4, currentStatus.dwell); }
         }
         else if(configPage2.nCylinders == 6)
         {
-          if( (toothCurrentCount == 1) || (toothCurrentCount == 7) ) {setIgnitionSchedule(&ignitionSchedule1); }
-          else if( (toothCurrentCount == 3) || (toothCurrentCount == 9) ) {setIgnitionSchedule(&ignitionSchedule2); }
-          else if( (toothCurrentCount == 5) || (toothCurrentCount == 11) ) {setIgnitionSchedule(&ignitionSchedule3); }
+          if( (toothCurrentCount == 1) || (toothCurrentCount == 7) ) {forceRunSchedule(&ignitionSchedule1, currentStatus.dwell); }
+          else if( (toothCurrentCount == 3) || (toothCurrentCount == 9) ) {forceRunSchedule(&ignitionSchedule2, currentStatus.dwell); }
+          else if( (toothCurrentCount == 5) || (toothCurrentCount == 11) ) {forceRunSchedule(&ignitionSchedule3, currentStatus.dwell); }
         }
       }
 
@@ -2215,8 +2216,14 @@ void triggerPri_Miata9905()
     //if ( BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK) && configPage4.ignCranklock)
     if ( (currentStatus.RPM < (currentStatus.crankRPM + 30)) && (configPage4.ignCranklock) ) //The +30 here is a safety margin. When switching from fixed timing to normal, there can be a situation where a pulse started when fixed and ending when in normal mode causes problems. This prevents that.
       {
-        if( (toothCurrentCount == 1) || (toothCurrentCount == 5) ) { setIgnitionSchedule(&ignitionSchedule1); setIgnitionSchedule(&ignitionSchedule3); }
-        else if( (toothCurrentCount == 3) || (toothCurrentCount == 7) ) { setIgnitionSchedule(&ignitionSchedule2); setIgnitionSchedule(&ignitionSchedule4); }
+        if( (toothCurrentCount == 1) || (toothCurrentCount == 5) ) { 
+          forceRunSchedule(&ignitionSchedule1, currentStatus.dwell);
+          forceRunSchedule(&ignitionSchedule3, currentStatus.dwell);
+        }
+        else if( (toothCurrentCount == 3) || (toothCurrentCount == 7) ) { 
+          forceRunSchedule(&ignitionSchedule2, currentStatus.dwell); 
+          forceRunSchedule(&ignitionSchedule4, currentStatus.dwell);
+        }
       }
     secondaryToothCount = 0;
   } //Trigger filter
@@ -2412,8 +2419,8 @@ void triggerPri_MazdaAU()
       // Locked cranking timing is available, fixed at 12* BTDC
       if ( BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK) && configPage4.ignCranklock )
       {
-        if( toothCurrentCount == 1 ) { setIgnitionSchedule(&ignitionSchedule1); }
-        else if( toothCurrentCount == 3 ) { setIgnitionSchedule(&ignitionSchedule2); }
+        if( toothCurrentCount == 1 ) { forceRunSchedule(&ignitionSchedule1, currentStatus.dwell); }
+        else if( toothCurrentCount == 3 ) { forceRunSchedule(&ignitionSchedule2, currentStatus.dwell); }
       }
 
       //Whilst this is an uneven tooth pattern, if the specific angle between the last 2 teeth is specified, 1st deriv prediction can be used
@@ -2912,8 +2919,14 @@ void triggerPri_Subaru67()
       //Locked timing during cranking. This is fixed at 10* BTDC.
       if ( BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK) && configPage4.ignCranklock)
       {
-        if( (toothCurrentCount == 1) || (toothCurrentCount == 7) ) { setIgnitionSchedule(&ignitionSchedule1); setIgnitionSchedule(&ignitionSchedule3); }
-        else if( (toothCurrentCount == 4) || (toothCurrentCount == 10) ) { setIgnitionSchedule(&ignitionSchedule2); setIgnitionSchedule(&ignitionSchedule4); }
+        if( (toothCurrentCount == 1) || (toothCurrentCount == 7) ) { 
+          forceRunSchedule(&ignitionSchedule1, currentStatus.dwell); 
+          forceRunSchedule(&ignitionSchedule3, currentStatus.dwell);
+        }
+        else if( (toothCurrentCount == 4) || (toothCurrentCount == 10) ) { 
+          forceRunSchedule(&ignitionSchedule2, currentStatus.dwell); 
+          forceRunSchedule(&ignitionSchedule4, currentStatus.dwell); 
+        }
       }
 
       if ( toothCurrentCount > 12 ) //2 complete crank revolutions
@@ -3137,10 +3150,10 @@ void triggerPri_Daihatsu()
       if ( configPage4.ignCranklock && BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK) )
       {
         //This locks the cranking timing to 0 degrees BTDC (All the triggers allow for)
-        if(toothCurrentCount == 1) { setIgnitionSchedule(&ignitionSchedule1); }
-        else if(toothCurrentCount == 2) { setIgnitionSchedule(&ignitionSchedule2); }
-        else if(toothCurrentCount == 3) { setIgnitionSchedule(&ignitionSchedule3); }
-        else if(toothCurrentCount == 4) { setIgnitionSchedule(&ignitionSchedule4); }
+        if(toothCurrentCount == 1) { forceRunSchedule(&ignitionSchedule1, currentStatus.dwell);  }
+        else if(toothCurrentCount == 2) { forceRunSchedule(&ignitionSchedule2, currentStatus.dwell); }
+        else if(toothCurrentCount == 3) { forceRunSchedule(&ignitionSchedule3, currentStatus.dwell); }
+        else if(toothCurrentCount == 4) { forceRunSchedule(&ignitionSchedule4, currentStatus.dwell); }
       }
     }
     else //NO SYNC
