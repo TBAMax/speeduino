@@ -132,35 +132,26 @@ void changeHalfToFullSync(void)
     switch (configPage2.nCylinders)
     {
       case 4:
-        fuelSchedule1.pStartFunction = openInjector1;
-        fuelSchedule1.pEndFunction = closeInjector1;
-        fuelSchedule2.pStartFunction = openInjector2;
-        fuelSchedule2.pEndFunction = closeInjector2;
+        setCallbacks(fuelSchedule1, openInjector1, closeInjector1);
+        setCallbacks(fuelSchedule2, openInjector2, closeInjector2);
         channel3InjEnabled = true;
         channel4InjEnabled = true;
         break;
             
       case 6:
-        fuelSchedule1.pStartFunction = openInjector1;
-        fuelSchedule1.pEndFunction = closeInjector1;
-        fuelSchedule2.pStartFunction = openInjector2;
-        fuelSchedule2.pEndFunction = closeInjector2;
-        fuelSchedule3.pStartFunction = openInjector3;
-        fuelSchedule3.pEndFunction = closeInjector3;
+        setCallbacks(fuelSchedule1, openInjector1, closeInjector1);
+        setCallbacks(fuelSchedule2, openInjector2, closeInjector2);
+        setCallbacks(fuelSchedule3, openInjector3, closeInjector3);
         channel4InjEnabled = true;
         channel5InjEnabled = true;
         channel6InjEnabled = true;
         break;
 
       case 8:
-        fuelSchedule1.pStartFunction = openInjector1;
-        fuelSchedule1.pEndFunction = closeInjector1;
-        fuelSchedule2.pStartFunction = openInjector2;
-        fuelSchedule2.pEndFunction = closeInjector2;
-        fuelSchedule3.pStartFunction = openInjector3;
-        fuelSchedule3.pEndFunction = closeInjector3;
-        fuelSchedule4.pStartFunction = openInjector4;
-        fuelSchedule4.pEndFunction = closeInjector4;
+        setCallbacks(fuelSchedule1, openInjector1, closeInjector1);
+        setCallbacks(fuelSchedule2, openInjector2, closeInjector2);
+        setCallbacks(fuelSchedule3, openInjector3, closeInjector3);
+        setCallbacks(fuelSchedule4, openInjector4, closeInjector4);
         channel5InjEnabled = true;
         channel6InjEnabled = true;
         channel7InjEnabled = true;
@@ -178,30 +169,21 @@ void changeHalfToFullSync(void)
     switch (configPage2.nCylinders)
     {
     case 4:
-      ignitionSchedule1.pStartFunction = beginCoil1Charge;
-      ignitionSchedule1.pEndFunction = endCoil1Charge;
-      ignitionSchedule2.pStartFunction = beginCoil2Charge;
-      ignitionSchedule2.pEndFunction = endCoil2Charge;
+      setCallbacks(ignitionSchedule1, beginCoil1Charge, endCoil1Charge);
+      setCallbacks(ignitionSchedule2, beginCoil2Charge, endCoil2Charge);
       break;
 
     case 6:
-      ignitionSchedule1.pStartFunction = beginCoil1Charge;
-      ignitionSchedule1.pEndFunction = endCoil1Charge;
-      ignitionSchedule2.pStartFunction = beginCoil2Charge;
-      ignitionSchedule2.pEndFunction = endCoil2Charge;
-      ignitionSchedule3.pStartFunction = beginCoil3Charge;
-      ignitionSchedule3.pEndFunction = endCoil3Charge;
+      setCallbacks(ignitionSchedule1, beginCoil1Charge, endCoil1Charge);
+      setCallbacks(ignitionSchedule2, beginCoil2Charge, endCoil2Charge);
+      setCallbacks(ignitionSchedule3, beginCoil3Charge, endCoil3Charge);
       break;
 
     case 8:
-      ignitionSchedule1.pStartFunction = beginCoil1Charge;
-      ignitionSchedule1.pEndFunction = endCoil1Charge;
-      ignitionSchedule2.pStartFunction = beginCoil2Charge;
-      ignitionSchedule2.pEndFunction = endCoil2Charge;
-      ignitionSchedule3.pStartFunction = beginCoil3Charge;
-      ignitionSchedule3.pEndFunction = endCoil3Charge;
-      ignitionSchedule4.pStartFunction = beginCoil4Charge;
-      ignitionSchedule4.pEndFunction = endCoil4Charge;
+      setCallbacks(ignitionSchedule1, beginCoil1Charge, endCoil1Charge);
+      setCallbacks(ignitionSchedule2, beginCoil2Charge, endCoil2Charge);
+      setCallbacks(ignitionSchedule3, beginCoil3Charge, endCoil3Charge);
+      setCallbacks(ignitionSchedule4, beginCoil4Charge, endCoil4Charge);
       break;
     }
   }
@@ -223,43 +205,32 @@ void changeFullToHalfSync(void)
       case 4:
         if(configPage4.inj4cylPairing == INJ_PAIR_13_24)
         {
-          fuelSchedule1.pStartFunction = openInjector1and3;
-          fuelSchedule1.pEndFunction = closeInjector1and3;
-          fuelSchedule2.pStartFunction = openInjector2and4;
-          fuelSchedule2.pEndFunction = closeInjector2and4;
+          setCallbacks(fuelSchedule1, openInjector1and3, closeInjector1and3);
+          setCallbacks(fuelSchedule2, openInjector2and4, closeInjector2and4);
         }
         else
         {
-          fuelSchedule1.pStartFunction = openInjector1and4;
-          fuelSchedule1.pEndFunction = closeInjector1and4;
-          fuelSchedule2.pStartFunction = openInjector2and3;
-          fuelSchedule2.pEndFunction = closeInjector2and3;
+          setCallbacks(fuelSchedule1, openInjector1and4, closeInjector1and4);
+          setCallbacks(fuelSchedule2, openInjector2and3, closeInjector2and3);
         }
         channel3InjEnabled = false;
         channel4InjEnabled = false;
         break;
             
       case 6:
-        fuelSchedule1.pStartFunction = openInjector1and4;
-        fuelSchedule1.pEndFunction = closeInjector1and4;
-        fuelSchedule2.pStartFunction = openInjector2and5;
-        fuelSchedule2.pEndFunction = closeInjector2and5;
-        fuelSchedule3.pStartFunction = openInjector3and6;
-        fuelSchedule3.pEndFunction = closeInjector3and6;
+        setCallbacks(fuelSchedule1, openInjector1and4, closeInjector1and4);
+        setCallbacks(fuelSchedule2, openInjector2and5, closeInjector2and5);
+        setCallbacks(fuelSchedule3, openInjector3and6, closeInjector3and6);
         channel4InjEnabled = false;
         channel5InjEnabled = false;
         channel6InjEnabled = false;
         break;
 
       case 8:
-        fuelSchedule1.pStartFunction = openInjector1and5;
-        fuelSchedule1.pEndFunction = closeInjector1and5;
-        fuelSchedule2.pStartFunction = openInjector2and6;
-        fuelSchedule2.pEndFunction = closeInjector2and6;
-        fuelSchedule3.pStartFunction = openInjector3and7;
-        fuelSchedule3.pEndFunction = closeInjector3and7;
-        fuelSchedule4.pStartFunction = openInjector4and8;
-        fuelSchedule4.pEndFunction = closeInjector4and8;
+        setCallbacks(fuelSchedule1, openInjector1and5, closeInjector1and5);
+        setCallbacks(fuelSchedule2, openInjector2and6, closeInjector2and6);
+        setCallbacks(fuelSchedule3, openInjector3and7, closeInjector3and7);
+        setCallbacks(fuelSchedule4, openInjector4and8, closeInjector4and8);
         channel5InjEnabled = false;
         channel6InjEnabled = false;
         channel7InjEnabled = false;
@@ -275,30 +246,21 @@ void changeFullToHalfSync(void)
     switch (configPage2.nCylinders)
     {
       case 4:
-        ignitionSchedule1.pStartFunction = beginCoil1and3Charge;
-        ignitionSchedule1.pEndFunction = endCoil1and3Charge;
-        ignitionSchedule2.pStartFunction = beginCoil2and4Charge;
-        ignitionSchedule2.pEndFunction = endCoil2and4Charge;
+        setCallbacks(ignitionSchedule1, beginCoil1and3Charge, endCoil1and3Charge);
+        setCallbacks(ignitionSchedule2, beginCoil2and4Charge, endCoil2and4Charge);
         break;
             
       case 6:
-        ignitionSchedule1.pStartFunction = beginCoil1and4Charge;
-        ignitionSchedule1.pEndFunction = endCoil1and4Charge;
-        ignitionSchedule2.pStartFunction = beginCoil2and5Charge;
-        ignitionSchedule2.pEndFunction = endCoil2and5Charge;
-        ignitionSchedule3.pStartFunction = beginCoil3and6Charge;
-        ignitionSchedule3.pEndFunction = endCoil3and6Charge;
+        setCallbacks(ignitionSchedule1, beginCoil1and4Charge, endCoil1and4Charge);
+        setCallbacks(ignitionSchedule2, beginCoil2and5Charge, endCoil2and5Charge);
+        setCallbacks(ignitionSchedule3, beginCoil3and6Charge, endCoil3and6Charge);
         break;
 
       case 8:
-        ignitionSchedule1.pStartFunction = beginCoil1and5Charge;
-        ignitionSchedule1.pEndFunction = endCoil1and5Charge;
-        ignitionSchedule2.pStartFunction = beginCoil2and6Charge;
-        ignitionSchedule2.pEndFunction = endCoil2and6Charge;
-        ignitionSchedule3.pStartFunction = beginCoil3and7Charge;
-        ignitionSchedule3.pEndFunction = endCoil3and7Charge;
-        ignitionSchedule4.pStartFunction = beginCoil4and8Charge;
-        ignitionSchedule4.pEndFunction = endCoil4and8Charge;
+        setCallbacks(ignitionSchedule1, beginCoil1and5Charge, endCoil1and5Charge);
+        setCallbacks(ignitionSchedule2, beginCoil2and6Charge, endCoil2and6Charge);
+        setCallbacks(ignitionSchedule3, beginCoil3and7Charge, endCoil3and7Charge);
+        setCallbacks(ignitionSchedule4, beginCoil4and8Charge, endCoil4and8Charge);
         break;
     }
   }

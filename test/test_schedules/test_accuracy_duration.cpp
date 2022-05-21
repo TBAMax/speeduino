@@ -110,8 +110,7 @@ void test_accuracy_duration_inj8(void)
 void test_accuracy_duration_inj(IgnSchedule *pIgnSchedule)
 {
     initialiseSchedulers();
-    pIgnSchedule->pStartFunction = startCallback;
-    pIgnSchedule->pEndFunction = endCallback;
+    setCallbacks(*pIgnSchedule, startCallback, endCallback);
     setIgnitionSchedule(pIgnSchedule, TIMEOUT, DURATION);
     while( (isPending(*pIgnSchedule)) || isRunning(*pIgnSchedule) ) /*Wait*/ ;
     TEST_ASSERT_UINT32_WITHIN(DELTA, DURATION, end_time - start_time);

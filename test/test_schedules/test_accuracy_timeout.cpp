@@ -14,8 +14,7 @@ static void endCallback(void) { /*Empty*/ }
  void test_accuracy_timeout_inj(FuelSchedule *pSchedule)
 {
     initialiseSchedulers();
-    pSchedule->pStartFunction = startCallback;
-    pSchedule->pEndFunction = endCallback;
+    setCallbacks(*pSchedule, startCallback, endCallback);
     uint32_t start_time = micros();
     setFuelSchedule(pSchedule, TIMEOUT, DURATION);
     while(isPending(*pSchedule)) /*Wait*/ ;
@@ -74,8 +73,7 @@ void test_accuracy_timeout_inj8(void)
 void test_accuracy_timeout_ign(IgnSchedule *pSchedule)
 {
     initialiseSchedulers();
-    pSchedule->pStartFunction = startCallback;
-    pSchedule->pEndFunction = endCallback;    
+    setCallbacks(*pSchedule, startCallback, endCallback);   
     uint32_t start_time = micros();
     setIgnitionSchedule(pSchedule, TIMEOUT, DURATION);
     while(isPending(*pSchedule)) /*Wait*/ ;

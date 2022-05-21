@@ -142,6 +142,11 @@ inline bool isPending(const Schedule &schedule) {
   return schedule.Status==PENDING;
 }
 
+inline void setCallbacks(Schedule &schedule, void (*pStartFunction)(), void (*pEndFunction)()) {
+  schedule.pStartFunction = pStartFunction;
+  schedule.pEndFunction = pEndFunction;
+}
+
 // Immediately run the schedule if not already running.
 void runSchedule(struct Schedule *schedule, unsigned long duration);
 

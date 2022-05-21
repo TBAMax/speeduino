@@ -70,8 +70,7 @@ void test_status_running_to_pending_inj8(void)
 void test_status_running_to_pending_ign(IgnSchedule *pSchedule)
 {
     initialiseSchedulers();
-    pSchedule->pStartFunction = emptyCallback;
-    pSchedule->pEndFunction = emptyCallback;
+    setCallbacks(*pSchedule, emptyCallback, emptyCallback);   
     setIgnitionSchedule(pSchedule, TIMEOUT, DURATION);
     while(isPending(*pSchedule)) /*Wait*/ ;
     setIgnitionSchedule(pSchedule, 2*TIMEOUT, DURATION);
