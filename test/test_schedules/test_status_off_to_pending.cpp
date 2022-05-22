@@ -3,79 +3,73 @@
 
 #include "scheduler.h"
 
-#define TIMEOUT 1000
-#define DURATION 1000
+#define TOTAL_DURATION 1500
+#define DURATION 500
 
 static void emptyCallback(void) {  }
 
-void test_status_off_to_pending_inj1(void)
+void test_status_off_to_pending_inj(FuelSchedule *pSchedule)
 {
     initialiseSchedulers();
-    runSchedule(&fuelSchedule1, DURATION);
-    TEST_ASSERT_TRUE(isPending(fuelSchedule1));
+    setCallbacks(*pSchedule, emptyCallback, emptyCallback);
+    setFuelSchedule(pSchedule, TOTAL_DURATION, DURATION);
+    TEST_ASSERT_TRUE(isPending(*pSchedule));
+}
+
+
+void test_status_off_to_pending_inj1(void)
+{
+    test_status_off_to_pending_inj(&fuelSchedule1);
 }
 
 void test_status_off_to_pending_inj2(void)
 {
-    initialiseSchedulers();
-    runSchedule(&fuelSchedule2, DURATION);
-    TEST_ASSERT_TRUE(isPending(fuelSchedule2));
+    test_status_off_to_pending_inj(&fuelSchedule2);
 }
 
 void test_status_off_to_pending_inj3(void)
 {
-    initialiseSchedulers();
-    runSchedule(&fuelSchedule3, DURATION);
-    TEST_ASSERT_TRUE(isPending(fuelSchedule3));
+    test_status_off_to_pending_inj(&fuelSchedule3);
 }
 
 void test_status_off_to_pending_inj4(void)
 {
-    initialiseSchedulers();
-    runSchedule(&fuelSchedule4, DURATION);
-    TEST_ASSERT_TRUE(isPending(fuelSchedule4));
+    test_status_off_to_pending_inj(&fuelSchedule4);
 }
 
 void test_status_off_to_pending_inj5(void)
 {
 #if INJ_CHANNELS >= 5
-    initialiseSchedulers();
-    runSchedule(&fuelSchedule5, DURATION);
-    TEST_ASSERT_TRUE(isPending(fuelSchedule5))
+    test_status_off_to_pending_inj(&fuelSchedule5);
 #endif
 }
 
 void test_status_off_to_pending_inj6(void)
 {
 #if INJ_CHANNELS >= 6
-    initialiseSchedulers();
-    runSchedule(&fuelSchedule6, DURATION);
-    TEST_ASSERT_TRUE(isPending(fuelSchedule6))
+    test_status_off_to_pending_inj(&fuelSchedule6);
 #endif
 }
 
 void test_status_off_to_pending_inj7(void)
 {
 #if INJ_CHANNELS >= 7
-    initialiseSchedulers();
-    runSchedule(&fuelSchedule7, DURATION);
-    TEST_ASSERT_TRUE(isPending(fuelSchedule7))
+    test_status_off_to_pending_inj(&fuelSchedule7);
 #endif
 }
 
 void test_status_off_to_pending_inj8(void)
 {
 #if INJ_CHANNELS >= 8
-    initialiseSchedulers();
-    runSchedule(&fuelSchedule8, DURATION);
-    TEST_ASSERT_TRUE(isPending(fuelSchedule8))
+    test_status_off_to_pending_inj(&fuelSchedule8);
 #endif
 }
 
 void test_status_off_to_pending_ign(IgnSchedule *pSchedule)
 {
     initialiseSchedulers();
-    setIgnitionSchedule(pSchedule, TIMEOUT, DURATION);
+    setCallbacks(*pSchedule, emptyCallback, emptyCallback);
+    setIgnitionSchedule(pSchedule, TOTAL_DURATION, DURATION);
     TEST_ASSERT_TRUE(isPending(*pSchedule));
 }
 

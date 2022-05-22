@@ -4,22 +4,21 @@
 #include "scheduler.h"
 #include "scheduledIO.h"
 
-#define TIMEOUT 1500
+#define TOTAL_DURATION 1500
 #define DURATION 500
 #define DELTA 24
 
-static void startCallback(void) { /*Empty*/ }
-static void endCallback(void) { /*Empty*/ }
+static void emptyCallback(void) { /*Empty*/ }
 
  void test_accuracy_timeout_inj(FuelSchedule *pSchedule)
 {
     initialiseSchedulers();
-    setCallbacks(*pSchedule, startCallback, endCallback);
+    setCallbacks(*pSchedule, emptyCallback, emptyCallback);
     uint32_t start_time = micros();
-    setFuelSchedule(pSchedule, TIMEOUT, DURATION);
+    setFuelSchedule(pSchedule, TOTAL_DURATION, DURATION);
     while(isPending(*pSchedule)) /*Wait*/ ;
     uint32_t end_time = micros();
-    TEST_ASSERT_UINT32_WITHIN(DELTA, TIMEOUT - DURATION, end_time - start_time);
+    TEST_ASSERT_UINT32_WITHIN(DELTA, TOTAL_DURATION - DURATION, end_time - start_time);
 }
 
 void test_accuracy_timeout_inj1(void)
@@ -73,12 +72,12 @@ void test_accuracy_timeout_inj8(void)
 void test_accuracy_timeout_ign(IgnSchedule *pSchedule)
 {
     initialiseSchedulers();
-    setCallbacks(*pSchedule, startCallback, endCallback);   
+    setCallbacks(*pSchedule, emptyCallback, emptyCallback);   
     uint32_t start_time = micros();
-    setIgnitionSchedule(pSchedule, TIMEOUT, DURATION);
+    setIgnitionSchedule(pSchedule, TOTAL_DURATION, DURATION);
     while(isPending(*pSchedule)) /*Wait*/ ;
     uint32_t end_time = micros();
-    TEST_ASSERT_UINT32_WITHIN(DELTA, TIMEOUT - DURATION, end_time - start_time);
+    TEST_ASSERT_UINT32_WITHIN(DELTA, TOTAL_DURATION - DURATION, end_time - start_time);
 }
 
 

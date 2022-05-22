@@ -3,16 +3,24 @@
 
 #include "scheduler.h"
 
-#define TIMEOUT 1000
-#define DURATION 1000
+#define TOTAL_DURATION 1500
+#define DURATION 500
 
-static void emptyCallback(void) {  }
+static volatile uint8_t start_count=0, end_count=0;
+static void startCallback(void) { ++start_count; }
+static void endCallback(void) { ++end_count; }
 
 void test_status_pending_to_running_inj(FuelSchedule *pSchedule)
 {
     initialiseSchedulers();
-    runSchedule(pSchedule, DURATION);
+    start_count = 0;
+    end_count = 0;
+    setCallbacks(*pSchedule, startCallback, endCallback);   
+    setFuelSchedule(pSchedule, TOTAL_DURATION, DURATION);
+    TEST_ASSERT_EQUAL_UINT8(0, start_count);
+    TEST_ASSERT_EQUAL_UINT8(0, end_count);
     while(isPending(*pSchedule)) /*Wait*/ ;
+    TEST_ASSERT_EQUAL_UINT8(1, start_count);
     TEST_ASSERT_TRUE(isRunning(*pSchedule));
 }
 
@@ -68,9 +76,14 @@ void test_status_pending_to_running_inj8(void)
 void test_status_pending_to_running_ign(IgnSchedule *pSchedule)
 {
     initialiseSchedulers();
-    setCallbacks(*pSchedule, emptyCallback, emptyCallback);   
-    setIgnitionSchedule(pSchedule, TIMEOUT, DURATION);
+    start_count = 0;
+    end_count = 0;
+    setCallbacks(*pSchedule, startCallback, endCallback);   
+    setIgnitionSchedule(pSchedule, TOTAL_DURATION, DURATION);
+    TEST_ASSERT_EQUAL_UINT8(0, start_count);
+    TEST_ASSERT_EQUAL_UINT8(0, end_count);
     while(isPending(*pSchedule)) /*Wait*/ ;
+    TEST_ASSERT_EQUAL_UINT8(1, start_count);
     TEST_ASSERT_TRUE(isRunning(*pSchedule));
 }
 
