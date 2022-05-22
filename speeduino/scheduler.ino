@@ -234,16 +234,18 @@ void setIgnitionSchedule(struct IgnSchedule *targetSchedule, unsigned long total
 {
   constexpr COMPARE_TYPE IGNITION_REFRESH_THRESHOLD = 230U; //Time in uS that the refresh functions will check to ensure there is enough time before changing the end compare
 
-  if (!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
+  // Need to check that the timeout doesn't exceed the overflow,
+  if ((totalDuration < MAX_TIMER_PERIOD))
   {
-    if((totalDuration < MAX_TIMER_PERIOD) && (totalDuration > coilChargeDuration + IGNITION_REFRESH_THRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
+    if (!isRunning(*targetSchedule)) // Check that we're not already part way charging the coil
     {
-      setPending(targetSchedule, totalDuration, coilChargeDuration);
+      // Aallow for fixed 230us safety between setting the schedule and running it
+      if(totalDuration > coilChargeDuration + IGNITION_REFRESH_THRESHOLD) 
+      {
+        setPending(targetSchedule, totalDuration, coilChargeDuration);
+      }
     }
-  }
-  else 
-  {
-    if(totalDuration < MAX_TIMER_PERIOD)
+    else 
     {
       setNext(targetSchedule, totalDuration, coilChargeDuration);
     }
