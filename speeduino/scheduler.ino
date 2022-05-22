@@ -51,22 +51,22 @@ void forceRunSchedule(struct Schedule *targetSchedule, unsigned long duration)
 }
 
 // Setup the schedule to run on the next cycle
-static inline void setPending(struct Schedule *targetSchedule, unsigned long timeout, unsigned long duration)
+static inline void setPending(struct Schedule *targetSchedule, unsigned long totalDuration, unsigned long runDuration)
 {
   noInterrupts(); // make sure start and end values are updated simultaneously
-  targetSchedule->endCompare = targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout)); //As there is a tick every 4uS, there are timeout/4 ticks until the interrupt should be triggered ( >>2 divides by 4)   
-  SET_COMPARE(targetSchedule->compare, targetSchedule->endCompare - uS_TO_TIMER_COMPARE(duration)); // previously startCompare
+  SET_COMPARE(targetSchedule->compare, targetSchedule->counter + uS_TO_TIMER_COMPARE(totalDuration-runDuration));
+  targetSchedule->endCounter =         targetSchedule->counter + uS_TO_TIMER_COMPARE(totalDuration);
   targetSchedule->Status = PENDING; //Turn this schedule on
   interrupts(); 
   targetSchedule->pTimerEnable();
 }
 
 // Setup the schedule to run after the current cycle
-static inline void setNext(struct Schedule *targetSchedule, unsigned long timeout, unsigned long duration)
+static inline void setNext(struct Schedule *targetSchedule, unsigned long totalDuration, unsigned long runDuration)
 {
   noInterrupts();
-  targetSchedule->nextEndCompare = targetSchedule->counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout));
-  targetSchedule->nextStartCompare = targetSchedule->nextEndCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration));
+  targetSchedule->nextStartCounter = targetSchedule->counter + uS_TO_TIMER_COMPARE(totalDuration-runDuration);
+  targetSchedule->nextEndCounter =   targetSchedule->counter + uS_TO_TIMER_COMPARE(totalDuration);
   targetSchedule->Status = RUNNINGHASNEXT;
   interrupts();
 }
@@ -183,7 +183,7 @@ void initialiseSchedulers()
 /*
 New generic function.
 */
-void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long duration)
+void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration)
 {
   while (injectorEndAngle <= crankAngle)   { injectorEndAngle += CRANK_ANGLE_MAX_INJ; } //calculate into the next cycle
   if (isRunning(*targetSchedule))
@@ -192,34 +192,32 @@ void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, i
     //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
     injectorEndAngle += CRANK_ANGLE_MAX_INJ;
   }
-  unsigned long timeout = (injectorEndAngle - crankAngle) * (unsigned long)timePerDegree; 
-  setFuelSchedule(targetSchedule, timeout, duration);
+  unsigned long totalDuration = (injectorEndAngle - crankAngle) * (unsigned long)timePerDegree; 
+  setFuelSchedule(targetSchedule, totalDuration, openDuration);
 }
 
-void setFuelSchedule(struct FuelSchedule *targetSchedule, unsigned long timeout, unsigned long duration)
+void setFuelSchedule(struct FuelSchedule *targetSchedule, unsigned long totalDuration, unsigned long openDuration)
 {
   // Time in uS that the refresh functions will check to ensure there is enough time before changing the start or end compare
   constexpr uint8_t INJECTION_REFRESH_TRESHOLD = 230U; 
 
-  if (!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
+  // Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
+  if ((totalDuration < MAX_TIMER_PERIOD) && (totalDuration > openDuration + INJECTION_REFRESH_TRESHOLD))
   {
-    if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + INJECTION_REFRESH_TRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
+    if (!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
     {
-      setPending(targetSchedule, timeout, duration);
+      setPending(targetSchedule, totalDuration, openDuration);
     }
-  }
-  else 
-  {
-    if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + INJECTION_REFRESH_TRESHOLD)&&((COMPARE_TYPE)(targetSchedule->endCompare-targetSchedule->counter)>400U))
+    // The running timer must have at least 400 ticks left
+    else if((targetSchedule->endCounter-targetSchedule->counter)>400U)
     {
-      setNext(targetSchedule, timeout, duration);
+      setNext(targetSchedule, totalDuration, openDuration);
     }
   }
 }
 
 
-//New generic function
-void setIgnitionSchedule(struct IgnSchedule *targetSchedule ,  int16_t crankAngle, int ignitionEndAngle, unsigned long duration)
+void setIgnitionSchedule(struct IgnSchedule *targetSchedule ,  int16_t crankAngle, int ignitionEndAngle, unsigned long coilChargeDuration)
 {
   while (ignitionEndAngle <= crankAngle)   { ignitionEndAngle += CRANK_ANGLE_MAX_IGN; } //calculate into the next cycle
   if (isRunning(*targetSchedule))
@@ -228,26 +226,26 @@ void setIgnitionSchedule(struct IgnSchedule *targetSchedule ,  int16_t crankAngl
     //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
     ignitionEndAngle += CRANK_ANGLE_MAX_IGN;
   }
-  unsigned long timeout = angleToTime((ignitionEndAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
-  setIgnitionSchedule(targetSchedule, timeout, duration);
+  unsigned long totalDuration = angleToTime((ignitionEndAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
+  setIgnitionSchedule(targetSchedule, totalDuration, coilChargeDuration);
 }
 
-void setIgnitionSchedule(struct IgnSchedule *targetSchedule , unsigned long timeout, unsigned long duration)
+void setIgnitionSchedule(struct IgnSchedule *targetSchedule, unsigned long totalDuration, unsigned long coilChargeDuration)
 {
   constexpr COMPARE_TYPE IGNITION_REFRESH_THRESHOLD = 230U; //Time in uS that the refresh functions will check to ensure there is enough time before changing the end compare
 
   if (!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
   {
-    if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + IGNITION_REFRESH_THRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
+    if((totalDuration < MAX_TIMER_PERIOD) && (totalDuration > coilChargeDuration + IGNITION_REFRESH_THRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
     {
-      setPending(targetSchedule, timeout, duration);
+      setPending(targetSchedule, totalDuration, coilChargeDuration);
     }
   }
   else 
   {
-    if(timeout < MAX_TIMER_PERIOD)
+    if(totalDuration < MAX_TIMER_PERIOD)
     {
-      setNext(targetSchedule, timeout, duration);
+      setNext(targetSchedule, totalDuration, coilChargeDuration);
     }
   }
 }
@@ -298,7 +296,7 @@ static void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
 
   if (isPending(*fuelSchedule)) //Check to see if this schedule is turn on
   {
-    SET_COMPARE(fuelSchedule->compare, fuelSchedule->endCompare);
+    SET_COMPARE(fuelSchedule->compare, fuelSchedule->endCounter);
     fuelSchedule->pStartFunction();
     fuelSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)    
   }
@@ -307,17 +305,17 @@ static void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
     //If there is a next schedule queued up, activate it
     if(fuelSchedule->Status == RUNNINGHASNEXT)
     {
-      if((fuelSchedule->nextEndCompare-fuelSchedule->nextStartCompare)+ uS_TO_TIMER_COMPARE(INJECTION_OVERLAP_TRESHOLD)>=(fuelSchedule->nextEndCompare-fuelSchedule->endCompare)) //check for possible overlap
+      if((fuelSchedule->nextEndCounter-fuelSchedule->nextStartCounter)+ uS_TO_TIMER_COMPARE(INJECTION_OVERLAP_TRESHOLD)>=(fuelSchedule->nextEndCounter-fuelSchedule->endCounter)) //check for possible overlap
       {
-        SET_COMPARE(fuelSchedule->compare, fuelSchedule->nextEndCompare);
-        fuelSchedule->endCompare = fuelSchedule->nextEndCompare;
+        SET_COMPARE(fuelSchedule->compare, fuelSchedule->nextEndCounter);
+        fuelSchedule->endCounter = fuelSchedule->nextEndCounter;
         fuelSchedule->Status = RUNNING;
       }
       else //no overlap
       {
         fuelSchedule->pEndFunction();
-        SET_COMPARE(fuelSchedule->compare, fuelSchedule->nextStartCompare);
-        fuelSchedule->endCompare = fuelSchedule->nextEndCompare;
+        SET_COMPARE(fuelSchedule->compare, fuelSchedule->nextStartCounter);
+        fuelSchedule->endCounter = fuelSchedule->nextEndCounter;
         fuelSchedule->Status = PENDING;
       }
     }
@@ -430,7 +428,7 @@ static void ignitionScheduleInterrupt(struct IgnSchedule *targetSchedule) // com
   {
     targetSchedule->pStartFunction();
     targetSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
-    SET_COMPARE(targetSchedule->compare, targetSchedule->endCompare);
+    SET_COMPARE(targetSchedule->compare, targetSchedule->endCounter);
   }
   else if (isRunning(*targetSchedule))
   {
@@ -439,8 +437,8 @@ static void ignitionScheduleInterrupt(struct IgnSchedule *targetSchedule) // com
       //If there is a next schedule queued up, activate it
     if(targetSchedule->Status == RUNNINGHASNEXT)
     {
-      SET_COMPARE(targetSchedule->compare, targetSchedule->nextStartCompare);
-      targetSchedule->endCompare = targetSchedule->nextEndCompare;
+      SET_COMPARE(targetSchedule->compare, targetSchedule->nextStartCounter);
+      targetSchedule->endCounter = targetSchedule->nextEndCounter;
       targetSchedule->Status = PENDING;
     }
     else

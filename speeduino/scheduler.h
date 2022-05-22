@@ -124,10 +124,10 @@ struct Schedule {
   volatile ScheduleStatus Status; ///< Schedule status: OFF, PENDING, STAGED, RUNNING, RUNNINGHASNEXT
   void (*pStartFunction)();        ///< Start Callback function for schedule
   void (*pEndFunction)();          ///< End Callback function for schedule
-  volatile COMPARE_TYPE endCompare;   ///< The counter value of the timer when this will end
+  volatile COMPARE_TYPE endCounter;   ///< The counter value of the timer when this will end
 
-  volatile COMPARE_TYPE nextStartCompare;      ///< Planned start of next schedule (when current schedule is RUNNINGHASNEXT)
-  volatile COMPARE_TYPE nextEndCompare;        ///< Planned end of next schedule (when current schedule is RUNNINGHASNEXT)
+  volatile COMPARE_TYPE nextStartCounter;      ///< Planned start of next schedule (when current schedule is RUNNINGHASNEXT)
+  volatile COMPARE_TYPE nextEndCounter;        ///< Planned end of next schedule (when current schedule is RUNNINGHASNEXT)
 
   counter_t &counter;  // Reference to the counter register. E.g. TCNT3
   compare_t &compare;  // Reference to the compare register. E.g. OCR3A
@@ -205,10 +205,33 @@ extern IgnSchedule ignitionSchedule8;
 void initialiseSchedulers();
 void beginInjectorPriming();
 
-void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule , int16_t crankAngle,int ignitionEndAngle, unsigned long duration);
-void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule , unsigned long timeout, unsigned long duration);
+/** @brief Set the next schedule for the ignition channel.
+ * 
+ * The spark timing is automatically calculated
+ * @param coilChargeDuration is the time to charge the ignition coil
+ */
+void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule, int16_t crankAngle, int ignitionEndAngle, unsigned long coilChargeDuration);
 
-void setFuelSchedule(struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long duration);
-void setFuelSchedule(struct FuelSchedule *targetSchedule , unsigned long timeout, unsigned long duration);
+/** @brief Manually set the next schedule for the ignition channel.
+ * 
+ * @param totalDuration is the duration of the entire schedule in uS (microseconds): spark will fire at the end of the schedule
+ * @param coilChargeDuration is the time to charge the ignition coil
+ */
+void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule, unsigned long totalDuration, unsigned long coilChargeDuration);
+
+/** @brief Set the next schedule for the injection channel.
+ * 
+ * The injector open time is automatically calculated.
+ * 
+ * @param openDuration length of time the injector is open
+ */
+void setFuelSchedule(struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration);
+
+/** @brief Manually set the next schedule for the ignition channel.
+ * 
+ * @param totalDuration the duration of the entire schedule in uS (microseconds): injector will close at the end of the schedule
+ * @param openDuration length of time the injector is open
+ */
+void setFuelSchedule(struct FuelSchedule *targetSchedule , unsigned long totalDuration, unsigned long openDuration);
 
 #endif // SCHEDULER_H

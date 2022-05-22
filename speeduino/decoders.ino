@@ -293,7 +293,7 @@ static inline void setToothTiming(IgnSchedule &schedule, int16_t crankAngle, int
   }
   else if(currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE)
   { 
-    schedule.endCompare = schedule.counter + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (endAngle - crankAngle) ) ) ); 
+    schedule.endCounter = schedule.counter + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (endAngle - crankAngle) ) ) ); 
   }
 }
 
