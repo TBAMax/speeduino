@@ -21,8 +21,6 @@ This means that the precision of the scheduler is:
 
 This differs from most other schedulers in that its calls are non-recurring (ie when you schedule an event at a certain time and once it has occurred,
 it will not reoccur unless you explicitly ask/re-register for it).
-Each timer can have only 1 callback associated with it at any given time. If you call the setCallback function a 2nd time,
-the original schedule will be overwritten and not occur.
 
 ## Timer identification
 
@@ -43,8 +41,11 @@ See page 136 of the processors datasheet: http://www.atmel.com/Images/doc2549.pd
 
 #include "globals.h"
 
-//The ARM cores use seprate functions for their ISRs
 #if defined(ARDUINO_ARCH_STM32) || defined(CORE_TEENSY)
+/*! \name The ARM cores need these declarations so they can hook up the interrupt vectors
+ * in their boardInit() function.
+ */
+/**@{*/ 
   void fuelSchedule1Interrupt();
   void fuelSchedule2Interrupt();
   void fuelSchedule3Interrupt();
@@ -85,24 +86,26 @@ See page 136 of the processors datasheet: http://www.atmel.com/Images/doc2549.pd
 #if (IGN_CHANNELS >= 8)
   void ignitionSchedule8Interrupt();
 #endif
+/**@}*/
 #endif
 
-/** Schedule statuses.
- * - OFF - Schedule turned off and there is no scheduled plan
- * - PENDING - There's a scheduled plan, but is has not started to run yet
- * - STAGED - (???, Not used)
- * - RUNNING - Schedule is currently running,
- * - RUNNINGHASNEXT - Schedule is currently running, but has a next schedule to run
- */
+/** \enum ScheduleStatus
+ * @brief The current state of a schedule
+ * */
 enum ScheduleStatus {
+  /** Schedule turned off and there is no scheduled plan */
   OFF, 
+  /** There's a scheduled plan, but is has not started to run yet */
   PENDING,
-  STAGED,
+  /** Schedule is currently running */
   RUNNING,
+  /** Schedule is currently running, and has a next schedule to run */
   RUNNINGHASNEXT,  
-}; //The statuses that a schedule can have
+}; 
 
-/** Ignition schedule.
+
+/**
+ * @brief A schedule for a single channel.
  */
 struct Schedule {  
 
@@ -142,17 +145,24 @@ inline bool isPending(const Schedule &schedule) {
   return schedule.Status==PENDING;
 }
 
+
+/**
+ * @brief Set the timer start and end callbacks.
+ * Each timer can have only 1 callback associated with it at any given time. 
+ * **If you call the setCallback function a 2nd time, the original schedule will be overwritten and not occur.**
+ */
 inline void setCallbacks(Schedule &schedule, void (*pStartFunction)(), void (*pEndFunction)()) {
   schedule.pStartFunction = pStartFunction;
   schedule.pEndFunction = pEndFunction;
 }
 
-// Immediately run the schedule if not already running.
+/** @brief Immediately run the schedule if not already running. */
 void runSchedule(struct Schedule *schedule, unsigned long duration);
 
-// Immediately run the schedule - regardless of current state.
+/** @brief Immediately run the schedule - regardless of current state. */
 void forceRunSchedule(struct Schedule *schedule, unsigned long duration);
 
+/** @brief A schedule specialized for injection pulses. */
 struct FuelSchedule: public Schedule {
   FuelSchedule(counter_t &counter, compare_t &compare,
               void (&_pTimerDisable)(), void (&_pTimerEnable)())
@@ -161,6 +171,8 @@ struct FuelSchedule: public Schedule {
   }
 };
 
+/*! \name The fuel schedulers */
+/**@{*/
 extern FuelSchedule fuelSchedule1;
 extern FuelSchedule fuelSchedule2;
 extern FuelSchedule fuelSchedule3;
@@ -177,16 +189,25 @@ extern FuelSchedule fuelSchedule7;
 #if (INJ_CHANNELS >= 8)
 extern FuelSchedule fuelSchedule8;
 #endif
+/**@}*/
 
+
+/** @brief A schedule specialized for ignition events. */
 struct IgnSchedule: public Schedule {
   IgnSchedule(counter_t &counter, compare_t &compare,
               void (&_pTimerDisable)(), void (&_pTimerEnable)())
   : Schedule(counter, compare, _pTimerDisable, _pTimerEnable)
   {    
   }
-  int channelIgnDegrees=0; // The number of crank degrees until corresponding cylinder is at TDC (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones)
+
+  /** @brief The number of crank degrees until corresponding cylinder is at TDC 
+   * (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones)
+  */
+  int channelIgnDegrees=0;
 };
 
+/*! \name The ignition schedulers */
+/**@{*/ 
 extern IgnSchedule ignitionSchedule1;
 extern IgnSchedule ignitionSchedule2;
 extern IgnSchedule ignitionSchedule3;
@@ -201,13 +222,18 @@ extern IgnSchedule ignitionSchedule7;
 #if IGN_CHANNELS >= 8
 extern IgnSchedule ignitionSchedule8;
 #endif
+/**@}*/
 
 void initialiseSchedulers();
+
+/** @brief Start priming all injectors. */
 void beginInjectorPriming();
 
 /** @brief Set the next schedule for the ignition channel.
  * 
  * The spark timing is automatically calculated
+ * @param crankAngle The current crank angle
+ * @param ignitionEndAngle The crank angle at which to fire the spark
  * @param coilChargeDuration is the time to charge the ignition coil
  */
 void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule, int16_t crankAngle, int ignitionEndAngle, unsigned long coilChargeDuration);
@@ -222,7 +248,8 @@ void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule, unsigned long tot
 /** @brief Set the next schedule for the injection channel.
  * 
  * The injector open time is automatically calculated.
- * 
+ * @param crankAngle The current crank angle
+ * @param injectorEndAngle The crank angle at which to end teh injection pulse
  * @param openDuration length of time the injector is open
  */
 void setFuelSchedule(struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration);

@@ -180,9 +180,7 @@ void initialiseSchedulers()
     #endif 
 }
 
-/*
-New generic function.
-*/
+
 void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration)
 {
   while (injectorEndAngle <= crankAngle)   { injectorEndAngle += CRANK_ANGLE_MAX_INJ; } //calculate into the next cycle
@@ -208,8 +206,8 @@ void setFuelSchedule(struct FuelSchedule *targetSchedule, unsigned long totalDur
     {
       setPending(targetSchedule, totalDuration, openDuration);
     }
-    // The running timer must have at least 400 ticks left
-    else if((targetSchedule->endCounter-targetSchedule->counter)>400U)
+    // The current injection pulse must have at least 400 ticks left.
+    else if((targetSchedule->compare-targetSchedule->counter)>400U)
     {
       setNext(targetSchedule, totalDuration, openDuration);
     }
@@ -239,7 +237,7 @@ void setIgnitionSchedule(struct IgnSchedule *targetSchedule, unsigned long total
   {
     if (!isRunning(*targetSchedule)) // Check that we're not already part way charging the coil
     {
-      // Aallow for fixed 230us safety between setting the schedule and running it
+      // Allow for fixed 230us safety between setting the schedule and running it
       if(totalDuration > coilChargeDuration + IGNITION_REFRESH_THRESHOLD) 
       {
         setPending(targetSchedule, totalDuration, coilChargeDuration);
