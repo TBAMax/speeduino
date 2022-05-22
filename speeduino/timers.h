@@ -23,11 +23,11 @@ Hence we will preload the timer with 131 cycles to leave 125 until overflow (1ms
 
 char getTimerFlags();
 
-volatile uint16_t lastRPM_100ms; //Need to record this for rpmDOT calculation
-volatile uint16_t last250msLoopCount = 1000; //Set to effectively random number on startup. Just need this to be different to what mainLoopCount equals initially (Probably 0)
+extern volatile uint16_t lastRPM_100ms; //Need to record this for rpmDOT calculation
+extern volatile uint16_t last250msLoopCount; //Set to effectively random number on startup. Just need this to be different to what mainLoopCount equals initially (Probably 0)
 
 #if defined (CORE_TEENSY)
-  IntervalTimer lowResTimer;
+  extern IntervalTimer lowResTimer;
   void oneMSInterval();
 #elif defined (ARDUINO_ARCH_STM32)
   void oneMSInterval();
