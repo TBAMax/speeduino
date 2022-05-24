@@ -7,12 +7,9 @@
 #define TOTAL_DURATION 1000
 #define DELTA 20
 
-static void emptyCallback(void) { /*Empty*/ }
-
 void test_accuracy_duration(Schedule *pSchedule)
 {
-    initialiseSchedulers();
-    setCallbacks(*pSchedule, emptyCallback, emptyCallback);
+    pSchedule->reset();
     runSchedule(pSchedule, DURATION);
     uint32_t start_time = micros();
     while(isRunning(*pSchedule)) /*Wait*/ ;

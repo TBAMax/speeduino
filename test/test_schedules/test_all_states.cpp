@@ -13,7 +13,7 @@ static void endCallback(void) { ++end_count; }
 
 void test_cycle_all_states_inj()
 {
-    initialiseSchedulers();
+    fuelSchedule1.reset();
     start_count = 0;
     end_count = 0;
 

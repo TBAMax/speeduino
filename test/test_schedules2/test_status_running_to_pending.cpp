@@ -13,7 +13,7 @@ static void endCallback(void) { ++end_count; }
 
 void test_status_running_to_pending_inj(FuelSchedule *pSchedule)
 {
-    initialiseSchedulers();
+    pSchedule->reset();
     start_count = 0;
     end_count = 0;
     setCallbacks(*pSchedule, startCallback, endCallback);   
@@ -87,7 +87,7 @@ void test_status_running_to_pending_inj8(void)
 
 void test_status_running_to_pending_ign(IgnSchedule *pSchedule)
 {
-    initialiseSchedulers();
+    pSchedule->reset();
     start_count = 0;
     end_count = 0;
     setCallbacks(*pSchedule, startCallback, endCallback);   

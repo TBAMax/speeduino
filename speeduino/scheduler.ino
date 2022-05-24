@@ -30,6 +30,19 @@ A full copy of the license may be found in the projects root directory
 #include "crankMaths.h"
 #include "timers.h"
 
+void Schedule::reset()
+{
+  pTimerDisable();
+
+  Status = OFF;
+  endCounter = 0;
+  nextStartCounter = 0;
+  nextEndCounter = 0;
+
+  pStartFunction = nullCallback;
+  pEndFunction = nullCallback;
+}
+
 // Immediately run the schedule if not already running.
 void runSchedule (struct Schedule *targetSchedule, unsigned long duration)
 {
@@ -143,42 +156,6 @@ static void fun_IGN8_TIMER_DISABLE() { IGN8_TIMER_DISABLE(); }
 static void fun_IGN8_TIMER_ENABLE() { IGN8_TIMER_ENABLE(); }
 IgnSchedule ignitionSchedule8(IGN8_COUNTER, IGN8_COMPARE, fun_IGN8_TIMER_DISABLE, fun_IGN8_TIMER_ENABLE);
 #endif
-
-void initialiseSchedulers()
-{
-    //nullSchedule.Status = OFF;    
-    fuelSchedule1.Status = OFF;    
-    fuelSchedule2.Status = OFF;    
-    fuelSchedule3.Status = OFF;
-    fuelSchedule4.Status = OFF;  
-    #if (INJ_CHANNELS >= 5)
-    fuelSchedule5.Status = OFF;
-    #endif 
-    #if (INJ_CHANNELS >= 6)
-    fuelSchedule6.Status = OFF;
-    #endif
-    #if (INJ_CHANNELS >= 7)
-    fuelSchedule7.Status = OFF;
-    #endif
-    #if (INJ_CHANNELS >= 8)
-    fuelSchedule8.Status = OFF;
-    #endif      
-    
-    ignitionSchedule1.Status = OFF;  
-    ignitionSchedule2.Status = OFF; 
-    ignitionSchedule3.Status = OFF; 
-    ignitionSchedule4.Status = OFF;
-    ignitionSchedule5.Status = OFF;
-    #if IGN_CHANNELS >= 6
-    ignitionSchedule6.Status = OFF; 
-    #endif
-    #if IGN_CHANNELS >= 7
-    ignitionSchedule7.Status = OFF;
-    #endif
-    #if IGN_CHANNELS >= 8
-    ignitionSchedule8.Status = OFF; 
-    #endif 
-}
 
 
 void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration)

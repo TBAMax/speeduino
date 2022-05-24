@@ -122,7 +122,11 @@ struct Schedule {
   , pTimerDisable(_pTimerDisable)
   , pTimerEnable(_pTimerEnable)
   {
+    reset();
   }
+
+  /** @brief Reset the schedule to its default state. */
+  void reset();
 
   volatile ScheduleStatus Status; ///< Schedule status: OFF, PENDING, STAGED, RUNNING, RUNNINGHASNEXT
   void (*pStartFunction)();        ///< Start Callback function for schedule
@@ -223,8 +227,6 @@ extern IgnSchedule ignitionSchedule7;
 extern IgnSchedule ignitionSchedule8;
 #endif
 /**@}*/
-
-void initialiseSchedulers();
 
 /** @brief Start priming all injectors. */
 void beginInjectorPriming();

@@ -8,12 +8,10 @@
 #define DURATION 500
 #define DELTA 24
 
-static void emptyCallback(void) { /*Empty*/ }
 
  void test_accuracy_timeout_inj(FuelSchedule *pSchedule)
 {
-    initialiseSchedulers();
-    setCallbacks(*pSchedule, emptyCallback, emptyCallback);
+    pSchedule->reset();
     uint32_t start_time = micros();
     setFuelSchedule(pSchedule, TOTAL_DURATION, DURATION);
     while(isPending(*pSchedule)) /*Wait*/ ;
@@ -71,8 +69,7 @@ void test_accuracy_timeout_inj8(void)
 
 void test_accuracy_timeout_ign(IgnSchedule *pSchedule)
 {
-    initialiseSchedulers();
-    setCallbacks(*pSchedule, emptyCallback, emptyCallback);   
+    pSchedule->reset();   
     uint32_t start_time = micros();
     setIgnitionSchedule(pSchedule, TOTAL_DURATION, DURATION);
     while(isPending(*pSchedule)) /*Wait*/ ;

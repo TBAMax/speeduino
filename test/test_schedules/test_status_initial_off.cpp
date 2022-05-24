@@ -3,114 +3,104 @@
 
 #include "scheduler.h"
 
+void test_status_initial_off(Schedule *pSchedule)
+{
+    pSchedule->reset();
+    TEST_ASSERT_EQUAL(OFF, pSchedule->Status);
+}
+
 void test_status_initial_off_inj1(void)
 {
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, fuelSchedule1.Status);
+    test_status_initial_off(&fuelSchedule1);
 }
 
 void test_status_initial_off_inj2(void)
 {
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, fuelSchedule2.Status);
+    test_status_initial_off(&fuelSchedule2);
 }
 
 void test_status_initial_off_inj3(void)
 {
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, fuelSchedule3.Status);
+    test_status_initial_off(&fuelSchedule3);
 }
 
 void test_status_initial_off_inj4(void)
 {
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, fuelSchedule4.Status);
+    test_status_initial_off(&fuelSchedule4);
 }
 
 void test_status_initial_off_inj5(void)
 {
 #if INJ_CHANNELS >= 5
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, fuelSchedule5.Status);
+    test_status_initial_off(&fuelSchedule5);
 #endif
 }
 
 void test_status_initial_off_inj6(void)
 {
 #if INJ_CHANNELS >= 6
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, fuelSchedule6.Status);
+    test_status_initial_off(&fuelSchedule6);
 #endif
 }
 
 void test_status_initial_off_inj7(void)
 {
 #if INJ_CHANNELS >= 7
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, fuelSchedule7.Status);
+    test_status_initial_off(&fuelSchedule7);
 #endif
 }
 
 void test_status_initial_off_inj8(void)
 {
 #if INJ_CHANNELS >= 8
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, fuelSchedule8.Status);
+    test_status_initial_off(&fuelSchedule8);
 #endif
 }
 
 
 void test_status_initial_off_ign1(void)
 {
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, ignitionSchedule1.Status);
+   test_status_initial_off(&ignitionSchedule1);
 }
 
 void test_status_initial_off_ign2(void)
 {
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, ignitionSchedule2.Status);
+    test_status_initial_off(&ignitionSchedule2);
 }
 
 void test_status_initial_off_ign3(void)
 {
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, ignitionSchedule3.Status);
+    test_status_initial_off(&ignitionSchedule3);
 }
 
 void test_status_initial_off_ign4(void)
 {
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, ignitionSchedule4.Status);
+    test_status_initial_off(&ignitionSchedule4);
 }
 
 void test_status_initial_off_ign5(void)
 {
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, ignitionSchedule5.Status);
+    test_status_initial_off(&ignitionSchedule5);
 }
 
 void test_status_initial_off_ign6(void)
 {
 #if IGN_CHANNELS >= 6
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, ignitionSchedule6.Status);
+    test_status_initial_off(&ignitionSchedule6);
 #endif
 }
 
 void test_status_initial_off_ign7(void)
 {
 #if IGN_CHANNELS >= 7
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, ignitionSchedule7.Status);
+    test_status_initial_off(&ignitionSchedule7);
 #endif
 }
 
 void test_status_initial_off_ign8(void)
 {
 #if IGN_CHANNELS >= 8
-    initialiseSchedulers();
-    TEST_ASSERT_EQUAL(OFF, ignitionSchedule8.Status);
+    test_status_initial_off(&ignitionSchedule8);
 #endif
 }
 

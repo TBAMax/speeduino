@@ -13,7 +13,7 @@ static void endCallback(void) { ++end_count; }
 
 void test_status_running_to_off(Schedule *pSchedule)
 {
-    initialiseSchedulers();
+    pSchedule->reset();
     start_count = 0;
     end_count = 0;
     setCallbacks(*pSchedule, startCallback, endCallback);   

@@ -6,12 +6,10 @@
 #define TOTAL_DURATION 1500
 #define DURATION 500
 
-static void emptyCallback(void) {  }
 
 void test_status_off_to_pending_inj(FuelSchedule *pSchedule)
 {
-    initialiseSchedulers();
-    setCallbacks(*pSchedule, emptyCallback, emptyCallback);
+    pSchedule->reset();
     setFuelSchedule(pSchedule, TOTAL_DURATION, DURATION);
     TEST_ASSERT_TRUE(isPending(*pSchedule));
 }
@@ -67,8 +65,7 @@ void test_status_off_to_pending_inj8(void)
 
 void test_status_off_to_pending_ign(IgnSchedule *pSchedule)
 {
-    initialiseSchedulers();
-    setCallbacks(*pSchedule, emptyCallback, emptyCallback);
+    pSchedule->reset();
     setIgnitionSchedule(pSchedule, TOTAL_DURATION, DURATION);
     TEST_ASSERT_TRUE(isPending(*pSchedule));
 }

@@ -341,7 +341,6 @@ void initialiseAll()
     //Set the tacho output default state
     digitalWrite(pinTachOut, HIGH);
     //Perform all initialisations
-    initialiseSchedulers();
     //initialiseDisplay();
     initialiseIdle();
     initialiseFan();
@@ -1140,8 +1139,6 @@ void initialiseAll()
         setCallbacks(ignitionSchedule5, beginCoil5Charge, endCoil5Charge);
         break;
     }
-
-    initialiseSchedulers(); //reapply all nessesary changes to the Schedulers also(coil charge functions and channelIgnDegrees).
 
     //Begin priming the fuel pump. This is turned off in the low resolution, 1s interrupt in timers.ino
     //First check that the priming time is not 0
