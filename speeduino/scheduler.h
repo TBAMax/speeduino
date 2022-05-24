@@ -171,8 +171,23 @@ struct FuelSchedule: public Schedule {
   FuelSchedule(counter_t &counter, compare_t &compare,
               void (&_pTimerDisable)(), void (&_pTimerEnable)())
   : Schedule(counter, compare, _pTimerDisable, _pTimerEnable)
+  , injDegrees(0)
+  , injEnabled(true)
   {    
   }
+
+  /** @brief Set the number of crank degrees until corresponding cylinder is at TDC */
+  void setInjDegrees(int injDegrees) {
+    this->injDegrees = injDegrees;
+    injEnabled = true;
+  }
+
+  /** @brief The number of crank degrees until corresponding cylinder is at TDC 
+   * (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones) */
+  int injDegrees;
+
+  /** @brief Is this injection channel enabled. */
+  bool injEnabled;
 };
 
 /*! \name The fuel schedulers */

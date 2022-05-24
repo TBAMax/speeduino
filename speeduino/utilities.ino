@@ -134,17 +134,21 @@ void changeHalfToFullSync(void)
       case 4:
         setCallbacks(fuelSchedule1, openInjector1, closeInjector1);
         setCallbacks(fuelSchedule2, openInjector2, closeInjector2);
-        channel3InjEnabled = true;
-        channel4InjEnabled = true;
+        fuelSchedule3.injEnabled = true;
+        fuelSchedule4.injEnabled = true;
         break;
             
       case 6:
         setCallbacks(fuelSchedule1, openInjector1, closeInjector1);
         setCallbacks(fuelSchedule2, openInjector2, closeInjector2);
         setCallbacks(fuelSchedule3, openInjector3, closeInjector3);
-        channel4InjEnabled = true;
-        channel5InjEnabled = true;
-        channel6InjEnabled = true;
+        fuelSchedule4.injEnabled = true;
+#if (INJ_CHANNELS >= 5)
+        fuelSchedule5.injEnabled = true;
+#endif
+#if (INJ_CHANNELS >= 6)
+        fuelSchedule6.injEnabled = true;
+#endif
         break;
 
       case 8:
@@ -152,10 +156,18 @@ void changeHalfToFullSync(void)
         setCallbacks(fuelSchedule2, openInjector2, closeInjector2);
         setCallbacks(fuelSchedule3, openInjector3, closeInjector3);
         setCallbacks(fuelSchedule4, openInjector4, closeInjector4);
-        channel5InjEnabled = true;
-        channel6InjEnabled = true;
-        channel7InjEnabled = true;
-        channel8InjEnabled = true;
+#if (INJ_CHANNELS >= 5)
+        fuelSchedule5.injEnabled = true;
+#endif
+#if (INJ_CHANNELS >= 6)
+        fuelSchedule6.injEnabled = true;
+#endif
+#if (INJ_CHANNELS >= 7)
+        fuelSchedule7.injEnabled = true;
+#endif
+#if (INJ_CHANNELS >= 8)
+        fuelSchedule8.injEnabled = true;
+#endif
         break;
 
     }
@@ -213,17 +225,21 @@ void changeFullToHalfSync(void)
           setCallbacks(fuelSchedule1, openInjector1and4, closeInjector1and4);
           setCallbacks(fuelSchedule2, openInjector2and3, closeInjector2and3);
         }
-        channel3InjEnabled = false;
-        channel4InjEnabled = false;
+        fuelSchedule3.injEnabled = false;
+        fuelSchedule4.injEnabled = false;
         break;
             
       case 6:
         setCallbacks(fuelSchedule1, openInjector1and4, closeInjector1and4);
         setCallbacks(fuelSchedule2, openInjector2and5, closeInjector2and5);
         setCallbacks(fuelSchedule3, openInjector3and6, closeInjector3and6);
-        channel4InjEnabled = false;
-        channel5InjEnabled = false;
-        channel6InjEnabled = false;
+        fuelSchedule4.injEnabled = false;
+#if (INJ_CHANNELS >= 5)
+        fuelSchedule5.injEnabled = false;
+#endif
+#if (INJ_CHANNELS >= 6)
+        fuelSchedule6.injEnabled = false;
+#endif
         break;
 
       case 8:
@@ -231,10 +247,18 @@ void changeFullToHalfSync(void)
         setCallbacks(fuelSchedule2, openInjector2and6, closeInjector2and6);
         setCallbacks(fuelSchedule3, openInjector3and7, closeInjector3and7);
         setCallbacks(fuelSchedule4, openInjector4and8, closeInjector4and8);
-        channel5InjEnabled = false;
-        channel6InjEnabled = false;
-        channel7InjEnabled = false;
-        channel8InjEnabled = false;
+#if (INJ_CHANNELS >= 5)
+        fuelSchedule5.injEnabled = false;
+#endif
+#if (INJ_CHANNELS >= 6)
+        fuelSchedule6.injEnabled = false;
+#endif
+#if (INJ_CHANNELS >= 7)
+        fuelSchedule7.injEnabled = false;
+#endif
+#if (INJ_CHANNELS >= 8)
+        fuelSchedule8.injEnabled = false;
+#endif
         break;
     }
   }

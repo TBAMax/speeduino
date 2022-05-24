@@ -103,16 +103,6 @@ volatile PINMASK_TYPE triggerPri_pin_mask;
 volatile PORT_TYPE *triggerSec_pin_port;
 volatile PINMASK_TYPE triggerSec_pin_mask;
 
-/// These need to be here as they are used in both speeduino.ino and scheduler.ino
-bool channel1InjEnabled = true;
-bool channel2InjEnabled = false;
-bool channel3InjEnabled = false;
-bool channel4InjEnabled = false;
-bool channel5InjEnabled = false;
-bool channel6InjEnabled = false;
-bool channel7InjEnabled = false;
-bool channel8InjEnabled = false;
-
 int ignition1EndAngle = 0;
 int ignition2EndAngle = 0;
 int ignition3EndAngle = 0;

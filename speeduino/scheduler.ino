@@ -233,27 +233,27 @@ void beginInjectorPriming()
   if( (primingValue > 0) && (currentStatus.TPS < configPage4.floodClear) )
   {
     primingValue = primingValue * 100 * 5; //to acheive long enough priming pulses, the values in tuner studio are divided by 0.5 instead of 0.1, so multiplier of 5 is required.
-    if ( channel1InjEnabled == true ) { runSchedule(&fuelSchedule1, primingValue); }
+    if ( fuelSchedule1.injEnabled == true ) { runSchedule(&fuelSchedule1, primingValue); }
 #if (INJ_CHANNELS >= 2)
-    if ( channel2InjEnabled == true ) { runSchedule(&fuelSchedule2, primingValue); }
+    if ( fuelSchedule2.injEnabled == true ) { runSchedule(&fuelSchedule2, primingValue); }
 #endif
 #if (INJ_CHANNELS >= 3)
-    if ( channel3InjEnabled == true ) { runSchedule(&fuelSchedule3, primingValue); }
+    if ( fuelSchedule3.injEnabled == true ) { runSchedule(&fuelSchedule3, primingValue); }
 #endif
 #if (INJ_CHANNELS >= 4)
-    if ( channel4InjEnabled == true ) { runSchedule(&fuelSchedule4, primingValue); }
+    if ( fuelSchedule4.injEnabled == true ) { runSchedule(&fuelSchedule4, primingValue); }
 #endif
 #if (INJ_CHANNELS >= 5)
-    if ( channel5InjEnabled == true ) { runSchedule(&fuelSchedule5, primingValue); }
+    if ( fuelSchedule5.injEnabled == true ) { runSchedule(&fuelSchedule5, primingValue); }
 #endif
 #if (INJ_CHANNELS >= 6)
-    if ( channel6InjEnabled == true ) { runSchedule(&fuelSchedule6, primingValue); }
+    if ( fuelSchedule6.injEnabled == true ) { runSchedule(&fuelSchedule6, primingValue); }
 #endif
 #if (INJ_CHANNELS >= 7)
-    if ( channel7InjEnabled == true ) { runSchedule(&fuelSchedule7, primingValue); }
+    if ( fuelSchedule7.injEnabled == true ) { runSchedule(&fuelSchedule7, primingValue); }
 #endif
 #if (INJ_CHANNELS >= 8)
-    if ( channel8InjEnabled == true ) { runSchedule(&fuelSchedule8, primingValue); }
+    if ( fuelSchedule8.injEnabled == true ) { runSchedule(&fuelSchedule8, primingValue); }
 #endif
   }
 }

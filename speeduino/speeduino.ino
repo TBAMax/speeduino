@@ -46,15 +46,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include RTC_LIB_H //Defined in each boards .h file
 
 
-int channel1InjDegrees = 0; /**< The number of crank degrees until cylinder 1 is at TDC (This is obviously 0 for virtually ALL engines, but there's some weird ones) */
-int channel2InjDegrees = 0; /**< The number of crank degrees until cylinder 2 (and 5/6/7/8) is at TDC */
-int channel3InjDegrees = 0; /**< The number of crank degrees until cylinder 3 (and 5/6/7/8) is at TDC */
-int channel4InjDegrees = 0; /**< The number of crank degrees until cylinder 4 (and 5/6/7/8) is at TDC */
-int channel5InjDegrees = 0; /**< The number of crank degrees until cylinder 5 is at TDC */
-int channel6InjDegrees = 0; /**< The number of crank degrees until cylinder 6 is at TDC */
-int channel7InjDegrees = 0; /**< The number of crank degrees until cylinder 7 is at TDC */
-int channel8InjDegrees = 0; /**< The number of crank degrees until cylinder 8 is at TDC */
-
 uint16_t req_fuel_uS = 0; /**< The required fuel variable (As calculated by TunerStudio) in uS */
 uint16_t inj_opentime_uS = 0;
 
@@ -570,7 +561,7 @@ void loop()
       //BEGIN INJECTION TIMING
       currentStatus.injAngle = table2D_getValue(&injectorAngleTable, currentStatus.RPM / 100);
 
-      injector1EndAngle= calculateInjectorEndAngle(channel1InjDegrees);
+      injector1EndAngle= calculateInjectorEndAngle(fuelSchedule1.injDegrees);
 
       //Repeat the above for each cylinder
       switch (configPage2.nCylinders)
@@ -580,12 +571,12 @@ void loop()
           //The only thing that needs to be done for single cylinder is to check for staging. 
           if( (configPage10.stagingEnabled == true) && (currentStatus.PW3 > 0) )
           {
-            injector3EndAngle= calculateInjectorEndAngle(channel3InjDegrees);
+            injector3EndAngle= calculateInjectorEndAngle(fuelSchedule3.injDegrees);
           }
           break;
         //2 cylinders
         case 2:
-          injector2EndAngle= calculateInjectorEndAngle(channel2InjDegrees);
+          injector2EndAngle= calculateInjectorEndAngle(fuelSchedule2.injDegrees);
           
           if ( (configPage2.injLayout == INJ_SEQUENTIAL) && (configPage6.fuelTrimEnabled > 0) )
             {
@@ -594,7 +585,7 @@ void loop()
             }
           else if( (configPage10.stagingEnabled == true) && (currentStatus.PW3 > 0) )
           {
-            injector3EndAngle= calculateInjectorEndAngle(channel3InjDegrees);
+            injector3EndAngle= calculateInjectorEndAngle(fuelSchedule3.injDegrees);
 
             injector4EndAngle = injector3EndAngle + (CRANK_ANGLE_MAX_INJ / 2); //Phase this either 180 or 360 degrees out from inj3 (In reality this will always be 180 as you can't have sequential and staged currently)
             if(injector4EndAngle > (uint16_t)CRANK_ANGLE_MAX_INJ) { injector4EndAngle -= CRANK_ANGLE_MAX_INJ; }
@@ -602,8 +593,8 @@ void loop()
           break;
         //3 cylinders
         case 3:
-          injector2EndAngle= calculateInjectorEndAngle(channel2InjDegrees);
-          injector3EndAngle= calculateInjectorEndAngle(channel3InjDegrees);
+          injector2EndAngle= calculateInjectorEndAngle(fuelSchedule2.injDegrees);
+          injector3EndAngle= calculateInjectorEndAngle(fuelSchedule3.injDegrees);
           
           if ( (configPage2.injLayout == INJ_SEQUENTIAL) && (configPage6.fuelTrimEnabled > 0) )
             {
@@ -614,13 +605,13 @@ void loop()
           break;
         //4 cylinders
         case 4:
-          injector2EndAngle= calculateInjectorEndAngle(channel2InjDegrees);
+          injector2EndAngle= calculateInjectorEndAngle(fuelSchedule2.injDegrees);
 
           if((configPage2.injLayout == INJ_SEQUENTIAL) && currentStatus.hasSync)
           {
             if( CRANK_ANGLE_MAX_INJ != 720 ) { changeHalfToFullSync(); }
-            injector3EndAngle= calculateInjectorEndAngle(channel3InjDegrees);
-            injector4EndAngle= calculateInjectorEndAngle(channel4InjDegrees);
+            injector3EndAngle= calculateInjectorEndAngle(fuelSchedule3.injDegrees);
+            injector4EndAngle= calculateInjectorEndAngle(fuelSchedule4.injDegrees);
 
             if(configPage6.fuelTrimEnabled > 0)
             {
@@ -632,7 +623,7 @@ void loop()
           }
           else if( (configPage10.stagingEnabled == true) && (currentStatus.PW3 > 0) )
           {
-            injector3EndAngle= calculateInjectorEndAngle(channel3InjDegrees);
+            injector3EndAngle= calculateInjectorEndAngle(fuelSchedule3.injDegrees);
 
             injector4EndAngle = injector3EndAngle + (CRANK_ANGLE_MAX_INJ / 2); //Phase this either 180 or 360 degrees out from inj3 (In reality this will always be 180 as you can't have sequential and staged currently)
             if(injector4EndAngle > (uint16_t)CRANK_ANGLE_MAX_INJ) { injector4EndAngle -= CRANK_ANGLE_MAX_INJ; }
@@ -644,25 +635,25 @@ void loop()
           break;
         //5 cylinders
         case 5:
-          injector2EndAngle= calculateInjectorEndAngle(channel2InjDegrees);
-          injector3EndAngle= calculateInjectorEndAngle(channel3InjDegrees);
-          injector4EndAngle= calculateInjectorEndAngle(channel4InjDegrees);
+          injector2EndAngle= calculateInjectorEndAngle(fuelSchedule2.injDegrees);
+          injector3EndAngle= calculateInjectorEndAngle(fuelSchedule3.injDegrees);
+          injector4EndAngle= calculateInjectorEndAngle(fuelSchedule4.injDegrees);
           #if INJ_CHANNELS >= 5
-            injector5EndAngle= calculateInjectorEndAngle(channel5InjDegrees);
+            injector5EndAngle= calculateInjectorEndAngle(fuelSchedule5.injDegrees);
           #endif
           break;
         //6 cylinders
         case 6:
-          injector2EndAngle= calculateInjectorEndAngle(channel2InjDegrees);
-          injector3EndAngle= calculateInjectorEndAngle(channel3InjDegrees);
+          injector2EndAngle= calculateInjectorEndAngle(fuelSchedule2.injDegrees);
+          injector3EndAngle= calculateInjectorEndAngle(fuelSchedule3.injDegrees);
           
           #if INJ_CHANNELS >= 6
             if((configPage2.injLayout == INJ_SEQUENTIAL) && currentStatus.hasSync)
             {
             if( CRANK_ANGLE_MAX_INJ != 720 ) { changeHalfToFullSync(); }
-              injector4EndAngle= calculateInjectorEndAngle(channel4InjDegrees);
-              injector5EndAngle= calculateInjectorEndAngle(channel5InjDegrees);
-              injector6EndAngle= calculateInjectorEndAngle(channel6InjDegrees);
+              injector4EndAngle= calculateInjectorEndAngle(fuelSchedule4.injDegrees);
+              injector5EndAngle= calculateInjectorEndAngle(fuelSchedule5.injDegrees);
+              injector6EndAngle= calculateInjectorEndAngle(fuelSchedule6.injDegrees);
 
               if(configPage6.fuelTrimEnabled > 0)
               {
@@ -682,18 +673,18 @@ void loop()
           break;
         //8 cylinders
         case 8:
-          injector2EndAngle= calculateInjectorEndAngle(channel2InjDegrees);
-          injector3EndAngle= calculateInjectorEndAngle(channel3InjDegrees);
-          injector4EndAngle= calculateInjectorEndAngle(channel4InjDegrees);
+          injector2EndAngle= calculateInjectorEndAngle(fuelSchedule2.injDegrees);
+          injector3EndAngle= calculateInjectorEndAngle(fuelSchedule3.injDegrees);
+          injector4EndAngle= calculateInjectorEndAngle(fuelSchedule4.injDegrees);
 
           #if INJ_CHANNELS >= 8
             if((configPage2.injLayout == INJ_SEQUENTIAL) && currentStatus.hasSync)
             {
               if( CRANK_ANGLE_MAX_INJ != 720 ) { changeHalfToFullSync(); }
-              injector5EndAngle= calculateInjectorEndAngle(channel5InjDegrees);
-              injector6EndAngle= calculateInjectorEndAngle(channel6InjDegrees);
-              injector7EndAngle= calculateInjectorEndAngle(channel7InjDegrees);
-              injector8EndAngle= calculateInjectorEndAngle(channel8InjDegrees);
+              injector5EndAngle= calculateInjectorEndAngle(fuelSchedule5.injDegrees);
+              injector6EndAngle= calculateInjectorEndAngle(fuelSchedule6.injDegrees);
+              injector7EndAngle= calculateInjectorEndAngle(fuelSchedule7.injDegrees);
+              injector8EndAngle= calculateInjectorEndAngle(fuelSchedule8.injDegrees);
 
               if(configPage6.fuelTrimEnabled > 0)
               {
@@ -823,49 +814,49 @@ void loop()
 #endif
 
 #if INJ_CHANNELS >= 2
-        if( (channel2InjEnabled) && (currentStatus.PW2 >= inj_opentime_uS) )
+        if( (fuelSchedule2.injEnabled) && (currentStatus.PW2 >= inj_opentime_uS) )
         {
           setFuelSchedule(&fuelSchedule2, crankAngle, injector2EndAngle, (unsigned long)currentStatus.PW2);    
         }
 #endif
 
 #if INJ_CHANNELS >= 3
-        if( (channel3InjEnabled) && (currentStatus.PW3 >= inj_opentime_uS) )
+        if( (fuelSchedule3.injEnabled) && (currentStatus.PW3 >= inj_opentime_uS) )
         {
           setFuelSchedule(&fuelSchedule3, crankAngle, injector3EndAngle, (unsigned long)currentStatus.PW3);  
         }
 #endif
 
 #if INJ_CHANNELS >= 4
-        if( (channel4InjEnabled) && (currentStatus.PW4 >= inj_opentime_uS) )
+        if( (fuelSchedule4.injEnabled) && (currentStatus.PW4 >= inj_opentime_uS) )
         {
           setFuelSchedule(&fuelSchedule4, crankAngle, injector4EndAngle, (unsigned long)currentStatus.PW4);  
         }
 #endif
 
 #if INJ_CHANNELS >= 5
-        if( (channel5InjEnabled) && (currentStatus.PW5 >= inj_opentime_uS) )
+        if( (fuelSchedule5.injEnabled) && (currentStatus.PW5 >= inj_opentime_uS) )
         {
           setFuelSchedule(&fuelSchedule5, crankAngle, injector5EndAngle, (unsigned long)currentStatus.PW5);  
         }
 #endif
 
 #if INJ_CHANNELS >= 6
-        if( (channel6InjEnabled) && (currentStatus.PW6 >= inj_opentime_uS) )
+        if( (fuelSchedule6.injEnabled) && (currentStatus.PW6 >= inj_opentime_uS) )
         {
           setFuelSchedule(&fuelSchedule6, crankAngle, injector6EndAngle, (unsigned long)currentStatus.PW6);  
         }
 #endif
 
 #if INJ_CHANNELS >= 7
-        if( (channel7InjEnabled) && (currentStatus.PW7 >= inj_opentime_uS) )
+        if( (fuelSchedule7.injEnabled) && (currentStatus.PW7 >= inj_opentime_uS) )
         {
           setFuelSchedule(&fuelSchedule7, crankAngle, injector7EndAngle, (unsigned long)currentStatus.PW7);  
         }
 #endif
 
 #if INJ_CHANNELS >= 8
-        if( (channel8InjEnabled) && (currentStatus.PW8 >= inj_opentime_uS) )
+        if( (fuelSchedule8.injEnabled) && (currentStatus.PW8 >= inj_opentime_uS) )
         {
           setFuelSchedule(&fuelSchedule8, crankAngle, injector8EndAngle, (unsigned long)currentStatus.PW8);
         }
