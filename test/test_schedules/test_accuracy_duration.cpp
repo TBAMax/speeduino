@@ -3,8 +3,8 @@
 
 #include "scheduler.h"
 
-#define DURATION 1000
-#define TOTAL_DURATION 1000
+#define DURATION 1000UL
+#define TOTAL_DURATION 1000UL
 #define DELTA 20
 
 void test_accuracy_duration(Schedule *pSchedule)

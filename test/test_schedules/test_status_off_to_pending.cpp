@@ -3,8 +3,8 @@
 
 #include "scheduler.h"
 
-#define TOTAL_DURATION 1500
-#define DURATION 500
+#define TOTAL_DURATION 1500UL
+#define DURATION 500UL
 
 
 void test_status_off_to_pending_inj(FuelSchedule *pSchedule)

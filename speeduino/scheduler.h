@@ -219,11 +219,21 @@ struct IgnSchedule: public Schedule {
   {    
   }
 
+  void setAdvance(int8_t advance)
+  {
+      ignitionEndAngle = channelIgnDegrees - advance;
+      if(ignitionEndAngle > CRANK_ANGLE_MAX_IGN) {ignitionEndAngle -= CRANK_ANGLE_MAX_IGN;}
+  }
+
   /** @brief The number of crank degrees until corresponding cylinder is at TDC 
    * (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones)
   */
-  int channelIgnDegrees=0;
+  int16_t channelIgnDegrees=0;
+
+  /** @brief The crank angle to fire the spark at */
+  int16_t ignitionEndAngle=0;
 };
+
 
 /*! \name The ignition schedulers */
 /**@{*/ 
@@ -250,10 +260,9 @@ void beginInjectorPriming();
  * 
  * The spark timing is automatically calculated
  * @param crankAngle The current crank angle
- * @param ignitionEndAngle The crank angle at which to fire the spark
  * @param coilChargeDuration is the time to charge the ignition coil
  */
-void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule, int16_t crankAngle, int ignitionEndAngle, unsigned long coilChargeDuration);
+void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule, int16_t crankAngle, unsigned long coilChargeDuration);
 
 /** @brief Manually set the next schedule for the ignition channel.
  * 

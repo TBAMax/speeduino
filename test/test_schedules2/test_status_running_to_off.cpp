@@ -4,8 +4,7 @@
 
 #include "scheduler.h"
 
-#define TIMEOUT 1000
-#define DURATION 1000
+#define DURATION 1000UL
 
 static volatile uint8_t start_count=0, end_count=0;
 static void startCallback(void) { ++start_count; }

@@ -192,16 +192,17 @@ void setFuelSchedule(struct FuelSchedule *targetSchedule, unsigned long totalDur
 }
 
 
-void setIgnitionSchedule(struct IgnSchedule *targetSchedule ,  int16_t crankAngle, int ignitionEndAngle, unsigned long coilChargeDuration)
+void setIgnitionSchedule(struct IgnSchedule *targetSchedule,  int16_t crankAngle, unsigned long coilChargeDuration)
 {
-  while (ignitionEndAngle <= crankAngle)   { ignitionEndAngle += CRANK_ANGLE_MAX_IGN; } //calculate into the next cycle
+  int endAngle = targetSchedule->ignitionEndAngle;
+  while (endAngle <= crankAngle)   { endAngle += CRANK_ANGLE_MAX_IGN; } //calculate into the next cycle
   if (isRunning(*targetSchedule))
   {
     //If the schedule is already running, we can set the next schedule so it is ready to go
     //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
-    ignitionEndAngle += CRANK_ANGLE_MAX_IGN;
+    endAngle += CRANK_ANGLE_MAX_IGN;
   }
-  unsigned long totalDuration = angleToTime((ignitionEndAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
+  unsigned long totalDuration = angleToTime((endAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
   setIgnitionSchedule(targetSchedule, totalDuration, coilChargeDuration);
 }
 

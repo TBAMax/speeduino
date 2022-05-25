@@ -4,8 +4,8 @@
 
 #include "scheduler.h"
 
-#define TOTAL_DURATION 2500
-#define DURATION 2250
+#define TOTAL_DURATION 2500UL
+#define DURATION 2250UL
 
 static volatile uint8_t start_count=0, end_count=0;
 static void startCallback(void) { ++start_count; }

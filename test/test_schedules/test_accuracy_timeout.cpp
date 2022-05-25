@@ -4,8 +4,8 @@
 #include "scheduler.h"
 #include "scheduledIO.h"
 
-#define TOTAL_DURATION 1500
-#define DURATION 500
+#define TOTAL_DURATION 1500UL
+#define DURATION 500UL
 #define DELTA 24
 
 
