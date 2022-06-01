@@ -13,8 +13,8 @@
 {
     pSchedule->reset();
     uint32_t start_time = micros();
-    setFuelSchedule(pSchedule, TOTAL_DURATION, DURATION);
-    while(isPending(*pSchedule)) /*Wait*/ ;
+    pSchedule->setFuelSchedule(TOTAL_DURATION, DURATION);
+    while(pSchedule->isPending()) /*Wait*/ ;
     uint32_t end_time = micros();
     TEST_ASSERT_UINT32_WITHIN(DELTA, TOTAL_DURATION - DURATION, end_time - start_time);
 }
@@ -71,8 +71,8 @@ void test_accuracy_timeout_ign(IgnSchedule *pSchedule)
 {
     pSchedule->reset();   
     uint32_t start_time = micros();
-    setIgnitionSchedule(pSchedule, TOTAL_DURATION, DURATION);
-    while(isPending(*pSchedule)) /*Wait*/ ;
+    pSchedule->setIgnitionSchedule(TOTAL_DURATION, DURATION);
+    while(pSchedule->isPending()) /*Wait*/ ;
     uint32_t end_time = micros();
     TEST_ASSERT_UINT32_WITHIN(DELTA, TOTAL_DURATION - DURATION, end_time - start_time);
 }

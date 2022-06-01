@@ -128,6 +128,30 @@ struct Schedule {
   /** @brief Reset the schedule to its default state. */
   void reset();
 
+  inline bool isRunning() const {
+    return Status==RUNNING || Status==RUNNINGHASNEXT;
+  }
+  
+  inline bool isPending() const {
+    return Status==PENDING;
+  }  
+
+  /**
+   * @brief Set the timer start and end callbacks.
+   * Each timer can have only 1 callback associated with it at any given time. 
+   * **If you call the setCallback function a 2nd time, the original schedule will be overwritten and not occur.**
+   */
+  inline void setCallbacks(void (*pStartFunction)(), void (*pEndFunction)()) {
+    this->pStartFunction = pStartFunction;
+    this->pEndFunction = pEndFunction;
+  }
+
+  /** @brief Immediately run the schedule if not already running. */
+  void runSchedule(unsigned long duration);
+
+  /** @brief Immediately run the schedule - regardless of current state. */
+  void forceRunSchedule(unsigned long duration);  
+
   volatile ScheduleStatus Status; ///< Schedule status: OFF, PENDING, STAGED, RUNNING, RUNNINGHASNEXT
   void (*pStartFunction)();        ///< Start Callback function for schedule
   void (*pEndFunction)();          ///< End Callback function for schedule
@@ -142,37 +166,12 @@ struct Schedule {
   void (&pTimerEnable)();     // Reference to the timer enable function
 };
 
-inline bool isRunning(const Schedule &schedule) {
-  return schedule.Status==RUNNING || schedule.Status==RUNNINGHASNEXT;
-}
-inline bool isPending(const Schedule &schedule) {
-  return schedule.Status==PENDING;
-}
-
-
-/**
- * @brief Set the timer start and end callbacks.
- * Each timer can have only 1 callback associated with it at any given time. 
- * **If you call the setCallback function a 2nd time, the original schedule will be overwritten and not occur.**
- */
-inline void setCallbacks(Schedule &schedule, void (*pStartFunction)(), void (*pEndFunction)()) {
-  schedule.pStartFunction = pStartFunction;
-  schedule.pEndFunction = pEndFunction;
-}
-
-/** @brief Immediately run the schedule if not already running. */
-void runSchedule(struct Schedule *schedule, unsigned long duration);
-
-/** @brief Immediately run the schedule - regardless of current state. */
-void forceRunSchedule(struct Schedule *schedule, unsigned long duration);
 
 /** @brief A schedule specialized for injection pulses. */
 struct FuelSchedule: public Schedule {
   FuelSchedule(counter_t &counter, compare_t &compare,
               void (&_pTimerDisable)(), void (&_pTimerEnable)())
   : Schedule(counter, compare, _pTimerDisable, _pTimerEnable)
-  , injDegrees(0)
-  , injEnabled(true)
   {    
   }
 
@@ -182,12 +181,28 @@ struct FuelSchedule: public Schedule {
     injEnabled = true;
   }
 
+  /** @brief Set the next schedule for the injection channel.
+   * 
+   * The injector open time is automatically calculated.
+   * @param crankAngle The current crank angle
+   * @param injectorEndAngle The crank angle at which to end teh injection pulse
+   * @param openDuration length of time the injector is open
+   */
+  void setFuelSchedule(int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration);
+
+  /** @brief Manually set the next schedule for the ignition channel.
+   * 
+   * @param totalDuration the duration of the entire schedule in uS (microseconds): injector will close at the end of the schedule
+   * @param openDuration length of time the injector is open
+   */
+  void setFuelSchedule(unsigned long totalDuration, unsigned long openDuration);  
+
   /** @brief The number of crank degrees until corresponding cylinder is at TDC 
    * (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones) */
-  int injDegrees;
+  int injDegrees = 0;
 
   /** @brief Is this injection channel enabled. */
-  bool injEnabled;
+  bool injEnabled = true;
 };
 
 /*! \name The fuel schedulers */
@@ -219,11 +234,30 @@ struct IgnSchedule: public Schedule {
   {    
   }
 
-  void setAdvance(int8_t advance)
+  /** @brief Tell this igntion schedule what the current calculated ignition advance is
+   * 
+   * Side effect is that it computes the ignition end angle for this schedule.
+   */
+  inline void setAdvance(int8_t advance)
   {
       ignitionEndAngle = channelIgnDegrees - advance;
       if(ignitionEndAngle > CRANK_ANGLE_MAX_IGN) {ignitionEndAngle -= CRANK_ANGLE_MAX_IGN;}
   }
+
+  /** @brief Set the next schedule for the ignition channel.
+   * 
+   * The spark timing is automatically calculated
+   * @param crankAngle The current crank angle
+   * @param coilChargeDuration is the time to charge the ignition coil
+   */
+  void setIgnitionSchedule(int16_t crankAngle, unsigned long coilChargeDuration);
+
+  /** @brief Manually set the next schedule for the ignition channel.
+   * 
+   * @param totalDuration is the duration of the entire schedule in uS (microseconds): spark will fire at the end of the schedule
+   * @param coilChargeDuration is the time to charge the ignition coil
+   */
+  void setIgnitionSchedule(unsigned long totalDuration, unsigned long coilChargeDuration);
 
   /** @brief The number of crank degrees until corresponding cylinder is at TDC 
    * (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones)
@@ -256,35 +290,5 @@ extern IgnSchedule ignitionSchedule8;
 /** @brief Start priming all injectors. */
 void beginInjectorPriming();
 
-/** @brief Set the next schedule for the ignition channel.
- * 
- * The spark timing is automatically calculated
- * @param crankAngle The current crank angle
- * @param coilChargeDuration is the time to charge the ignition coil
- */
-void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule, int16_t crankAngle, unsigned long coilChargeDuration);
-
-/** @brief Manually set the next schedule for the ignition channel.
- * 
- * @param totalDuration is the duration of the entire schedule in uS (microseconds): spark will fire at the end of the schedule
- * @param coilChargeDuration is the time to charge the ignition coil
- */
-void setIgnitionSchedule(struct IgnSchedule *ignitionSchedule, unsigned long totalDuration, unsigned long coilChargeDuration);
-
-/** @brief Set the next schedule for the injection channel.
- * 
- * The injector open time is automatically calculated.
- * @param crankAngle The current crank angle
- * @param injectorEndAngle The crank angle at which to end teh injection pulse
- * @param openDuration length of time the injector is open
- */
-void setFuelSchedule(struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration);
-
-/** @brief Manually set the next schedule for the ignition channel.
- * 
- * @param totalDuration the duration of the entire schedule in uS (microseconds): injector will close at the end of the schedule
- * @param openDuration length of time the injector is open
- */
-void setFuelSchedule(struct FuelSchedule *targetSchedule , unsigned long totalDuration, unsigned long openDuration);
 
 #endif // SCHEDULER_H

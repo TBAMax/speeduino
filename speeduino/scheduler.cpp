@@ -44,23 +44,23 @@ void Schedule::reset()
 }
 
 // Immediately run the schedule if not already running.
-void runSchedule (struct Schedule *targetSchedule, unsigned long duration)
+void Schedule::runSchedule (unsigned long duration)
 {
-  if(!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
+  if(!isRunning()) //Check that we're not already part way through a schedule
   {      
-    forceRunSchedule(targetSchedule, duration);
+    forceRunSchedule(duration);
   }
 }
 
 // Immediately run the schedule - regardless of current state.
-void forceRunSchedule(struct Schedule *targetSchedule, unsigned long duration)
+void Schedule::forceRunSchedule(unsigned long duration)
 {
-  targetSchedule->pStartFunction();
+  pStartFunction();
   noInterrupts(); // make sure start and end values are updated simultaneously
-  SET_COMPARE(targetSchedule->compare, targetSchedule->counter + (COMPARE_TYPE)uS_TO_TIMER_COMPARE(duration));
-  targetSchedule->Status = RUNNING; //RUN this schedule immediately
+  SET_COMPARE(compare, counter + (COMPARE_TYPE)uS_TO_TIMER_COMPARE(duration));
+  Status = RUNNING; //RUN this schedule immediately
   interrupts(); 
-  targetSchedule->pTimerEnable(); 
+  pTimerEnable(); 
 }
 
 // Setup the schedule to run on the next cycle
@@ -158,20 +158,20 @@ IgnSchedule ignitionSchedule8(IGN8_COUNTER, IGN8_COMPARE, fun_IGN8_TIMER_DISABLE
 #endif
 
 
-void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration)
+void FuelSchedule::setFuelSchedule (int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration)
 {
   while (injectorEndAngle <= crankAngle)   { injectorEndAngle += CRANK_ANGLE_MAX_INJ; } //calculate into the next cycle
-  if (isRunning(*targetSchedule))
+  if (isRunning())
   {
     //If the schedule is already running, we can set the next schedule so it is ready to go
     //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
     injectorEndAngle += CRANK_ANGLE_MAX_INJ;
   }
   unsigned long totalDuration = (injectorEndAngle - crankAngle) * (unsigned long)timePerDegree; 
-  setFuelSchedule(targetSchedule, totalDuration, openDuration);
+  setFuelSchedule(totalDuration, openDuration);
 }
 
-void setFuelSchedule(struct FuelSchedule *targetSchedule, unsigned long totalDuration, unsigned long openDuration)
+void FuelSchedule::setFuelSchedule(unsigned long totalDuration, unsigned long openDuration)
 {
   // Time in uS that the refresh functions will check to ensure there is enough time before changing the start or end compare
   constexpr uint8_t INJECTION_REFRESH_TRESHOLD = 230U; 
@@ -179,51 +179,51 @@ void setFuelSchedule(struct FuelSchedule *targetSchedule, unsigned long totalDur
   // Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
   if ((totalDuration < MAX_TIMER_PERIOD) && (totalDuration > openDuration + INJECTION_REFRESH_TRESHOLD))
   {
-    if (!isRunning(*targetSchedule)) //Check that we're not already part way through a schedule
+    if (!isRunning()) //Check that we're not already part way through a schedule
     {
-      setPending(targetSchedule, totalDuration, openDuration);
+      setPending(this, totalDuration, openDuration);
     }
     // The current injection pulse must have at least 400 ticks left.
-    else if((targetSchedule->compare-targetSchedule->counter)>400U)
+    else if((compare-counter)>400U)
     {
-      setNext(targetSchedule, totalDuration, openDuration);
+      setNext(this, totalDuration, openDuration);
     }
   }
 }
 
 
-void setIgnitionSchedule(struct IgnSchedule *targetSchedule,  int16_t crankAngle, unsigned long coilChargeDuration)
+void IgnSchedule::setIgnitionSchedule(int16_t crankAngle, unsigned long coilChargeDuration)
 {
-  int endAngle = targetSchedule->ignitionEndAngle;
+  int endAngle = ignitionEndAngle;
   while (endAngle <= crankAngle)   { endAngle += CRANK_ANGLE_MAX_IGN; } //calculate into the next cycle
-  if (isRunning(*targetSchedule))
+  if (isRunning())
   {
     //If the schedule is already running, we can set the next schedule so it is ready to go
     //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
     endAngle += CRANK_ANGLE_MAX_IGN;
   }
   unsigned long totalDuration = angleToTime((endAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
-  setIgnitionSchedule(targetSchedule, totalDuration, coilChargeDuration);
+  setIgnitionSchedule(totalDuration, coilChargeDuration);
 }
 
-void setIgnitionSchedule(struct IgnSchedule *targetSchedule, unsigned long totalDuration, unsigned long coilChargeDuration)
+void IgnSchedule::setIgnitionSchedule(unsigned long totalDuration, unsigned long coilChargeDuration)
 {
   constexpr COMPARE_TYPE IGNITION_REFRESH_THRESHOLD = 230U; //Time in uS that the refresh functions will check to ensure there is enough time before changing the end compare
 
   // Need to check that the timeout doesn't exceed the overflow,
   if ((totalDuration < MAX_TIMER_PERIOD))
   {
-    if (!isRunning(*targetSchedule)) // Check that we're not already part way charging the coil
+    if (!isRunning()) // Check that we're not already part way charging the coil
     {
       // Allow for fixed 230us safety between setting the schedule and running it
       if(totalDuration > coilChargeDuration + IGNITION_REFRESH_THRESHOLD) 
       {
-        setPending(targetSchedule, totalDuration, coilChargeDuration);
+        setPending(this, totalDuration, coilChargeDuration);
       }
     }
     else 
     {
-      setNext(targetSchedule, totalDuration, coilChargeDuration);
+      setNext(this, totalDuration, coilChargeDuration);
     }
   }
 }
@@ -234,27 +234,27 @@ void beginInjectorPriming()
   if( (primingValue > 0) && (currentStatus.TPS < configPage4.floodClear) )
   {
     primingValue = primingValue * 100 * 5; //to acheive long enough priming pulses, the values in tuner studio are divided by 0.5 instead of 0.1, so multiplier of 5 is required.
-    if ( fuelSchedule1.injEnabled == true ) { runSchedule(&fuelSchedule1, primingValue); }
+    if ( fuelSchedule1.injEnabled == true ) { fuelSchedule1.runSchedule(primingValue); }
 #if (INJ_CHANNELS >= 2)
-    if ( fuelSchedule2.injEnabled == true ) { runSchedule(&fuelSchedule2, primingValue); }
+    if ( fuelSchedule2.injEnabled == true ) { fuelSchedule2.runSchedule(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 3)
-    if ( fuelSchedule3.injEnabled == true ) { runSchedule(&fuelSchedule3, primingValue); }
+    if ( fuelSchedule3.injEnabled == true ) { fuelSchedule3.runSchedule(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 4)
-    if ( fuelSchedule4.injEnabled == true ) { runSchedule(&fuelSchedule4, primingValue); }
+    if ( fuelSchedule4.injEnabled == true ) { fuelSchedule4.runSchedule(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 5)
-    if ( fuelSchedule5.injEnabled == true ) { runSchedule(&fuelSchedule5, primingValue); }
+    if ( fuelSchedule5.injEnabled == true ) { fuelSchedule5.runSchedule(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 6)
-    if ( fuelSchedule6.injEnabled == true ) { runSchedule(&fuelSchedule6, primingValue); }
+    if ( fuelSchedule6.injEnabled == true ) { fuelSchedule6.runSchedule(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 7)
-    if ( fuelSchedule7.injEnabled == true ) { runSchedule(&fuelSchedule7, primingValue); }
+    if ( fuelSchedule7.injEnabled == true ) { fuelSchedule7.runSchedule(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 8)
-    if ( fuelSchedule8.injEnabled == true ) { runSchedule(&fuelSchedule8, primingValue); }
+    if ( fuelSchedule8.injEnabled == true ) { fuelSchedule8.runSchedule(primingValue); }
 #endif
   }
 }
@@ -272,13 +272,13 @@ static void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
 {
   constexpr uint8_t INJECTION_OVERLAP_TRESHOLD  = 96U; //Time in us, basically minimum injector off time that is allowed.
 
-  if (isPending(*fuelSchedule)) //Check to see if this schedule is turn on
+  if (fuelSchedule->isPending()) //Check to see if this schedule is turn on
   {
     SET_COMPARE(fuelSchedule->compare, fuelSchedule->endCounter);
     fuelSchedule->pStartFunction();
     fuelSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)    
   }
-  else if (isRunning(*fuelSchedule))
+  else if (fuelSchedule->isRunning())
   {
     //If there is a next schedule queued up, activate it
     if(fuelSchedule->Status == RUNNINGHASNEXT)
@@ -402,13 +402,13 @@ fuelScheduleInterrupt(&fuelSchedule8);
 
 static void ignitionScheduleInterrupt(struct IgnSchedule *targetSchedule) // common function that all ignition channel interrupts use
 {
-  if (isPending(*targetSchedule)) //Check to see if this schedule is turn on
+  if (targetSchedule->isPending()) //Check to see if this schedule is turn on
   {
     targetSchedule->pStartFunction();
     targetSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
     SET_COMPARE(targetSchedule->compare, targetSchedule->endCounter);
   }
-  else if (isRunning(*targetSchedule))
+  else if (targetSchedule->isRunning())
   {
     targetSchedule->pEndFunction(); //Moment of spark 
 

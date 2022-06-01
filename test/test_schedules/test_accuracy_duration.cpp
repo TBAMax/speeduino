@@ -10,9 +10,9 @@
 void test_accuracy_duration(Schedule *pSchedule)
 {
     pSchedule->reset();
-    runSchedule(pSchedule, DURATION);
+    pSchedule->runSchedule(DURATION);
     uint32_t start_time = micros();
-    while(isRunning(*pSchedule)) /*Wait*/ ;
+    while(pSchedule->isRunning()) /*Wait*/ ;
     uint32_t end_time = micros();
     TEST_ASSERT_UINT32_WITHIN(DELTA, DURATION, end_time - start_time);
 }

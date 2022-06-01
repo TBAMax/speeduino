@@ -16,22 +16,22 @@ void test_status_running_to_pending_inj(FuelSchedule *pSchedule)
     pSchedule->reset();
     start_count = 0;
     end_count = 0;
-    setCallbacks(*pSchedule, startCallback, endCallback);   
+    pSchedule->setCallbacks(startCallback, endCallback);   
     
-    setFuelSchedule(pSchedule, TOTAL_DURATION, DURATION);
+    pSchedule->setFuelSchedule(TOTAL_DURATION, DURATION);
     TEST_ASSERT_EQUAL_UINT8(0, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
     TEST_ASSERT_EQUAL(PENDING, pSchedule->Status);
     
-    while(isPending(*pSchedule)) /*Wait*/ ;
+    while(pSchedule->isPending()) /*Wait*/ ;
     TEST_ASSERT_EQUAL_UINT8(1, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
     TEST_ASSERT_EQUAL(RUNNING, pSchedule->Status);
     
-    setFuelSchedule(pSchedule, 2*TOTAL_DURATION, DURATION);
+    pSchedule->setFuelSchedule(2*TOTAL_DURATION, DURATION);
     TEST_ASSERT_EQUAL(RUNNINGHASNEXT, pSchedule->Status);
 
-    while(isRunning(*pSchedule)) /*Wait*/ ;
+    while(pSchedule->isRunning()) /*Wait*/ ;
     TEST_ASSERT_EQUAL_UINT8(1, start_count);
     TEST_ASSERT_EQUAL_UINT8(1, end_count);
     TEST_ASSERT_EQUAL(PENDING, pSchedule->Status);
@@ -90,18 +90,18 @@ void test_status_running_to_pending_ign(IgnSchedule *pSchedule)
     pSchedule->reset();
     start_count = 0;
     end_count = 0;
-    setCallbacks(*pSchedule, startCallback, endCallback);   
-    setIgnitionSchedule(pSchedule, TOTAL_DURATION, DURATION);
+    pSchedule->setCallbacks(startCallback, endCallback);   
+    pSchedule->setIgnitionSchedule(TOTAL_DURATION, DURATION);
     TEST_ASSERT_EQUAL_UINT8(0, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
-    while(isPending(*pSchedule)) /*Wait*/ ;
+    while(pSchedule->isPending()) /*Wait*/ ;
     TEST_ASSERT_EQUAL_UINT8(1, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
-    setIgnitionSchedule(pSchedule, 2*TOTAL_DURATION, DURATION);
-    while(isRunning(*pSchedule)) /*Wait*/ ;
+    pSchedule->setIgnitionSchedule(2*TOTAL_DURATION, DURATION);
+    while(pSchedule->isRunning()) /*Wait*/ ;
     TEST_ASSERT_EQUAL_UINT8(1, start_count);
     TEST_ASSERT_EQUAL_UINT8(1, end_count);
-    TEST_ASSERT_TRUE(isPending(*pSchedule));    
+    TEST_ASSERT_TRUE(pSchedule->isPending());    
 }
 
 void test_status_running_to_pending_ign1(void)

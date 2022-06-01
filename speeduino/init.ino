@@ -837,12 +837,12 @@ void initialiseAll()
     {
     case INJ_PAIRED:
         //Paired injection
-        setCallbacks(fuelSchedule1, openInjector1, closeInjector1);
-        setCallbacks(fuelSchedule2, openInjector2, closeInjector2);
-        setCallbacks(fuelSchedule3, openInjector3, closeInjector3);
-        setCallbacks(fuelSchedule4, openInjector4, closeInjector4);
+        fuelSchedule1.setCallbacks(openInjector1, closeInjector1);
+        fuelSchedule2.setCallbacks(openInjector2, closeInjector2);
+        fuelSchedule3.setCallbacks(openInjector3, closeInjector3);
+        fuelSchedule4.setCallbacks(openInjector4, closeInjector4);
         #if (INJ_CHANNELS >= 5)
-        setCallbacks(fuelSchedule5, openInjector5, closeInjector5);
+        fuelSchedule5.setCallbacks(openInjector5, closeInjector5);
         #endif
         break;
 
@@ -852,76 +852,76 @@ void initialiseAll()
         {
           if(configPage4.inj4cylPairing == INJ_PAIR_13_24)
           {
-            setCallbacks(fuelSchedule1, openInjector1and3, closeInjector1and3);
-            setCallbacks(fuelSchedule2, openInjector2and4, closeInjector2and4);
+            fuelSchedule1.setCallbacks(openInjector1and3, closeInjector1and3);
+            fuelSchedule2.setCallbacks(openInjector2and4, closeInjector2and4);
           }
           else
           {
-            setCallbacks(fuelSchedule1, openInjector1and4, closeInjector1and4);
-            setCallbacks(fuelSchedule2, openInjector2and3, closeInjector2and3);
+            fuelSchedule1.setCallbacks(openInjector1and4, closeInjector1and4);
+            fuelSchedule2.setCallbacks(openInjector2and3, closeInjector2and3);
           }
         }
         else if( configPage2.nCylinders == 5 ) //This is similar to the paired injection but uses five injector outputs instead of four
         {
-          setCallbacks(fuelSchedule1, openInjector1, closeInjector1);
-          setCallbacks(fuelSchedule2, openInjector2, closeInjector2);
-          setCallbacks(fuelSchedule3, openInjector3and5, closeInjector3and5);
-          setCallbacks(fuelSchedule4, openInjector4, closeInjector4);
+          fuelSchedule1.setCallbacks(openInjector1, closeInjector1);
+          fuelSchedule2.setCallbacks(openInjector2, closeInjector2);
+          fuelSchedule3.setCallbacks(openInjector3and5, closeInjector3and5);
+          fuelSchedule4.setCallbacks(openInjector4, closeInjector4);
         }
         else if( configPage2.nCylinders == 6 )
         {
-          setCallbacks(fuelSchedule1, openInjector1and4, closeInjector1and4);
-          setCallbacks(fuelSchedule2, openInjector2and5, closeInjector2and5);
-          setCallbacks(fuelSchedule3, openInjector3and6, closeInjector3and6);
+          fuelSchedule1.setCallbacks(openInjector1and4, closeInjector1and4);
+          fuelSchedule2.setCallbacks(openInjector2and5, closeInjector2and5);
+          fuelSchedule3.setCallbacks(openInjector3and6, closeInjector3and6);
         }
         else if( configPage2.nCylinders == 8 )
         {
-          setCallbacks(fuelSchedule1, openInjector1and5, closeInjector1and5);
-          setCallbacks(fuelSchedule2, openInjector2and6, closeInjector2and6);
-          setCallbacks(fuelSchedule3, openInjector3and7, closeInjector3and7);
-          setCallbacks(fuelSchedule4, openInjector4and8, closeInjector4and8);
+          fuelSchedule1.setCallbacks(openInjector1and5, closeInjector1and5);
+          fuelSchedule2.setCallbacks(openInjector2and6, closeInjector2and6);
+          fuelSchedule3.setCallbacks(openInjector3and7, closeInjector3and7);
+          fuelSchedule4.setCallbacks(openInjector4and8, closeInjector4and8);
         }
         else
         {
           //Fall back to paired injection
-          setCallbacks(fuelSchedule1, openInjector1, closeInjector1);
-          setCallbacks(fuelSchedule2, openInjector2, closeInjector2);
-          setCallbacks(fuelSchedule3, openInjector3, closeInjector3);
-          setCallbacks(fuelSchedule4, openInjector4, closeInjector4);
+          fuelSchedule1.setCallbacks(openInjector1, closeInjector1);
+          fuelSchedule2.setCallbacks(openInjector2, closeInjector2);
+          fuelSchedule3.setCallbacks(openInjector3, closeInjector3);
+          fuelSchedule4.setCallbacks(openInjector4, closeInjector4);
           #if (INJ_CHANNELS >= 5)
-          setCallbacks(fuelSchedule5, openInjector5, closeInjector5);
+          fuelSchedule5.setCallbacks(openInjector5, closeInjector5);
           #endif
         }
         break;
 
     case INJ_SEQUENTIAL:
         //Sequential injection
-        setCallbacks(fuelSchedule1, openInjector1, closeInjector1);
-        setCallbacks(fuelSchedule2, openInjector2, closeInjector2);
-        setCallbacks(fuelSchedule3, openInjector3, closeInjector3);
-        setCallbacks(fuelSchedule4, openInjector4, closeInjector4);
+        fuelSchedule1.setCallbacks(openInjector1, closeInjector1);
+        fuelSchedule2.setCallbacks(openInjector2, closeInjector2);
+        fuelSchedule3.setCallbacks(openInjector3, closeInjector3);
+        fuelSchedule4.setCallbacks(openInjector4, closeInjector4);
         #if (INJ_CHANNELS >= 5)
-        setCallbacks(fuelSchedule5, openInjector5, closeInjector5);
+        fuelSchedule5.setCallbacks(openInjector5, closeInjector5);
         #endif
         #if (INJ_CHANNELS >= 6)
-        setCallbacks(fuelSchedule6, openInjector6, closeInjector6);
+        fuelSchedule6.setCallbacks(openInjector6, closeInjector6);
         #endif
         #if (INJ_CHANNELS >= 7)
-        setCallbacks(fuelSchedule7, openInjector7, closeInjector7);
+        fuelSchedule7.setCallbacks(openInjector7, closeInjector7);
         #endif
         #if (INJ_CHANNELS >= 8)
-        setCallbacks(fuelSchedule8, openInjector8, closeInjector8);
+        fuelSchedule8.setCallbacks(openInjector8, closeInjector8);
         #endif
         break;
 
     default:
         //Paired injection
-        setCallbacks(fuelSchedule1, openInjector1, closeInjector1);
-        setCallbacks(fuelSchedule2, openInjector2, closeInjector2);
-        setCallbacks(fuelSchedule3, openInjector3, closeInjector3);
-        setCallbacks(fuelSchedule4, openInjector4, closeInjector4);
+        fuelSchedule1.setCallbacks(openInjector1, closeInjector1);
+        fuelSchedule2.setCallbacks(openInjector2, closeInjector2);
+        fuelSchedule3.setCallbacks(openInjector3, closeInjector3);
+        fuelSchedule4.setCallbacks(openInjector4, closeInjector4);
         #if (INJ_CHANNELS >= 5)
-        setCallbacks(fuelSchedule5, openInjector5, closeInjector5);
+        fuelSchedule5.setCallbacks(openInjector5, closeInjector5);
         #endif
         break;
     }
@@ -930,28 +930,28 @@ void initialiseAll()
     {
     case IGN_MODE_WASTED:
         //Wasted Spark (Normal mode)
-        setCallbacks(ignitionSchedule1, beginCoil1Charge, endCoil1Charge);
-        setCallbacks(ignitionSchedule2, beginCoil2Charge, endCoil2Charge);
-        setCallbacks(ignitionSchedule3, beginCoil3Charge, endCoil3Charge);
-        setCallbacks(ignitionSchedule4, beginCoil4Charge, endCoil4Charge);
-        setCallbacks(ignitionSchedule5, beginCoil5Charge, endCoil5Charge);
+        ignitionSchedule1.setCallbacks(beginCoil1Charge, endCoil1Charge);
+        ignitionSchedule2.setCallbacks(beginCoil2Charge, endCoil2Charge);
+        ignitionSchedule3.setCallbacks(beginCoil3Charge, endCoil3Charge);
+        ignitionSchedule4.setCallbacks(beginCoil4Charge, endCoil4Charge);
+        ignitionSchedule5.setCallbacks(beginCoil5Charge, endCoil5Charge);
         break;
 
     case IGN_MODE_SINGLE:
         //Single channel mode. All ignition pulses are on channel 1
-        setCallbacks(ignitionSchedule1, beginCoil1Charge, endCoil1Charge);
-        setCallbacks(ignitionSchedule2, beginCoil1Charge, endCoil1Charge);
-        setCallbacks(ignitionSchedule3, beginCoil1Charge, endCoil1Charge);
-        setCallbacks(ignitionSchedule4, beginCoil1Charge, endCoil1Charge);
-        setCallbacks(ignitionSchedule5, beginCoil1Charge, endCoil1Charge);
+        ignitionSchedule1.setCallbacks(beginCoil1Charge, endCoil1Charge);
+        ignitionSchedule2.setCallbacks(beginCoil1Charge, endCoil1Charge);
+        ignitionSchedule3.setCallbacks(beginCoil1Charge, endCoil1Charge);
+        ignitionSchedule4.setCallbacks(beginCoil1Charge, endCoil1Charge);
+        ignitionSchedule5.setCallbacks(beginCoil1Charge, endCoil1Charge);
         #if IGN_CHANNELS >= 6
-        setCallbacks(ignitionSchedule6, beginCoil1Charge, endCoil1Charge);
+        ignitionSchedule6.setCallbacks(beginCoil1Charge, endCoil1Charge);
         #endif
         #if IGN_CHANNELS >= 7
-        setCallbacks(ignitionSchedule7, beginCoil1Charge, endCoil1Charge);
+        ignitionSchedule7.setCallbacks(beginCoil1Charge, endCoil1Charge);
         #endif
         #if IGN_CHANNELS >= 8
-        setCallbacks(ignitionSchedule8, beginCoil1Charge, endCoil1Charge);
+        ignitionSchedule8.setCallbacks(beginCoil1Charge, endCoil1Charge);
         #endif
         break;
 
@@ -960,75 +960,75 @@ void initialiseAll()
         //Wasted COP mode for 4 cylinders. Ignition channels 1&3 and 2&4 are paired together
         if( configPage2.nCylinders <= 4 )
         {
-          setCallbacks(ignitionSchedule1, beginCoil1and3Charge, endCoil1and3Charge);
-          setCallbacks(ignitionSchedule2, beginCoil2and4Charge, endCoil2and4Charge);
+          ignitionSchedule1.setCallbacks(beginCoil1and3Charge, endCoil1and3Charge);
+          ignitionSchedule2.setCallbacks(beginCoil2and4Charge, endCoil2and4Charge);
 
-          setCallbacks(ignitionSchedule3, nullCallback, nullCallback);
-          setCallbacks(ignitionSchedule4, nullCallback, nullCallback);
+          ignitionSchedule3.setCallbacks(nullCallback, nullCallback);
+          ignitionSchedule4.setCallbacks(nullCallback, nullCallback);
         }
         //Wasted COP mode for 6 cylinders. Ignition channels 1&4, 2&5 and 3&6 are paired together
         else if( configPage2.nCylinders == 6 )
           {
-          setCallbacks(ignitionSchedule1, beginCoil1and4Charge, endCoil1and4Charge);
-          setCallbacks(ignitionSchedule2, beginCoil2and5Charge, endCoil2and5Charge);
-          setCallbacks(ignitionSchedule3, beginCoil3and6Charge, endCoil3and6Charge);
+          ignitionSchedule1.setCallbacks(beginCoil1and4Charge, endCoil1and4Charge);
+          ignitionSchedule2.setCallbacks(beginCoil2and5Charge, endCoil2and5Charge);
+          ignitionSchedule3.setCallbacks(beginCoil3and6Charge, endCoil3and6Charge);
 
-          setCallbacks(ignitionSchedule4, nullCallback, nullCallback);
+          ignitionSchedule4.setCallbacks(nullCallback, nullCallback);
           #if IGN_CHANNELS >= 5
-          setCallbacks(ignitionSchedule5, nullCallback, nullCallback);
+          ignitionSchedule5.setCallbacks(nullCallback, nullCallback);
           #endif
           #if IGN_CHANNELS >= 6
-          setCallbacks(ignitionSchedule6, nullCallback, nullCallback);
+          ignitionSchedule6.setCallbacks(nullCallback, nullCallback);
           #endif
         }
         //Wasted COP mode for 8 cylinders. Ignition channels 1&5, 2&6, 3&7 and 4&8 are paired together
         else if( configPage2.nCylinders == 8 )
           {
-          setCallbacks(ignitionSchedule1, beginCoil1and5Charge, endCoil1and5Charge);
-          setCallbacks(ignitionSchedule2, beginCoil2and6Charge, endCoil2and6Charge);
-          setCallbacks(ignitionSchedule3, beginCoil3and7Charge, endCoil3and7Charge);
-          setCallbacks(ignitionSchedule4, beginCoil4and8Charge, endCoil4and8Charge);
+          ignitionSchedule1.setCallbacks(beginCoil1and5Charge, endCoil1and5Charge);
+          ignitionSchedule2.setCallbacks(beginCoil2and6Charge, endCoil2and6Charge);
+          ignitionSchedule3.setCallbacks(beginCoil3and7Charge, endCoil3and7Charge);
+          ignitionSchedule4.setCallbacks(beginCoil4and8Charge, endCoil4and8Charge);
 
           #if IGN_CHANNELS >= 5
-          setCallbacks(ignitionSchedule5, nullCallback, nullCallback);
+          ignitionSchedule5.setCallbacks(nullCallback, nullCallback);
           #endif
           #if IGN_CHANNELS >= 6
-          setCallbacks(ignitionSchedule6, nullCallback, nullCallback);
+          ignitionSchedule6.setCallbacks(nullCallback, nullCallback);
           #endif
           #if IGN_CHANNELS >= 7
-          setCallbacks(ignitionSchedule7, nullCallback, nullCallback);
+          ignitionSchedule7.setCallbacks(nullCallback, nullCallback);
           #endif
           #if IGN_CHANNELS >= 8
-          setCallbacks(ignitionSchedule8, nullCallback, nullCallback);
+          ignitionSchedule8.setCallbacks(nullCallback, nullCallback);
           #endif
         }
         else
         {
           //If the person has inadvertantly selected this when running more than 4 cylinders or other than 6 cylinders, just use standard Wasted spark mode
-          setCallbacks(ignitionSchedule1, beginCoil1Charge, endCoil1Charge);
-          setCallbacks(ignitionSchedule2, beginCoil2Charge, endCoil2Charge);
-          setCallbacks(ignitionSchedule3, beginCoil3Charge, endCoil3Charge);
-          setCallbacks(ignitionSchedule4, beginCoil4Charge, endCoil4Charge);
+          ignitionSchedule1.setCallbacks(beginCoil1Charge, endCoil1Charge);
+          ignitionSchedule2.setCallbacks(beginCoil2Charge, endCoil2Charge);
+          ignitionSchedule3.setCallbacks(beginCoil3Charge, endCoil3Charge);
+          ignitionSchedule4.setCallbacks(beginCoil4Charge, endCoil4Charge);
           #if IGN_CHANNELS >= 5
-          setCallbacks(ignitionSchedule5, beginCoil5Charge, endCoil5Charge);
+          ignitionSchedule5.setCallbacks(beginCoil5Charge, endCoil5Charge);
           #endif
         }
         break;
 
     case IGN_MODE_SEQUENTIAL:
-        setCallbacks(ignitionSchedule1, beginCoil1Charge, endCoil1Charge);
-        setCallbacks(ignitionSchedule2, beginCoil2Charge, endCoil2Charge);
-        setCallbacks(ignitionSchedule3, beginCoil3Charge, endCoil3Charge);
-        setCallbacks(ignitionSchedule4, beginCoil4Charge, endCoil4Charge);
-        setCallbacks(ignitionSchedule5, beginCoil5Charge, endCoil5Charge);
+        ignitionSchedule1.setCallbacks(beginCoil1Charge, endCoil1Charge);
+        ignitionSchedule2.setCallbacks(beginCoil2Charge, endCoil2Charge);
+        ignitionSchedule3.setCallbacks(beginCoil3Charge, endCoil3Charge);
+        ignitionSchedule4.setCallbacks(beginCoil4Charge, endCoil4Charge);
+        ignitionSchedule5.setCallbacks(beginCoil5Charge, endCoil5Charge);
         #if IGN_CHANNELS >= 6
-        setCallbacks(ignitionSchedule6, beginCoil6Charge, endCoil6Charge);
+        ignitionSchedule6.setCallbacks(beginCoil6Charge, endCoil6Charge);
         #endif
         #if IGN_CHANNELS >= 7
-        setCallbacks(ignitionSchedule7, beginCoil7Charge, endCoil7Charge);
+        ignitionSchedule7.setCallbacks(beginCoil7Charge, endCoil7Charge);
         #endif
         #if IGN_CHANNELS >= 8
-        setCallbacks(ignitionSchedule8, beginCoil8Charge, endCoil8Charge);
+        ignitionSchedule8.setCallbacks(beginCoil8Charge, endCoil8Charge);
         #endif
         break;
 
@@ -1036,23 +1036,23 @@ void initialiseAll()
         if(configPage10.rotaryType == ROTARY_IGN_FC)
         {
           //Ignition channel 1 is a wasted spark signal for leading signal on both rotors
-          setCallbacks(ignitionSchedule1, beginCoil1Charge, endCoil1Charge);
-          setCallbacks(ignitionSchedule2, beginCoil1Charge, endCoil1Charge);
+          ignitionSchedule1.setCallbacks(beginCoil1Charge, endCoil1Charge);
+          ignitionSchedule2.setCallbacks(beginCoil1Charge, endCoil1Charge);
 
-          setCallbacks(ignitionSchedule3, beginTrailingCoilCharge, endTrailingCoilCharge1);
-          setCallbacks(ignitionSchedule4, beginTrailingCoilCharge, endTrailingCoilCharge2);
+          ignitionSchedule3.setCallbacks(beginTrailingCoilCharge, endTrailingCoilCharge1);
+          ignitionSchedule4.setCallbacks(beginTrailingCoilCharge, endTrailingCoilCharge2);
         }
         else if(configPage10.rotaryType == ROTARY_IGN_FD)
         {
           //Ignition channel 1 is a wasted spark signal for leading signal on both rotors
-          setCallbacks(ignitionSchedule1, beginCoil1Charge, endCoil1Charge);
-          setCallbacks(ignitionSchedule2, beginCoil1Charge, endCoil1Charge);
+          ignitionSchedule1.setCallbacks(beginCoil1Charge, endCoil1Charge);
+          ignitionSchedule2.setCallbacks(beginCoil1Charge, endCoil1Charge);
 
           //Trailing coils have their own channel each
           //IGN2 = front rotor trailing spark
-          setCallbacks(ignitionSchedule3, beginCoil2Charge, endCoil2Charge);
+          ignitionSchedule3.setCallbacks(beginCoil2Charge, endCoil2Charge);
           //IGN3 = rear rotor trailing spark
-          setCallbacks(ignitionSchedule4, beginCoil3Charge, endCoil3Charge);
+          ignitionSchedule4.setCallbacks(beginCoil3Charge, endCoil3Charge);
 
           //IGN4 not used
         }
@@ -1061,23 +1061,23 @@ void initialiseAll()
           //RX8 outputs are simply 1 coil and 1 output per plug
 
           //IGN1 is front rotor, leading spark
-          setCallbacks(ignitionSchedule1, beginCoil1Charge, endCoil1Charge);
+          ignitionSchedule1.setCallbacks(beginCoil1Charge, endCoil1Charge);
           //IGN2 is rear rotor, leading spark
-          setCallbacks(ignitionSchedule2, beginCoil2Charge, endCoil2Charge);
+          ignitionSchedule2.setCallbacks(beginCoil2Charge, endCoil2Charge);
           //IGN3 = front rotor trailing spark
-          setCallbacks(ignitionSchedule3, beginCoil3Charge, endCoil3Charge);
+          ignitionSchedule3.setCallbacks(beginCoil3Charge, endCoil3Charge);
           //IGN4 = rear rotor trailing spark
-          setCallbacks(ignitionSchedule4, beginCoil4Charge, endCoil4Charge);
+          ignitionSchedule4.setCallbacks(beginCoil4Charge, endCoil4Charge);
         }
         break;
 
     default:
         //Wasted spark (Shouldn't ever happen anyway)
-        setCallbacks(ignitionSchedule1, beginCoil1Charge, endCoil1Charge);
-        setCallbacks(ignitionSchedule2, beginCoil2Charge, endCoil2Charge);
-        setCallbacks(ignitionSchedule3, beginCoil3Charge, endCoil3Charge);
-        setCallbacks(ignitionSchedule4, beginCoil4Charge, endCoil4Charge);
-        setCallbacks(ignitionSchedule5, beginCoil5Charge, endCoil5Charge);
+        ignitionSchedule1.setCallbacks(beginCoil1Charge, endCoil1Charge);
+        ignitionSchedule2.setCallbacks(beginCoil2Charge, endCoil2Charge);
+        ignitionSchedule3.setCallbacks(beginCoil3Charge, endCoil3Charge);
+        ignitionSchedule4.setCallbacks(beginCoil4Charge, endCoil4Charge);
+        ignitionSchedule5.setCallbacks(beginCoil5Charge, endCoil5Charge);
         break;
     }
 

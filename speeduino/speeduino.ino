@@ -809,56 +809,56 @@ void loop()
       {
         if(currentStatus.PW1 >= inj_opentime_uS)
         {
-          setFuelSchedule(&fuelSchedule1, crankAngle, injector1EndAngle, (unsigned long)currentStatus.PW1);          
+          fuelSchedule1.setFuelSchedule(crankAngle, injector1EndAngle, (unsigned long)currentStatus.PW1);          
         }
 #endif
 
 #if INJ_CHANNELS >= 2
         if( (fuelSchedule2.injEnabled) && (currentStatus.PW2 >= inj_opentime_uS) )
         {
-          setFuelSchedule(&fuelSchedule2, crankAngle, injector2EndAngle, (unsigned long)currentStatus.PW2);    
+          fuelSchedule2.setFuelSchedule(crankAngle, injector2EndAngle, (unsigned long)currentStatus.PW2);    
         }
 #endif
 
 #if INJ_CHANNELS >= 3
         if( (fuelSchedule3.injEnabled) && (currentStatus.PW3 >= inj_opentime_uS) )
         {
-          setFuelSchedule(&fuelSchedule3, crankAngle, injector3EndAngle, (unsigned long)currentStatus.PW3);  
+          fuelSchedule3.setFuelSchedule(crankAngle, injector3EndAngle, (unsigned long)currentStatus.PW3);  
         }
 #endif
 
 #if INJ_CHANNELS >= 4
         if( (fuelSchedule4.injEnabled) && (currentStatus.PW4 >= inj_opentime_uS) )
         {
-          setFuelSchedule(&fuelSchedule4, crankAngle, injector4EndAngle, (unsigned long)currentStatus.PW4);  
+          fuelSchedule4.setFuelSchedule(crankAngle, injector4EndAngle, (unsigned long)currentStatus.PW4);  
         }
 #endif
 
 #if INJ_CHANNELS >= 5
         if( (fuelSchedule5.injEnabled) && (currentStatus.PW5 >= inj_opentime_uS) )
         {
-          setFuelSchedule(&fuelSchedule5, crankAngle, injector5EndAngle, (unsigned long)currentStatus.PW5);  
+          fuelSchedule5.setFuelSchedule(crankAngle, injector5EndAngle, (unsigned long)currentStatus.PW5);  
         }
 #endif
 
 #if INJ_CHANNELS >= 6
         if( (fuelSchedule6.injEnabled) && (currentStatus.PW6 >= inj_opentime_uS) )
         {
-          setFuelSchedule(&fuelSchedule6, crankAngle, injector6EndAngle, (unsigned long)currentStatus.PW6);  
+          fuelSchedule6.setFuelSchedule(crankAngle, injector6EndAngle, (unsigned long)currentStatus.PW6);  
         }
 #endif
 
 #if INJ_CHANNELS >= 7
         if( (fuelSchedule7.injEnabled) && (currentStatus.PW7 >= inj_opentime_uS) )
         {
-          setFuelSchedule(&fuelSchedule7, crankAngle, injector7EndAngle, (unsigned long)currentStatus.PW7);  
+          fuelSchedule7.setFuelSchedule(crankAngle, injector7EndAngle, (unsigned long)currentStatus.PW7);  
         }
 #endif
 
 #if INJ_CHANNELS >= 8
         if( (fuelSchedule8.injEnabled) && (currentStatus.PW8 >= inj_opentime_uS) )
         {
-          setFuelSchedule(&fuelSchedule8, crankAngle, injector8EndAngle, (unsigned long)currentStatus.PW8);
+          fuelSchedule8.setFuelSchedule(crankAngle, injector8EndAngle, (unsigned long)currentStatus.PW8);
         }
 #endif
       }
@@ -885,7 +885,7 @@ void loop()
 #if IGN_CHANNELS >= 1
         if (!BIT_CHECK(curRollingCut, IGN1_CMD_BIT) )
         {
-          setIgnitionSchedule(&ignitionSchedule1, crankAngle, currentStatus.dwell);
+          ignitionSchedule1.setIgnitionSchedule(crankAngle, currentStatus.dwell);
         }
 #endif
 
@@ -893,49 +893,49 @@ void loop()
 #if IGN_CHANNELS >= 2
         if (maxIgnOutputs >= 2 && !BIT_CHECK(curRollingCut, IGN2_CMD_BIT))
         {
-          setIgnitionSchedule(&ignitionSchedule2, crankAngle, currentStatus.dwell);
+          ignitionSchedule2.setIgnitionSchedule(crankAngle, currentStatus.dwell);
         }
 #endif
 
 #if IGN_CHANNELS >= 3
         if (maxIgnOutputs >= 3 && !BIT_CHECK(curRollingCut, IGN3_CMD_BIT))
         {
-          setIgnitionSchedule(&ignitionSchedule3, crankAngle, currentStatus.dwell);
+          ignitionSchedule3.setIgnitionSchedule(crankAngle, currentStatus.dwell);
         }
 #endif
 
 #if IGN_CHANNELS >= 4
         if (maxIgnOutputs >= 4 && !BIT_CHECK(curRollingCut, IGN4_CMD_BIT))
         {
-          setIgnitionSchedule(&ignitionSchedule4, crankAngle, currentStatus.dwell);
+          ignitionSchedule4.setIgnitionSchedule(crankAngle, currentStatus.dwell);
         }
 #endif
 
 #if IGN_CHANNELS >= 5
         if (maxIgnOutputs >= 5  && !BIT_CHECK(curRollingCut, IGN5_CMD_BIT))
         {
-          setIgnitionSchedule(&ignitionSchedule5, crankAngle, currentStatus.dwell);
+          ignitionSchedule5.setIgnitionSchedule(crankAngle, currentStatus.dwell);
         }
 #endif
 
 #if IGN_CHANNELS >= 6
         if (maxIgnOutputs >= 6 && !BIT_CHECK(curRollingCut, IGN6_CMD_BIT))
         {
-          setIgnitionSchedule(&ignitionSchedule6, crankAngle, currentStatus.dwell);
+          ignitionSchedule6.setIgnitionSchedule(crankAngle, currentStatus.dwell);
         }
 #endif
 
 #if IGN_CHANNELS >= 7
         if (maxIgnOutputs >= 7 && !BIT_CHECK(curRollingCut, IGN7_CMD_BIT))
         {
-          setIgnitionSchedule(&ignitionSchedule7, crankAngle, currentStatus.dwell);
+          ignitionSchedule7.setIgnitionSchedule(crankAngle, currentStatus.dwell);
         }
 #endif
 
 #if IGN_CHANNELS >= 8
         if (maxIgnOutputs >= 8  && !BIT_CHECK(curRollingCut, IGN8_CMD_BIT))
         {
-          setIgnitionSchedule(&ignitionSchedule8, crankAngle, currentStatus.dwell);
+          ignitionSchedule8.setIgnitionSchedule(crankAngle, currentStatus.dwell);
         } 
 #endif
 

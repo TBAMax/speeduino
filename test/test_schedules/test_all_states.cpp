@@ -17,33 +17,33 @@ void test_cycle_all_states_inj()
     start_count = 0;
     end_count = 0;
 
-    setCallbacks(fuelSchedule1, startCallback, endCallback);   
+    fuelSchedule1.setCallbacks(startCallback, endCallback);   
     TEST_ASSERT_EQUAL(OFF, fuelSchedule1.Status);
     
-    setFuelSchedule(&fuelSchedule1, TOTAL_DURATION, DURATION);
+    fuelSchedule1.setFuelSchedule(TOTAL_DURATION, DURATION);
     TEST_ASSERT_EQUAL_UINT8(0, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
     TEST_ASSERT_EQUAL(PENDING, fuelSchedule1.Status);
     
-    while(isPending(fuelSchedule1)) /*Wait*/ ;
+    while(fuelSchedule1.isPending()) /*Wait*/ ;
     TEST_ASSERT_EQUAL_UINT8(1, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
     TEST_ASSERT_EQUAL(RUNNING, fuelSchedule1.Status);
     
-    setFuelSchedule(&fuelSchedule1, 2*TOTAL_DURATION, DURATION);
+    fuelSchedule1.setFuelSchedule(2*TOTAL_DURATION, DURATION);
     TEST_ASSERT_EQUAL(RUNNINGHASNEXT, fuelSchedule1.Status);
 
-    while(isRunning(fuelSchedule1)) /*Wait*/ ;
+    while(fuelSchedule1.isRunning()) /*Wait*/ ;
     TEST_ASSERT_EQUAL_UINT8(1, start_count);
     TEST_ASSERT_EQUAL_UINT8(1, end_count);
     TEST_ASSERT_EQUAL(PENDING, fuelSchedule1.Status);
 
-    while(isPending(fuelSchedule1)) /*Wait*/ ;
+    while(fuelSchedule1.isPending()) /*Wait*/ ;
     TEST_ASSERT_EQUAL_UINT8(2, start_count);
     TEST_ASSERT_EQUAL_UINT8(1, end_count);
     TEST_ASSERT_EQUAL(RUNNING, fuelSchedule1.Status);
 
-    while(isRunning(fuelSchedule1)) /*Wait*/ ;
+    while(fuelSchedule1.isRunning()) /*Wait*/ ;
     TEST_ASSERT_EQUAL_UINT8(2, start_count);
     TEST_ASSERT_EQUAL_UINT8(2, end_count);
     TEST_ASSERT_EQUAL(OFF, fuelSchedule1.Status);

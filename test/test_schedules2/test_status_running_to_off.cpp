@@ -15,11 +15,11 @@ void test_status_running_to_off(Schedule *pSchedule)
     pSchedule->reset();
     start_count = 0;
     end_count = 0;
-    setCallbacks(*pSchedule, startCallback, endCallback);   
-    runSchedule(pSchedule, DURATION);
+    pSchedule->setCallbacks(startCallback, endCallback);   
+    pSchedule->runSchedule(DURATION);
     TEST_ASSERT_EQUAL_UINT8(1, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
-    while( (isPending(*pSchedule)) || isRunning(*pSchedule) ) /*Wait*/ ;
+    while( pSchedule->isPending() || pSchedule->isRunning() ) /*Wait*/ ;
     TEST_ASSERT_EQUAL_UINT8(1, start_count);
     TEST_ASSERT_EQUAL_UINT8(1, end_count);
     TEST_ASSERT_EQUAL(OFF, pSchedule->Status);

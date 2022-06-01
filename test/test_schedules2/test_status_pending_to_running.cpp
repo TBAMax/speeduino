@@ -15,13 +15,13 @@ void test_status_pending_to_running_inj(FuelSchedule *pSchedule)
     pSchedule->reset();
     start_count = 0;
     end_count = 0;
-    setCallbacks(*pSchedule, startCallback, endCallback);   
-    setFuelSchedule(pSchedule, TOTAL_DURATION, DURATION);
+    pSchedule->setCallbacks(startCallback, endCallback);   
+    pSchedule->setFuelSchedule(TOTAL_DURATION, DURATION);
     TEST_ASSERT_EQUAL_UINT8(0, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
-    while(isPending(*pSchedule)) /*Wait*/ ;
+    while(pSchedule->isPending()) /*Wait*/ ;
     TEST_ASSERT_EQUAL_UINT8(1, start_count);
-    TEST_ASSERT_TRUE(isRunning(*pSchedule));
+    TEST_ASSERT_TRUE(pSchedule->isRunning());
 }
 
 void test_status_pending_to_running_inj1(void)
@@ -78,13 +78,13 @@ void test_status_pending_to_running_ign(IgnSchedule *pSchedule)
     pSchedule->reset();
     start_count = 0;
     end_count = 0;
-    setCallbacks(*pSchedule, startCallback, endCallback);   
-    setIgnitionSchedule(pSchedule, TOTAL_DURATION, DURATION);
+    pSchedule->setCallbacks(startCallback, endCallback);   
+    pSchedule->setIgnitionSchedule(TOTAL_DURATION, DURATION);
     TEST_ASSERT_EQUAL_UINT8(0, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
-    while(isPending(*pSchedule)) /*Wait*/ ;
+    while(pSchedule->isPending()) /*Wait*/ ;
     TEST_ASSERT_EQUAL_UINT8(1, start_count);
-    TEST_ASSERT_TRUE(isRunning(*pSchedule));
+    TEST_ASSERT_TRUE(pSchedule->isRunning());
 }
 
 

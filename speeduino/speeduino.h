@@ -20,7 +20,6 @@ byte getVE1();
 byte getAdvance1();
 
 uint16_t calculateInjectorEndAngle(int16_t injChannelDegrees);
-int calculateIgnitionAngle(int channelIgnDegrees);
 void calculateIgnitionAngle3(int rotarySplitDegrees);
 void calculateIgnitionAngle4(int rotarySplitDegrees);
 void calculateIgnitionAngles();
