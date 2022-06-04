@@ -6,11 +6,10 @@
 #define TOTAL_DURATION 1500UL
 #define DURATION 500UL
 
-
 void test_status_off_to_pending_inj(FuelSchedule *pSchedule)
 {
     pSchedule->reset();
-    pSchedule->setFuelSchedule(TOTAL_DURATION, DURATION);
+    TEST_ASSERT_EQUAL(Schedule::STARTED, pSchedule->beginSchedule(TOTAL_DURATION, DURATION));
     TEST_ASSERT_TRUE(pSchedule->isPending());
 }
 
@@ -66,7 +65,7 @@ void test_status_off_to_pending_inj8(void)
 void test_status_off_to_pending_ign(IgnSchedule *pSchedule)
 {
     pSchedule->reset();
-    pSchedule->setIgnitionSchedule(TOTAL_DURATION, DURATION);
+    TEST_ASSERT_EQUAL(Schedule::STARTED, pSchedule->beginSchedule(TOTAL_DURATION, DURATION));
     TEST_ASSERT_TRUE(pSchedule->isPending());
 }
 

@@ -16,7 +16,7 @@ void test_status_pending_to_running_inj(FuelSchedule *pSchedule)
     start_count = 0;
     end_count = 0;
     pSchedule->setCallbacks(startCallback, endCallback);   
-    pSchedule->setFuelSchedule(TOTAL_DURATION, DURATION);
+    TEST_ASSERT_EQUAL(Schedule::STARTED, pSchedule->beginSchedule(TOTAL_DURATION, DURATION));
     TEST_ASSERT_EQUAL_UINT8(0, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
     while(pSchedule->isPending()) /*Wait*/ ;
@@ -79,7 +79,7 @@ void test_status_pending_to_running_ign(IgnSchedule *pSchedule)
     start_count = 0;
     end_count = 0;
     pSchedule->setCallbacks(startCallback, endCallback);   
-    pSchedule->setIgnitionSchedule(TOTAL_DURATION, DURATION);
+    TEST_ASSERT_EQUAL(Schedule::STARTED, pSchedule->beginSchedule(TOTAL_DURATION, DURATION));
     TEST_ASSERT_EQUAL_UINT8(0, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
     while(pSchedule->isPending()) /*Wait*/ ;

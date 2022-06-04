@@ -84,6 +84,26 @@ static inline void setNext(struct Schedule *targetSchedule, unsigned long totalD
   interrupts();
 }
 
+// Set the schedule
+Schedule::scheduleResult Schedule::beginSchedule(unsigned long totalDuration, unsigned long eventDuration)
+{
+// Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
+  if (totalDuration < MAX_TIMER_PERIOD)
+  {
+    if (!isRunning()) //Check that we're not already part way through a schedule
+    {
+      setPending(this, totalDuration, eventDuration);
+      return STARTED;
+    }
+    else
+    {
+      setNext(this, totalDuration, eventDuration);
+      return QUEUED;
+    }
+  }
+  return BADDURATION;
+}
+
 static void fun_FUEL1_TIMER_DISABLE() { FUEL1_TIMER_DISABLE(); }
 static void fun_FUEL1_TIMER_ENABLE() { FUEL1_TIMER_ENABLE(); }
 FuelSchedule fuelSchedule1(FUEL1_COUNTER, FUEL1_COMPARE, fun_FUEL1_TIMER_DISABLE, fun_FUEL1_TIMER_ENABLE);
@@ -158,75 +178,63 @@ IgnSchedule ignitionSchedule8(IGN8_COUNTER, IGN8_COMPARE, fun_IGN8_TIMER_DISABLE
 #endif
 
 
-void FuelSchedule::setFuelSchedule (int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration)
+Schedule::scheduleResult FuelSchedule::setFuelSchedule (int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration)
 {
-  while (injectorEndAngle <= crankAngle)   { injectorEndAngle += CRANK_ANGLE_MAX_INJ; } //calculate into the next cycle
+  // Time in uS that the refresh functions will check to ensure there is enough time before changing the start or end compare
+  constexpr uint8_t INJECTION_REFRESH_THRESHOLD = 230U; 
+
+  // The current injection pulse must have at least 400 ticks left.
+  if (isRunning() && (compare-counter)<400U)
+  {
+    return BADDURATION;
+  }
+  
+  // Calculate into the next cycle
+  while (injectorEndAngle <= crankAngle)   { injectorEndAngle += CRANK_ANGLE_MAX_INJ; } 
+
+  //If the schedule is already running, we can set the next schedule so it is ready to go
+  //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
   if (isRunning())
   {
-    //If the schedule is already running, we can set the next schedule so it is ready to go
-    //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
     injectorEndAngle += CRANK_ANGLE_MAX_INJ;
   }
   unsigned long totalDuration = (injectorEndAngle - crankAngle) * (unsigned long)timePerDegree; 
-  setFuelSchedule(totalDuration, openDuration);
-}
 
-void FuelSchedule::setFuelSchedule(unsigned long totalDuration, unsigned long openDuration)
-{
-  // Time in uS that the refresh functions will check to ensure there is enough time before changing the start or end compare
-  constexpr uint8_t INJECTION_REFRESH_TRESHOLD = 230U; 
-
-  // Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
-  if ((totalDuration < MAX_TIMER_PERIOD) && (totalDuration > openDuration + INJECTION_REFRESH_TRESHOLD))
+  // If the total duration is less than the minimum duration, then we can't run the schedule
+  if (totalDuration < openDuration + INJECTION_REFRESH_THRESHOLD)
   {
-    if (!isRunning()) //Check that we're not already part way through a schedule
-    {
-      setPending(this, totalDuration, openDuration);
-    }
-    // The current injection pulse must have at least 400 ticks left.
-    else if((compare-counter)>400U)
-    {
-      setNext(this, totalDuration, openDuration);
-    }
+    return BADDURATION;
   }
+
+  return beginSchedule(totalDuration, openDuration);
 }
 
 
-void IgnSchedule::setIgnitionSchedule(int16_t crankAngle, unsigned long coilChargeDuration)
-{
-  int endAngle = ignitionEndAngle;
-  while (endAngle <= crankAngle)   { endAngle += CRANK_ANGLE_MAX_IGN; } //calculate into the next cycle
-  if (isRunning())
-  {
-    //If the schedule is already running, we can set the next schedule so it is ready to go
-    //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
-    endAngle += CRANK_ANGLE_MAX_IGN;
-  }
-  unsigned long totalDuration = angleToTime((endAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
-  setIgnitionSchedule(totalDuration, coilChargeDuration);
-}
-
-void IgnSchedule::setIgnitionSchedule(unsigned long totalDuration, unsigned long coilChargeDuration)
+Schedule::scheduleResult IgnSchedule::setIgnitionSchedule(int16_t crankAngle, unsigned long coilChargeDuration)
 {
   constexpr COMPARE_TYPE IGNITION_REFRESH_THRESHOLD = 230U; //Time in uS that the refresh functions will check to ensure there is enough time before changing the end compare
 
-  // Need to check that the timeout doesn't exceed the overflow,
-  if ((totalDuration < MAX_TIMER_PERIOD))
+  //calculate into the next cycle
+  int endAngle = ignitionEndAngle; // We don't want to change the ignitionEndAngle member variable
+  while (endAngle <= crankAngle)   { endAngle += CRANK_ANGLE_MAX_IGN; }
+
+  //If the schedule is already running, we can set the next schedule so it is ready to go
+  //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
+  if (isRunning())
   {
-    if (!isRunning()) // Check that we're not already part way charging the coil
-    {
-      // Allow for fixed 230us safety between setting the schedule and running it
-      if(totalDuration > coilChargeDuration + IGNITION_REFRESH_THRESHOLD) 
-      {
-        setPending(this, totalDuration, coilChargeDuration);
-      }
-    }
-    else 
-    {
-      setNext(this, totalDuration, coilChargeDuration);
-    }
+    endAngle += CRANK_ANGLE_MAX_IGN;
   }
+  unsigned long totalDuration = angleToTime((endAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
+  
+  // If the total duration is less than the minimum duration, then we can't run the schedule
+  if (totalDuration < coilChargeDuration + IGNITION_REFRESH_THRESHOLD)
+  {
+    return BADDURATION;
+  }
+
+  return beginSchedule(totalDuration, coilChargeDuration);
 }
+
 
 void beginInjectorPriming()
 {

@@ -105,7 +105,18 @@ enum ScheduleStatus {
 
 
 /**
- * @brief A schedule for a single channel.
+ * @brief A schedule for a single channel. A schedule consists of 2 parts:
+ * - total duration
+ * - event duration (E.g. ignition or injection)
+ * 
+ * These overlap and end at the same time:
+ *                         Total Duration
+ *   |------------------------------------------------------------|
+ *                                          |---------------------|
+ *                                               Event Duration
+ * We use this overlapping format because it's simpler for the rest
+ * of the code base to compute start and end crank angles (which 
+ * are synonymous with time).
  */
 struct Schedule {  
 
@@ -146,11 +157,33 @@ struct Schedule {
     this->pEndFunction = pEndFunction;
   }
 
+  /** \enum scheduleResult
+   * @brief return values for methods that initiate a schedule
+   * */
+  enum scheduleResult {
+    /** Schedule was started */
+    STARTED,
+    /** Schedule was already running, new schedule is queued */
+    QUEUED,
+    /** Schedule is too long, wait period isn't long enough */
+    BADDURATION
+  };
+  
   /** @brief Immediately run the schedule if not already running. */
   void runSchedule(unsigned long duration);
 
   /** @brief Immediately run the schedule - regardless of current state. */
-  void forceRunSchedule(unsigned long duration);  
+  void forceRunSchedule(unsigned long duration);
+
+  /** @brief Begin a new schedule. 
+   * If no schedule is currently running, the new schedule will be started immediately.
+   * If a schedule is currently running, the new schedule will be started after the current one finishes.
+   * 
+   * @param totalDuration the duration of the entire schedule in uS (microseconds): pEndFunction will be invoked after this duration.
+   * @param eventDuration event length of time. pStartFunction will be invoked at time (totalDuration-eventDuration).
+   * @param minWaitDuration minimum duration of the waiting period before pEndFunction is invoked.
+   */
+  scheduleResult beginSchedule(unsigned long totalDuration, unsigned long eventDuration);  
 
   volatile ScheduleStatus Status; ///< Schedule status: OFF, PENDING, STAGED, RUNNING, RUNNINGHASNEXT
   void (*pStartFunction)();        ///< Start Callback function for schedule
@@ -188,14 +221,7 @@ struct FuelSchedule: public Schedule {
    * @param injectorEndAngle The crank angle at which to end teh injection pulse
    * @param openDuration length of time the injector is open
    */
-  void setFuelSchedule(int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration);
-
-  /** @brief Manually set the next schedule for the ignition channel.
-   * 
-   * @param totalDuration the duration of the entire schedule in uS (microseconds): injector will close at the end of the schedule
-   * @param openDuration length of time the injector is open
-   */
-  void setFuelSchedule(unsigned long totalDuration, unsigned long openDuration);  
+  scheduleResult setFuelSchedule(int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration);
 
   /** @brief The number of crank degrees until corresponding cylinder is at TDC 
    * (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones) */
@@ -250,14 +276,7 @@ struct IgnSchedule: public Schedule {
    * @param crankAngle The current crank angle
    * @param coilChargeDuration is the time to charge the ignition coil
    */
-  void setIgnitionSchedule(int16_t crankAngle, unsigned long coilChargeDuration);
-
-  /** @brief Manually set the next schedule for the ignition channel.
-   * 
-   * @param totalDuration is the duration of the entire schedule in uS (microseconds): spark will fire at the end of the schedule
-   * @param coilChargeDuration is the time to charge the ignition coil
-   */
-  void setIgnitionSchedule(unsigned long totalDuration, unsigned long coilChargeDuration);
+  scheduleResult setIgnitionSchedule(int16_t crankAngle, unsigned long coilChargeDuration);
 
   /** @brief The number of crank degrees until corresponding cylinder is at TDC 
    * (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones)

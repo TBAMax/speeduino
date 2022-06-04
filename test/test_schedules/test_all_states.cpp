@@ -20,7 +20,7 @@ void test_cycle_all_states_inj()
     fuelSchedule1.setCallbacks(startCallback, endCallback);   
     TEST_ASSERT_EQUAL(OFF, fuelSchedule1.Status);
     
-    fuelSchedule1.setFuelSchedule(TOTAL_DURATION, DURATION);
+    TEST_ASSERT_EQUAL(Schedule::STARTED, fuelSchedule1.beginSchedule(TOTAL_DURATION, DURATION));
     TEST_ASSERT_EQUAL_UINT8(0, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
     TEST_ASSERT_EQUAL(PENDING, fuelSchedule1.Status);
@@ -30,7 +30,7 @@ void test_cycle_all_states_inj()
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
     TEST_ASSERT_EQUAL(RUNNING, fuelSchedule1.Status);
     
-    fuelSchedule1.setFuelSchedule(2*TOTAL_DURATION, DURATION);
+    TEST_ASSERT_EQUAL(Schedule::QUEUED, fuelSchedule1.beginSchedule(2*TOTAL_DURATION, DURATION));
     TEST_ASSERT_EQUAL(RUNNINGHASNEXT, fuelSchedule1.Status);
 
     while(fuelSchedule1.isRunning()) /*Wait*/ ;
