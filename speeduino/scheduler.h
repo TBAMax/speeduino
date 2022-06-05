@@ -89,6 +89,29 @@ See page 136 of the processors datasheet: http://www.atmel.com/Images/doc2549.pd
 /**@}*/
 #endif
 
+
+/**
+ * @brief An action that can be started and stopped. 
+ */
+class Action
+{
+public:
+  Action();
+  Action(void (*pStartFunction)(), void (*pEndFunction)())
+  : startFunction(pStartFunction), endFunction(pEndFunction)
+  {
+  }
+  Action(const Action&)=default;
+
+  inline void start () { startFunction(); }
+  inline void stop  () { endFunction(); }
+
+private:
+  void (*startFunction)();
+  void (*endFunction)();
+};
+
+
 /** \enum ScheduleStatus
  * @brief The current state of a schedule
  * */
@@ -105,15 +128,17 @@ enum ScheduleStatus {
 
 
 /**
- * @brief A schedule for a single channel. A schedule consists of 2 parts:
+ * @brief A schedule for a single channel. 
+ * 
+ * A schedule consists of 2 parts:
  * - total duration
- * - event duration (E.g. ignition or injection)
+ * - action duration (E.g. ignition or injection pulse)
  * 
  * These overlap and end at the same time:
  *                         Total Duration
  *   |------------------------------------------------------------|
  *   <------------- Wait Time ------------->|---------------------|
- *                                               Event Duration
+ *                                               Action Duration
  * We use this overlapping format because it's simpler for the rest
  * of the code base to compute start and end crank angles (which 
  * are synonymous with time).
@@ -130,8 +155,7 @@ struct Schedule {
             void (&_pTimerDisable)(), void (&_pTimerEnable)())
   : counter(counter)
   , compare(compare)
-  , pTimerDisable(_pTimerDisable)
-  , pTimerEnable(_pTimerEnable)
+  , timer(_pTimerEnable, _pTimerDisable)
   {
     reset();
   }
@@ -153,8 +177,7 @@ struct Schedule {
    * **If you call the setCallback function a 2nd time, the original schedule will be overwritten and not occur.**
    */
   inline void setCallbacks(void (*pStartFunction)(), void (*pEndFunction)()) {
-    this->pStartFunction = pStartFunction;
-    this->pEndFunction = pEndFunction;
+    action = Action(pStartFunction, pEndFunction);
   }
 
   /** \enum scheduleResult
@@ -169,39 +192,39 @@ struct Schedule {
     BADDURATION
   };
   
-  /** @brief Immediately run the schedule if not already running. */
-  void runSchedule(unsigned long duration);
+  /** @brief Immediately run the action if not already running. 
+   * @param actionDuration action length of time.
+   */
+  void runAction(unsigned long actionDuration);
 
-  /** @brief Immediately run the schedule - regardless of current state. */
-  void forceRunSchedule(unsigned long duration);
+  /** @brief Immediately run the schedule - regardless of current state.
+   * @param actionDuration action length of time.
+   */
+  void forceRunAction(unsigned long actionDuration);
 
   /** @brief Begin a new schedule. 
    * If no schedule is currently running, the new schedule will be started immediately.
    * If a schedule is currently running, the new schedule will be started after the current one finishes.
    * 
-   * @param totalDuration the duration of the entire schedule in uS (microseconds): pEndFunction will be invoked after this duration.
-   * @param eventDuration event length of time. pStartFunction will be invoked at time (totalDuration-eventDuration).
-   * @param minWaitDuration minimum duration of the waiting period before pEndFunction is invoked.
+   * @param totalDuration the duration of the entire schedule in uS (microseconds): Action will be stopped at the end of this timer period.
+   * @param actionDuration action length of time. Tthe action will be started at time (totalDuration-actionDuration).
    */
-  scheduleResult beginSchedule(unsigned long totalDuration, unsigned long eventDuration);  
-
+  scheduleResult beginSchedule(unsigned long totalDuration, unsigned long actionDuration);  
+  
+  Action action;
   volatile ScheduleStatus Status; ///< Schedule status: OFF, PENDING, STAGED, RUNNING, RUNNINGHASNEXT
-  void (*pStartFunction)();        ///< Start Callback function for schedule
-  void (*pEndFunction)();          ///< End Callback function for schedule
   volatile COMPARE_TYPE endCounter;   ///< The counter value of the timer when this will end
-
   volatile COMPARE_TYPE nextStartCounter;      ///< Planned start of next schedule (when current schedule is RUNNINGHASNEXT)
   volatile COMPARE_TYPE nextEndCounter;        ///< Planned end of next schedule (when current schedule is RUNNINGHASNEXT)
 
   counter_t &counter;  // Reference to the counter register. E.g. TCNT3
   compare_t &compare;  // Reference to the compare register. E.g. OCR3A
-  void (&pTimerDisable)();    // Reference to the timer disable function
-  void (&pTimerEnable)();     // Reference to the timer enable function
+  Action timer;
 
 private:
 
-  void beginScheduleInternal(unsigned long totalDuration, unsigned long eventDuration);
-  void queueScheduleInternal(unsigned long totalDuration, unsigned long eventDuration);
+  void beginScheduleInternal(unsigned long totalDuration, unsigned long actionDuration);
+  void queueScheduleInternal(unsigned long totalDuration, unsigned long actionDuration);
 };
 
 
@@ -258,7 +281,7 @@ extern FuelSchedule fuelSchedule8;
 /**@}*/
 
 
-/** @brief A schedule specialized for ignition events. */
+/** @brief A schedule specialized for ignition actions. */
 struct IgnSchedule: public Schedule {
   IgnSchedule(counter_t &counter, compare_t &compare,
               void (&_pTimerDisable)(), void (&_pTimerEnable)())

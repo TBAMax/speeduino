@@ -30,37 +30,42 @@ A full copy of the license may be found in the projects root directory
 #include "crankMaths.h"
 #include "timers.h"
 
+Action::Action()
+ : Action(nullCallback, nullCallback)
+ {
+ }
+
 void Schedule::reset()
 {
-  pTimerDisable();
+  timer.stop();
+  action.stop();
 
   Status = OFF;
   endCounter = 0;
   nextStartCounter = 0;
   nextEndCounter = 0;
 
-  pStartFunction = nullCallback;
-  pEndFunction = nullCallback;
+  action = Action();
 }
 
 // Immediately run the schedule if not already running.
-void Schedule::runSchedule (unsigned long duration)
+void Schedule::runAction (unsigned long duration)
 {
   if(!isRunning()) //Check that we're not already part way through a schedule
   {      
-    forceRunSchedule(duration);
+    forceRunAction(duration);
   }
 }
 
 // Immediately run the schedule - regardless of current state.
-void Schedule::forceRunSchedule(unsigned long duration)
+void Schedule::forceRunAction(unsigned long duration)
 {
-  pStartFunction();
+  action.start();
   noInterrupts(); // make sure start and end values are updated simultaneously
   SET_COMPARE(compare, counter + (COMPARE_TYPE)uS_TO_TIMER_COMPARE(duration));
   Status = RUNNING; //RUN this schedule immediately
   interrupts(); 
-  pTimerEnable(); 
+  timer.start(); 
 }
 
 // Setup the schedule to run on the next cycle
@@ -71,7 +76,7 @@ inline void Schedule::beginScheduleInternal(unsigned long totalDuration, unsigne
   endCounter =         counter + uS_TO_TIMER_COMPARE(totalDuration);
   Status = PENDING; //Turn this schedule on
   interrupts(); 
-  pTimerEnable();
+  timer.start();
 }
 
 // Setup the schedule to run after the current cycle
@@ -85,19 +90,19 @@ inline void Schedule::queueScheduleInternal(unsigned long totalDuration, unsigne
 }
 
 // Set the schedule
-Schedule::scheduleResult Schedule::beginSchedule(unsigned long totalDuration, unsigned long eventDuration)
+Schedule::scheduleResult Schedule::beginSchedule(unsigned long totalDuration, unsigned long actionDuration)
 {
 // Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
   if (totalDuration < MAX_TIMER_PERIOD)
   {
     if (!isRunning()) //Check that we're not already part way through a schedule
     {
-      beginScheduleInternal(totalDuration, eventDuration);
+      beginScheduleInternal(totalDuration, actionDuration);
       return STARTED;
     }
     else
     {
-      queueScheduleInternal(totalDuration, eventDuration);
+      queueScheduleInternal(totalDuration, actionDuration);
       return QUEUED;
     }
   }
@@ -242,27 +247,27 @@ void beginInjectorPriming()
   if( (primingValue > 0) && (currentStatus.TPS < configPage4.floodClear) )
   {
     primingValue = primingValue * 100 * 5; //to acheive long enough priming pulses, the values in tuner studio are divided by 0.5 instead of 0.1, so multiplier of 5 is required.
-    if ( fuelSchedule1.injEnabled == true ) { fuelSchedule1.runSchedule(primingValue); }
+    if ( fuelSchedule1.injEnabled == true ) { fuelSchedule1.runAction(primingValue); }
 #if (INJ_CHANNELS >= 2)
-    if ( fuelSchedule2.injEnabled == true ) { fuelSchedule2.runSchedule(primingValue); }
+    if ( fuelSchedule2.injEnabled == true ) { fuelSchedule2.runAction(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 3)
-    if ( fuelSchedule3.injEnabled == true ) { fuelSchedule3.runSchedule(primingValue); }
+    if ( fuelSchedule3.injEnabled == true ) { fuelSchedule3.runAction(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 4)
-    if ( fuelSchedule4.injEnabled == true ) { fuelSchedule4.runSchedule(primingValue); }
+    if ( fuelSchedule4.injEnabled == true ) { fuelSchedule4.runAction(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 5)
-    if ( fuelSchedule5.injEnabled == true ) { fuelSchedule5.runSchedule(primingValue); }
+    if ( fuelSchedule5.injEnabled == true ) { fuelSchedule5.runAction(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 6)
-    if ( fuelSchedule6.injEnabled == true ) { fuelSchedule6.runSchedule(primingValue); }
+    if ( fuelSchedule6.injEnabled == true ) { fuelSchedule6.runAction(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 7)
-    if ( fuelSchedule7.injEnabled == true ) { fuelSchedule7.runSchedule(primingValue); }
+    if ( fuelSchedule7.injEnabled == true ) { fuelSchedule7.runAction(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 8)
-    if ( fuelSchedule8.injEnabled == true ) { fuelSchedule8.runSchedule(primingValue); }
+    if ( fuelSchedule8.injEnabled == true ) { fuelSchedule8.runAction(primingValue); }
 #endif
   }
 }
@@ -283,7 +288,7 @@ static void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
   if (fuelSchedule->isPending()) //Check to see if this schedule is turn on
   {
     SET_COMPARE(fuelSchedule->compare, fuelSchedule->endCounter);
-    fuelSchedule->pStartFunction();
+    fuelSchedule->action.start();
     fuelSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)    
   }
   else if (fuelSchedule->isRunning())
@@ -299,7 +304,7 @@ static void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
       }
       else //no overlap
       {
-        fuelSchedule->pEndFunction();
+        fuelSchedule->action.stop();
         SET_COMPARE(fuelSchedule->compare, fuelSchedule->nextStartCounter);
         fuelSchedule->endCounter = fuelSchedule->nextEndCounter;
         fuelSchedule->Status = PENDING;
@@ -307,14 +312,14 @@ static void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
     }
     else //no next schedule
     {
-      fuelSchedule->pEndFunction();
+      fuelSchedule->action.stop();
       fuelSchedule->Status = OFF; //Turn off the schedule        
     }
   }
   else //(fuelSchedule->Status == OFF)
   {
-    fuelSchedule->pEndFunction();
-    fuelSchedule->pTimerDisable(); //Safety check. Turn off this output compare unit and return without performing any action
+    fuelSchedule->action.stop();
+    fuelSchedule->timer.stop(); //Safety check. Turn off this output compare unit and return without performing any action
   } 
 }
 
@@ -412,13 +417,13 @@ static void ignitionScheduleInterrupt(struct IgnSchedule *targetSchedule) // com
 {
   if (targetSchedule->isPending()) //Check to see if this schedule is turn on
   {
-    targetSchedule->pStartFunction();
+    targetSchedule->action.start();
     targetSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
     SET_COMPARE(targetSchedule->compare, targetSchedule->endCounter);
   }
   else if (targetSchedule->isRunning())
   {
-    targetSchedule->pEndFunction(); //Moment of spark 
+    targetSchedule->action.stop(); //Moment of spark 
 
       //If there is a next schedule queued up, activate it
     if(targetSchedule->Status == RUNNINGHASNEXT)
@@ -429,14 +434,14 @@ static void ignitionScheduleInterrupt(struct IgnSchedule *targetSchedule) // com
     }
     else
     {
-      targetSchedule->pTimerDisable();
+      targetSchedule->timer.stop();
       targetSchedule->Status = OFF; //Turn off the schedule
     }
   }
   else //Safety check. Turn off this output compare unit and return without performing any action
   {
-    targetSchedule->pEndFunction();
-    targetSchedule->pTimerDisable(); 
+    targetSchedule->action.stop();
+    targetSchedule->timer.stop(); 
   } 
 }
 

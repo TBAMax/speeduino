@@ -16,7 +16,7 @@ void test_status_running_to_off(Schedule *pSchedule)
     start_count = 0;
     end_count = 0;
     pSchedule->setCallbacks(startCallback, endCallback);   
-    pSchedule->runSchedule(DURATION);
+    pSchedule->runAction(DURATION);
     TEST_ASSERT_EQUAL_UINT8(1, start_count);
     TEST_ASSERT_EQUAL_UINT8(0, end_count);
     while( pSchedule->isPending() || pSchedule->isRunning() ) /*Wait*/ ;

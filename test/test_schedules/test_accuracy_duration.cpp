@@ -10,7 +10,7 @@
 void test_accuracy_duration(Schedule *pSchedule)
 {
     pSchedule->reset();
-    pSchedule->runSchedule(DURATION);
+    pSchedule->runAction(DURATION);
     uint32_t start_time = micros();
     while(pSchedule->isRunning()) /*Wait*/ ;
     uint32_t end_time = micros();
