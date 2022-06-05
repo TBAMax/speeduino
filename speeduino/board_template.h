@@ -1,3 +1,4 @@
+
 #ifndef TEMPLATE_H
 #define TEMPLATE_H
 #if defined(CORE_TEMPLATE)
@@ -66,45 +67,45 @@
   #define IGN7_COMPARE  <register here>
   #define IGN8_COMPARE  <register here>
 
-  #define FUEL1_TIMER_ENABLE() <macro here>
-  #define FUEL2_TIMER_ENABLE() <macro here>
-  #define FUEL3_TIMER_ENABLE() <macro here>
-  #define FUEL4_TIMER_ENABLE() <macro here>
+  inline void FUEL1_TIMER_ENABLE() { <function body here> }
+  inline void FUEL2_TIMER_ENABLE() { <function body here> }
+  inline void FUEL3_TIMER_ENABLE() { <function body here> }
+  inline void FUEL4_TIMER_ENABLE() { <function body here> }
   //The below are optional, but recommended if there are sufficient timers/compares
-  #define FUEL5_TIMER_ENABLE() <macro here>
-  #define FUEL6_TIMER_ENABLE() <macro here>
-  #define FUEL7_TIMER_ENABLE() <macro here>
-  #define FUEL8_TIMER_ENABLE() <macro here>
+  inline void FUEL5_TIMER_ENABLE() { <function body here> }
+  inline void FUEL6_TIMER_ENABLE() { <function body here> }
+  inline void FUEL7_TIMER_ENABLE() { <function body here> }
+  inline void FUEL8_TIMER_ENABLE() { <function body here> }
 
-  #define FUEL1_TIMER_DISABLE() <macro here>
-  #define FUEL2_TIMER_DISABLE() <macro here>
-  #define FUEL3_TIMER_DISABLE() <macro here>
-  #define FUEL4_TIMER_DISABLE() <macro here>
+  inline void FUEL1_TIMER_DISABLE() { <function body here> }
+  inline void FUEL2_TIMER_DISABLE() { <function body here> }
+  inline void FUEL3_TIMER_DISABLE() { <function body here> }
+  inline void FUEL4_TIMER_DISABLE() { <function body here> }
   //The below are optional, but recommended if there are sufficient timers/compares
-  #define FUEL5_TIMER_DISABLE() <macro here>
-  #define FUEL6_TIMER_DISABLE() <macro here>
-  #define FUEL7_TIMER_DISABLE() <macro here>
-  #define FUEL8_TIMER_DISABLE() <macro here>
+  inline void FUEL5_TIMER_DISABLE() { <function body here> }
+  inline void FUEL6_TIMER_DISABLE() { <function body here> }
+  inline void FUEL7_TIMER_DISABLE() { <function body here> }
+  inline void FUEL8_TIMER_DISABLE() { <function body here> }
 
-  #define IGN1_TIMER_ENABLE() <macro here>
-  #define IGN2_TIMER_ENABLE() <macro here>
-  #define IGN3_TIMER_ENABLE() <macro here>
-  #define IGN4_TIMER_ENABLE() <macro here>
+  inline void IGN1_TIMER_ENABLE() { <function body here> }
+  inline void IGN2_TIMER_ENABLE() { <function body here> }
+  inline void IGN3_TIMER_ENABLE() { <function body here> }
+  inline void IGN4_TIMER_ENABLE() { <function body here> }
   //The below are optional, but recommended if there are sufficient timers/compares
-  #define IGN5_TIMER_ENABLE() <macro here>
-  #define IGN6_TIMER_ENABLE() <macro here>
-  #define IGN7_TIMER_ENABLE() <macro here>
-  #define IGN8_TIMER_ENABLE() <macro here>
+  inline void IGN5_TIMER_ENABLE() { <function body here> }
+  inline void IGN6_TIMER_ENABLE() { <function body here> }
+  inline void IGN7_TIMER_ENABLE() { <function body here> }
+  inline void IGN8_TIMER_ENABLE() { <function body here> }
 
-  #define IGN1_TIMER_DISABLE() <macro here>
-  #define IGN2_TIMER_DISABLE() <macro here>
-  #define IGN3_TIMER_DISABLE() <macro here>
-  #define IGN4_TIMER_DISABLE() <macro here>
+  inline void IGN1_TIMER_DISABLE() { <function body here> }
+  inline void IGN2_TIMER_DISABLE() { <function body here> }
+  inline void IGN3_TIMER_DISABLE() { <function body here> }
+  inline void IGN4_TIMER_DISABLE() { <function body here> }
   //The below are optional, but recommended if there are sufficient timers/compares
-  #define IGN5_TIMER_DISABLE() <macro here>
-  #define IGN6_TIMER_DISABLE() <macro here>
-  #define IGN7_TIMER_DISABLE() <macro here>
-  #define IGN8_TIMER_DISABLE() <macro here>
+  inline void IGN5_TIMER_DISABLE() { <function body here> }
+  inline void IGN6_TIMER_DISABLE() { <function body here> }
+  inline void IGN7_TIMER_DISABLE() { <function body here> }
+  inline void IGN8_TIMER_DISABLE() { <function body here> }
 
   
   #define MAX_TIMER_PERIOD 139808 //This is the maximum time, in uS, that the compare channels can run before overflowing. It is typically 65535 * <how long each tick represents>
