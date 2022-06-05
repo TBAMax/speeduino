@@ -64,23 +64,23 @@ void Schedule::forceRunSchedule(unsigned long duration)
 }
 
 // Setup the schedule to run on the next cycle
-static inline void setPending(struct Schedule *targetSchedule, unsigned long totalDuration, unsigned long runDuration)
+inline void Schedule::beginScheduleInternal(unsigned long totalDuration, unsigned long runDuration)
 {
   noInterrupts(); // make sure start and end values are updated simultaneously
-  SET_COMPARE(targetSchedule->compare, targetSchedule->counter + uS_TO_TIMER_COMPARE(totalDuration-runDuration));
-  targetSchedule->endCounter =         targetSchedule->counter + uS_TO_TIMER_COMPARE(totalDuration);
-  targetSchedule->Status = PENDING; //Turn this schedule on
+  SET_COMPARE(compare, counter + uS_TO_TIMER_COMPARE(totalDuration-runDuration));
+  endCounter =         counter + uS_TO_TIMER_COMPARE(totalDuration);
+  Status = PENDING; //Turn this schedule on
   interrupts(); 
-  targetSchedule->pTimerEnable();
+  pTimerEnable();
 }
 
 // Setup the schedule to run after the current cycle
-static inline void setNext(struct Schedule *targetSchedule, unsigned long totalDuration, unsigned long runDuration)
+inline void Schedule::queueScheduleInternal(unsigned long totalDuration, unsigned long runDuration)
 {
   noInterrupts();
-  targetSchedule->nextStartCounter = targetSchedule->counter + uS_TO_TIMER_COMPARE(totalDuration-runDuration);
-  targetSchedule->nextEndCounter =   targetSchedule->counter + uS_TO_TIMER_COMPARE(totalDuration);
-  targetSchedule->Status = RUNNINGHASNEXT;
+  nextStartCounter = counter + uS_TO_TIMER_COMPARE(totalDuration-runDuration);
+  nextEndCounter =   counter + uS_TO_TIMER_COMPARE(totalDuration);
+  Status = RUNNINGHASNEXT;
   interrupts();
 }
 
@@ -92,12 +92,12 @@ Schedule::scheduleResult Schedule::beginSchedule(unsigned long totalDuration, un
   {
     if (!isRunning()) //Check that we're not already part way through a schedule
     {
-      setPending(this, totalDuration, eventDuration);
+      beginScheduleInternal(totalDuration, eventDuration);
       return STARTED;
     }
     else
     {
-      setNext(this, totalDuration, eventDuration);
+      queueScheduleInternal(totalDuration, eventDuration);
       return QUEUED;
     }
   }

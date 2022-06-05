@@ -112,7 +112,7 @@ enum ScheduleStatus {
  * These overlap and end at the same time:
  *                         Total Duration
  *   |------------------------------------------------------------|
- *                                          |---------------------|
+ *   <------------- Wait Time ------------->|---------------------|
  *                                               Event Duration
  * We use this overlapping format because it's simpler for the rest
  * of the code base to compute start and end crank angles (which 
@@ -197,6 +197,11 @@ struct Schedule {
   compare_t &compare;  // Reference to the compare register. E.g. OCR3A
   void (&pTimerDisable)();    // Reference to the timer disable function
   void (&pTimerEnable)();     // Reference to the timer enable function
+
+private:
+
+  void beginScheduleInternal(unsigned long totalDuration, unsigned long eventDuration);
+  void queueScheduleInternal(unsigned long totalDuration, unsigned long eventDuration);
 };
 
 
@@ -217,8 +222,9 @@ struct FuelSchedule: public Schedule {
   /** @brief Set the next schedule for the injection channel.
    * 
    * The injector open time is automatically calculated.
+   * 
    * @param crankAngle The current crank angle
-   * @param injectorEndAngle The crank angle at which to end teh injection pulse
+   * @param injectorEndAngle The crank angle at which to end the injection pulse
    * @param openDuration length of time the injector is open
    */
   scheduleResult setFuelSchedule(int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration);
