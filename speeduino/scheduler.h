@@ -192,12 +192,12 @@ struct Schedule {
     BADDURATION
   };
   
-  /** @brief Immediately run the action if not already running. 
+  /** @brief Immediately start the action if not already running. 
    * @param actionDuration action length of time.
    */
   void runAction(unsigned long actionDuration);
 
-  /** @brief Immediately run the schedule - regardless of current state.
+  /** @brief Immediately start the action - regardless of current state.
    * @param actionDuration action length of time.
    */
   void forceRunAction(unsigned long actionDuration);
@@ -211,6 +211,16 @@ struct Schedule {
    */
   scheduleResult beginSchedule(unsigned long totalDuration, unsigned long actionDuration);  
   
+  /** @brief Move the schedule to it's next state.
+   *  PENDING -------------------> RUNNING -> OFF
+   *          |                  |
+   *          +- RUNNINGHASNEXT -+
+   * 
+   * @param allowOverlap Are we allowed to overlap the current schedule with a queued schedule? False means the action will be turned off then on again
+   * @param overlapThreshold If the gap between the end of the current schedule and the start of the next schedule is less than this, they are considered to overlap.
+   */
+  void moveToNextState(bool allowOverlap, COMPARE_TYPE overlapThreshold);
+
   Action action;
   volatile ScheduleStatus Status; ///< Schedule status: OFF, PENDING, STAGED, RUNNING, RUNNINGHASNEXT
   volatile COMPARE_TYPE endCounter;   ///< The counter value of the timer when this will end
@@ -224,7 +234,10 @@ struct Schedule {
 private:
 
   void beginScheduleInternal(unsigned long totalDuration, unsigned long actionDuration);
+  
   void queueScheduleInternal(unsigned long totalDuration, unsigned long actionDuration);
+
+  bool queuedScheduleOverlaps(COMPARE_TYPE overlapThreshold) const;
 };
 
 

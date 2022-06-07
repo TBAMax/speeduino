@@ -109,6 +109,50 @@ Schedule::scheduleResult Schedule::beginSchedule(unsigned long totalDuration, un
   return BADDURATION;
 }
 
+inline bool Schedule::queuedScheduleOverlaps(COMPARE_TYPE overlapThreshold) const
+{
+  return (nextEndCounter-nextStartCounter)+uS_TO_TIMER_COMPARE(overlapThreshold)>=(nextEndCounter-endCounter);
+}
+
+void Schedule::moveToNextState(bool allowOverlap, COMPARE_TYPE overlapThreshold)
+{
+  switch (Status)
+  {
+    // Wait period has ended, so start the action & wait for it to finish
+    case PENDING:
+      SET_COMPARE(compare, endCounter);
+      action.start();
+      Status = RUNNING;
+      break;
+
+    // Action duration has expired & there is a next schedule
+    case RUNNINGHASNEXT:
+      if (!allowOverlap || !queuedScheduleOverlaps(overlapThreshold))
+      {
+        // No overlap, so stop the current action and begin the next schedule
+        action.stop();
+        SET_COMPARE(compare, nextStartCounter);
+        endCounter = nextEndCounter;
+        Status = PENDING;
+      }
+      else
+      {
+        SET_COMPARE(compare, nextEndCounter);
+        endCounter = nextEndCounter;
+        Status = RUNNING;
+      }
+      break;
+
+    case RUNNING:
+    case OFF:
+    default:
+      action.stop();
+      timer.stop();
+      Status = OFF;
+      break;
+  }
+}
+ 
 FuelSchedule fuelSchedule1(FUEL1_COUNTER, FUEL1_COMPARE, FUEL1_TIMER_DISABLE, FUEL1_TIMER_ENABLE);
 FuelSchedule fuelSchedule2(FUEL2_COUNTER, FUEL2_COMPARE, FUEL2_TIMER_DISABLE, FUEL2_TIMER_ENABLE);
 FuelSchedule fuelSchedule3(FUEL3_COUNTER, FUEL3_COMPARE, FUEL3_TIMER_DISABLE, FUEL3_TIMER_ENABLE);
@@ -240,46 +284,10 @@ void beginInjectorPriming()
 */
 
 
-static void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
+static inline void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
 {
-  constexpr uint8_t INJECTION_OVERLAP_TRESHOLD  = 96U; //Time in us, basically minimum injector off time that is allowed.
-
-  if (fuelSchedule->isPending()) //Check to see if this schedule is turn on
-  {
-    SET_COMPARE(fuelSchedule->compare, fuelSchedule->endCounter);
-    fuelSchedule->action.start();
-    fuelSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)    
-  }
-  else if (fuelSchedule->isRunning())
-  {
-    //If there is a next schedule queued up, activate it
-    if(fuelSchedule->Status == RUNNINGHASNEXT)
-    {
-      if((fuelSchedule->nextEndCounter-fuelSchedule->nextStartCounter)+ uS_TO_TIMER_COMPARE(INJECTION_OVERLAP_TRESHOLD)>=(fuelSchedule->nextEndCounter-fuelSchedule->endCounter)) //check for possible overlap
-      {
-        SET_COMPARE(fuelSchedule->compare, fuelSchedule->nextEndCounter);
-        fuelSchedule->endCounter = fuelSchedule->nextEndCounter;
-        fuelSchedule->Status = RUNNING;
-      }
-      else //no overlap
-      {
-        fuelSchedule->action.stop();
-        SET_COMPARE(fuelSchedule->compare, fuelSchedule->nextStartCounter);
-        fuelSchedule->endCounter = fuelSchedule->nextEndCounter;
-        fuelSchedule->Status = PENDING;
-      }
-    }
-    else //no next schedule
-    {
-      fuelSchedule->action.stop();
-      fuelSchedule->Status = OFF; //Turn off the schedule        
-    }
-  }
-  else //(fuelSchedule->Status == OFF)
-  {
-    fuelSchedule->action.stop();
-    fuelSchedule->timer.stop(); //Safety check. Turn off this output compare unit and return without performing any action
-  } 
+  constexpr uint8_t INJECTION_OVERLAP_THRESHOLD  = 96U; //Time in us, basically minimum injector off time that is allowed.
+  fuelSchedule->moveToNextState(true, INJECTION_OVERLAP_THRESHOLD);
 }
 
 //Timer3A (fuel schedule 1) Compare Vector
@@ -372,36 +380,9 @@ fuelScheduleInterrupt(&fuelSchedule8);
 #endif
 
 
-static void ignitionScheduleInterrupt(struct IgnSchedule *targetSchedule) // common function that all ignition channel interrupts use
+static inline void ignitionScheduleInterrupt(struct IgnSchedule *targetSchedule) // common function that all ignition channel interrupts use
 {
-  if (targetSchedule->isPending()) //Check to see if this schedule is turn on
-  {
-    targetSchedule->action.start();
-    targetSchedule->Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
-    SET_COMPARE(targetSchedule->compare, targetSchedule->endCounter);
-  }
-  else if (targetSchedule->isRunning())
-  {
-    targetSchedule->action.stop(); //Moment of spark 
-
-      //If there is a next schedule queued up, activate it
-    if(targetSchedule->Status == RUNNINGHASNEXT)
-    {
-      SET_COMPARE(targetSchedule->compare, targetSchedule->nextStartCounter);
-      targetSchedule->endCounter = targetSchedule->nextEndCounter;
-      targetSchedule->Status = PENDING;
-    }
-    else
-    {
-      targetSchedule->timer.stop();
-      targetSchedule->Status = OFF; //Turn off the schedule
-    }
-  }
-  else //Safety check. Turn off this output compare unit and return without performing any action
-  {
-    targetSchedule->action.stop();
-    targetSchedule->timer.stop(); 
-  } 
+  targetSchedule->moveToNextState(false, 0);
 }
 
 #if IGN_CHANNELS >= 1
