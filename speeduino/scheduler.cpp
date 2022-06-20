@@ -114,7 +114,7 @@ inline bool Schedule::queuedScheduleOverlaps(COMPARE_TYPE overlapThreshold) cons
   return (nextEndCounter-nextStartCounter)+uS_TO_TIMER_COMPARE(overlapThreshold)>=(nextEndCounter-endCounter);
 }
 
-void Schedule::moveToNextState(bool allowOverlap, COMPARE_TYPE overlapThreshold)
+void Schedule::moveToNextState(bool continueAction, COMPARE_TYPE overlapThreshold)
 {
   switch (Status)
   {
@@ -127,19 +127,20 @@ void Schedule::moveToNextState(bool allowOverlap, COMPARE_TYPE overlapThreshold)
 
     // Action duration has expired & there is a next schedule
     case RUNNINGHASNEXT:
-      if (!allowOverlap || !queuedScheduleOverlaps(overlapThreshold))
+      if (continueAction && queuedScheduleOverlaps(overlapThreshold))
+      {
+        // Overlap and action can be continued, so start the next schedule
+        SET_COMPARE(compare, nextEndCounter);
+        endCounter = nextEndCounter;
+        Status = RUNNING;
+      }
+      else
       {
         // No overlap, so stop the current action and begin the next schedule
         action.stop();
         SET_COMPARE(compare, nextStartCounter);
         endCounter = nextEndCounter;
         Status = PENDING;
-      }
-      else
-      {
-        SET_COMPARE(compare, nextEndCounter);
-        endCounter = nextEndCounter;
-        Status = RUNNING;
       }
       break;
 
@@ -150,6 +151,18 @@ void Schedule::moveToNextState(bool allowOverlap, COMPARE_TYPE overlapThreshold)
       timer.stop();
       Status = OFF;
       break;
+  }
+}
+
+void Schedule::adjustEndTime(COMPARE_TYPE ticksFromNow)
+{
+  if( isRunning() ) 
+  { 
+    SET_COMPARE(compare, counter + ticksFromNow); 
+  }
+  else
+  { 
+    endCounter = (COMPARE_TYPE)(counter + ticksFromNow); 
   }
 }
  
@@ -284,12 +297,6 @@ void beginInjectorPriming()
 */
 
 
-static inline void fuelScheduleInterrupt(struct FuelSchedule *fuelSchedule)
-{
-  constexpr uint8_t INJECTION_OVERLAP_THRESHOLD  = 96U; //Time in us, basically minimum injector off time that is allowed.
-  fuelSchedule->moveToNextState(true, INJECTION_OVERLAP_THRESHOLD);
-}
-
 //Timer3A (fuel schedule 1) Compare Vector
 #if (INJ_CHANNELS >= 1)
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__) //AVR chips use the ISR for this
@@ -298,7 +305,7 @@ ISR(TIMER3_COMPA_vect) //fuelSchedules 1 and 5
 void fuelSchedule1Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-fuelScheduleInterrupt(&fuelSchedule1);
+  fuelSchedule1.timerCallback();
 }
 #endif
 
@@ -309,7 +316,7 @@ ISR(TIMER3_COMPB_vect) //fuelSchedule2
 void fuelSchedule2Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-fuelScheduleInterrupt(&fuelSchedule2);
+  fuelSchedule2.timerCallback();
 }
 #endif
 
@@ -320,7 +327,7 @@ ISR(TIMER3_COMPC_vect) //fuelSchedule3
 void fuelSchedule3Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-fuelScheduleInterrupt(&fuelSchedule3);
+  fuelSchedule3.timerCallback();
 }
 #endif
 
@@ -331,7 +338,7 @@ ISR(TIMER4_COMPB_vect) //fuelSchedule4
 void fuelSchedule4Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-fuelScheduleInterrupt(&fuelSchedule4);
+  fuelSchedule4.timerCallback();
 }
 #endif
 
@@ -342,7 +349,7 @@ ISR(TIMER4_COMPC_vect) //fuelSchedule5
 void fuelSchedule5Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-fuelScheduleInterrupt(&fuelSchedule5);
+  fuelSchedule5.timerCallback();
 }
 #endif
 
@@ -353,7 +360,7 @@ ISR(TIMER4_COMPA_vect) //fuelSchedule6
 void fuelSchedule6Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-fuelScheduleInterrupt(&fuelSchedule6);
+  fuelSchedule6.timerCallback();
 }
 #endif
 
@@ -364,7 +371,7 @@ ISR(TIMER5_COMPC_vect) //fuelSchedule7
 void fuelSchedule7Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-fuelScheduleInterrupt(&fuelSchedule7);
+  fuelSchedule7.timerCallback();
 }
 #endif
 
@@ -375,15 +382,9 @@ ISR(TIMER5_COMPB_vect) //fuelSchedule8
 void fuelSchedule8Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-fuelScheduleInterrupt(&fuelSchedule8);
+  fuelSchedule8.timerCallback();
 }
 #endif
-
-
-static inline void ignitionScheduleInterrupt(struct IgnSchedule *targetSchedule) // common function that all ignition channel interrupts use
-{
-  targetSchedule->moveToNextState(false, 0);
-}
 
 #if IGN_CHANNELS >= 1
 #if defined(CORE_AVR) //AVR chips use the ISR for this
@@ -392,7 +393,7 @@ ISR(TIMER5_COMPA_vect) //ignitionSchedule1
 void ignitionSchedule1Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-ignitionScheduleInterrupt(&ignitionSchedule1);
+  ignitionSchedule1.timerCallback();
 }
 #endif
 
@@ -403,7 +404,7 @@ ISR(TIMER5_COMPB_vect) //ignitionSchedule2
 void ignitionSchedule2Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-ignitionScheduleInterrupt(&ignitionSchedule2);
+  ignitionSchedule2.timerCallback();
 }
 #endif
 
@@ -414,7 +415,7 @@ ISR(TIMER5_COMPC_vect) //ignitionSchedule3
 void ignitionSchedule3Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-ignitionScheduleInterrupt(&ignitionSchedule3);
+  ignitionSchedule3.timerCallback();
 }
 #endif
 
@@ -425,7 +426,7 @@ ISR(TIMER4_COMPA_vect) //ignitionSchedule4
 void ignitionSchedule4Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-ignitionScheduleInterrupt(&ignitionSchedule4);
+  ignitionSchedule4.timerCallback();
 }
 #endif
 
@@ -436,7 +437,7 @@ ISR(TIMER4_COMPC_vect) //ignitionSchedule5
 void ignitionSchedule5Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-ignitionScheduleInterrupt(&ignitionSchedule5);
+  ignitionSchedule5.timerCallback();
 }
 #endif
 
@@ -447,7 +448,7 @@ ISR(TIMER4_COMPB_vect) //ignitionSchedule6
 void ignitionSchedule6Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-ignitionScheduleInterrupt(&ignitionSchedule6);
+  ignitionSchedule6.timerCallback();
 }
 #endif
 
@@ -458,7 +459,7 @@ ISR(TIMER3_COMPC_vect) //ignitionSchedule6
 void ignitionSchedule7Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-ignitionScheduleInterrupt(&ignitionSchedule7);
+  ignitionSchedule7.timerCallback();
 }
 #endif
 
@@ -469,6 +470,6 @@ ISR(TIMER3_COMPB_vect) //ignitionSchedule8
 void ignitionSchedule8Interrupt() //Most ARM chips can simply call a function
 #endif
 {
-ignitionScheduleInterrupt(&ignitionSchedule8);
+  ignitionSchedule8.timerCallback();
 }
 #endif

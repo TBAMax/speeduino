@@ -210,28 +210,40 @@ struct Schedule {
    * @param actionDuration action length of time. Tthe action will be started at time (totalDuration-actionDuration).
    */
   scheduleResult beginSchedule(unsigned long totalDuration, unsigned long actionDuration);  
-  
+
+  /** @brief Set the end time of the current schedule.
+   *
+   * @param ticksFromNow number of ticks from now to stop the current/pending action.
+   */
+  void adjustEndTime(COMPARE_TYPE ticksFromNow);
+
+  volatile ScheduleStatus Status; ///< Schedule status: OFF, PENDING, STAGED, RUNNING, RUNNINGHASNEXT
+
+protected:
+
   /** @brief Move the schedule to it's next state.
-   *  PENDING -------------------> RUNNING -> OFF
-   *          |                  |
-   *          +- RUNNINGHASNEXT -+
+   *  PENDING -> RUNNING -> OFF
+   *                      |
+   *  PENDING ----------->+- RUNNINGHASNEXT -> RUNNING -> OFF
    * 
-   * @param allowOverlap Are we allowed to overlap the current schedule with a queued schedule? False means the action will be turned off then on again
+   * The intent is that this is called by the timer that is associate to this schedule.
+   * 
+   * @param continueAction In case of overlap: True if current action should be continued, False to stop & restart the action
    * @param overlapThreshold If the gap between the end of the current schedule and the start of the next schedule is less than this, they are considered to overlap.
    */
-  void moveToNextState(bool allowOverlap, COMPARE_TYPE overlapThreshold);
-
-  Action action;
-  volatile ScheduleStatus Status; ///< Schedule status: OFF, PENDING, STAGED, RUNNING, RUNNINGHASNEXT
-  volatile COMPARE_TYPE endCounter;   ///< The counter value of the timer when this will end
-  volatile COMPARE_TYPE nextStartCounter;      ///< Planned start of next schedule (when current schedule is RUNNINGHASNEXT)
-  volatile COMPARE_TYPE nextEndCounter;        ///< Planned end of next schedule (when current schedule is RUNNINGHASNEXT)
+  void moveToNextState(bool continueAction, COMPARE_TYPE overlapThreshold);
 
   counter_t &counter;  // Reference to the counter register. E.g. TCNT3
   compare_t &compare;  // Reference to the compare register. E.g. OCR3A
-  Action timer;
 
 private:
+
+  Action action;
+  Action timer;
+
+  volatile COMPARE_TYPE endCounter;   ///< The counter value of the timer when this will end
+  volatile COMPARE_TYPE nextStartCounter;      ///< Planned start of next schedule (when current schedule is RUNNINGHASNEXT)
+  volatile COMPARE_TYPE nextEndCounter;        ///< Planned end of next schedule (when current schedule is RUNNINGHASNEXT)
 
   void beginScheduleInternal(unsigned long totalDuration, unsigned long actionDuration);
   
@@ -264,6 +276,12 @@ struct FuelSchedule: public Schedule {
    * @param openDuration length of time the injector is open
    */
   scheduleResult setFuelSchedule(int16_t crankAngle, int16_t injectorEndAngle, unsigned long openDuration);
+
+  /** @brief Callback for timers to drive the schedule through it's cycle */
+  inline void timerCallback() {
+    constexpr uint8_t INJECTION_OVERLAP_THRESHOLD  = 96U; //Time in us, basically minimum injector off time that is allowed.
+    moveToNextState(true, INJECTION_OVERLAP_THRESHOLD);
+  }
 
   /** @brief The number of crank degrees until corresponding cylinder is at TDC 
    * (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones) */
@@ -319,6 +337,11 @@ struct IgnSchedule: public Schedule {
    * @param coilChargeDuration is the time to charge the ignition coil
    */
   scheduleResult setIgnitionSchedule(int16_t crankAngle, unsigned long coilChargeDuration);
+
+  /** @brief Callback for timers to drive the schedule through it's cycle */
+  inline void timerCallback() {
+    moveToNextState(false, 0);
+  }
 
   /** @brief The number of crank degrees until corresponding cylinder is at TDC 
    * (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones)

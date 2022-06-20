@@ -287,13 +287,10 @@ static inline void setToothTiming(IgnSchedule &schedule, int16_t crankAngle)
 {
   constexpr uint8_t MIN_CYCLES_FOR_ENDCOMPARE = 6;
   
-  if( schedule.isRunning() ) 
+  COMPARE_TYPE endTime = (COMPARE_TYPE)uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (schedule.ignitionEndAngle - crankAngle) ) ) );
+  if( schedule.isRunning() || currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE) 
   { 
-    SET_COMPARE(schedule.compare, schedule.counter + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (schedule.ignitionEndAngle - crankAngle) ) ) ) ); 
-  }
-  else if(currentStatus.startRevolutions > MIN_CYCLES_FOR_ENDCOMPARE)
-  { 
-    schedule.endCounter = (COMPARE_TYPE)(schedule.counter + uS_TO_TIMER_COMPARE( fastDegreesToUS( ignitionLimits( (schedule.ignitionEndAngle - crankAngle) ) ) )); 
+    schedule.adjustEndTime(endTime);
   }
 }
 
