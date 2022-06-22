@@ -283,6 +283,13 @@ struct FuelSchedule: public Schedule {
     moveToNextState(true, INJECTION_OVERLAP_THRESHOLD);
   }
 
+  inline uint16_t calculateEndAngle(uint16_t openAngle) {
+    uint16_t endAngle = openAngle + injDegrees;
+    while(endAngle > (uint16_t)CRANK_ANGLE_MAX_INJ) { endAngle -= CRANK_ANGLE_MAX_INJ; }
+
+    return endAngle;
+  }
+
   /** @brief The number of crank degrees until corresponding cylinder is at TDC 
    * (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones) */
   int injDegrees = 0;
