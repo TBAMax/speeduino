@@ -1094,17 +1094,6 @@ uint16_t calculateInjectorEndAngle(int16_t injChannelDegrees)
   return tempInjectorEndAngle;
 }
 
-// ignition 3 for rotary
-void calculateIgnitionAngle3(int rotarySplitDegrees)
-{
-  ignitionSchedule3.ignitionEndAngle = ignitionSchedule1.ignitionEndAngle + rotarySplitDegrees;
-}
-
-// ignition 4 for rotary
-void calculateIgnitionAngle4(int rotarySplitDegrees)
-{
-  ignitionSchedule4.ignitionEndAngle = ignitionSchedule2.ignitionEndAngle + rotarySplitDegrees;
-}
 
 /** Calculate the Ignition angles for all cylinders (based on @ref config2.nCylinders).
  * both start and end angles are calculated for each channel.
@@ -1146,12 +1135,11 @@ void calculateIgnitionAngles()
       }
       else if(configPage4.sparkMode == IGN_MODE_ROTARY)
       {
-        byte splitDegrees = 0;
-        splitDegrees = table2D_getValue(&rotarySplitTable, currentStatus.ignLoad);
+        byte splitDegrees = table2D_getValue(&rotarySplitTable, currentStatus.ignLoad);
 
         //The trailing angles are set relative to the leading ones
-        calculateIgnitionAngle3(splitDegrees);
-        calculateIgnitionAngle4(splitDegrees);
+        ignitionSchedule3.setTrailingRotary(ignitionSchedule1, splitDegrees);
+        ignitionSchedule4.setTrailingRotary(ignitionSchedule2, splitDegrees);
       }
       else
       {

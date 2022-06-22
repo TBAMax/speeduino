@@ -330,6 +330,15 @@ struct IgnSchedule: public Schedule {
       if(ignitionEndAngle > CRANK_ANGLE_MAX_IGN) {ignitionEndAngle -= CRANK_ANGLE_MAX_IGN;}
   }
 
+  /** @brief Compute the ignition angle for a trailing rotary spark 
+   * 
+   * @param leadingSchedule The schedule for the leading spark
+   * @param rotarySplitDegrees The leading / trailing split angle
+  */
+  inline void setTrailingRotary(const IgnSchedule &leadingSchedule, int rotarySplitDegrees) {
+    ignitionEndAngle = leadingSchedule.ignitionEndAngle + rotarySplitDegrees;
+  }
+
   /** @brief Set the next schedule for the ignition channel.
    * 
    * The spark timing is automatically calculated
