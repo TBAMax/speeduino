@@ -586,9 +586,7 @@ void loop()
           else if( (configPage10.stagingEnabled == true) && (currentStatus.PW3 > 0) )
           {
             injector3EndAngle = fuelSchedule3.calculateEndAngle(currentStatus.injAngle);
-
-            injector4EndAngle = injector3EndAngle + (CRANK_ANGLE_MAX_INJ / 2); //Phase this either 180 or 360 degrees out from inj3 (In reality this will always be 180 as you can't have sequential and staged currently)
-            if(injector4EndAngle > (uint16_t)CRANK_ANGLE_MAX_INJ) { injector4EndAngle -= CRANK_ANGLE_MAX_INJ; }
+            injector4EndAngle = fuelSchedule4.calculateStageEndAngle(fuelSchedule3, currentStatus.injAngle);
           }
           break;
         //3 cylinders
@@ -624,9 +622,7 @@ void loop()
           else if( (configPage10.stagingEnabled == true) && (currentStatus.PW3 > 0) )
           {
             injector3EndAngle = fuelSchedule3.calculateEndAngle(currentStatus.injAngle);
-
-            injector4EndAngle = injector3EndAngle + (CRANK_ANGLE_MAX_INJ / 2); //Phase this either 180 or 360 degrees out from inj3 (In reality this will always be 180 as you can't have sequential and staged currently)
-            if(injector4EndAngle > (uint16_t)CRANK_ANGLE_MAX_INJ) { injector4EndAngle -= CRANK_ANGLE_MAX_INJ; }
+            injector4EndAngle = fuelSchedule4.calculateStageEndAngle(fuelSchedule3, currentStatus.injAngle);
           }
           else
           {

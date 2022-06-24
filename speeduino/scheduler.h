@@ -283,11 +283,20 @@ struct FuelSchedule: public Schedule {
     moveToNextState(true, INJECTION_OVERLAP_THRESHOLD);
   }
 
-  inline uint16_t calculateEndAngle(uint16_t openAngle) {
-    uint16_t endAngle = openAngle + injDegrees;
-    while(endAngle > (uint16_t)CRANK_ANGLE_MAX_INJ) { endAngle -= CRANK_ANGLE_MAX_INJ; }
+  /** @brief Compute the individual injector close angle. 
+   * 
+   * This is later fed back into setFuelSchedule
+   */
+  inline uint16_t calculateEndAngle(uint16_t openAngle) const {
+    return limitInjAngle(openAngle + injDegrees);
+  }
 
-    return endAngle;
+  /** @brief Compute the individual injector close angle as a staged (secondary) injector. 
+   * 
+   * This is later fed back into setFuelSchedule
+   */
+  inline uint16_t calculateStageEndAngle(const FuelSchedule &primaryInjector, uint16_t openAngle) const {
+      return limitInjAngle(primaryInjector.calculateEndAngle(openAngle) + (CRANK_ANGLE_MAX_INJ / 2)); //Phase this either 180 or 360 degrees out from (In reality this will always be 180 as you can't have sequential and staged currently)
   }
 
   /** @brief The number of crank degrees until corresponding cylinder is at TDC 
@@ -296,6 +305,13 @@ struct FuelSchedule: public Schedule {
 
   /** @brief Is this injection channel enabled. */
   bool injEnabled = true;
+
+private:
+
+  static inline uint16_t limitInjAngle(uint16_t angle) {
+    while(angle > (uint16_t)CRANK_ANGLE_MAX_INJ) { angle -= CRANK_ANGLE_MAX_INJ; }
+    return angle;
+  }
 };
 
 /*! \name The fuel schedulers */
