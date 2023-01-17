@@ -209,7 +209,7 @@ struct FuelSchedule {
 
   void (*injStartFunction)();        ///< Start function for injection
   void (*injEndFunction)();        ///< End function for injection
-  virtual COMPARE_TYPE getFuelCounter(){}; //Function for getting counter value
+  virtual COMPARE_TYPE getFuelCounter(){return 0U;}; //Function for getting counter value
   virtual void setFuelCompare(COMPARE_TYPE compareValue){}; //Function for setting counter compare value
   virtual void fuelTimerDisable(){}; //Function to disable timer for specific channel
   virtual void fuelTimerEnable(){}; //Function to enable timer for specific channel
