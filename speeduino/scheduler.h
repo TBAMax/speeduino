@@ -200,14 +200,15 @@ struct Ign8: Schedule //Derived ignitionSchedule structs with  channel specific 
 */
 struct FuelSchedule {
   volatile ScheduleStatus Status; ///< Schedule status: OFF, PENDING, STAGED, RUNNING
+  void (*injStartFunction)();        ///< Start function for injection
+  void (*injEndFunction)();        ///< End function for injection
   volatile COMPARE_TYPE endCompare;   ///< The counter value of the timer when this will end
 
   COMPARE_TYPE nextStartCompare;
   COMPARE_TYPE nextEndCompare;
   volatile bool hasNextSchedule = false;
+  int channelDegrees=0; // The number of crank degrees until corresponding cylinder is at TDC (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones)
 
-  void (*injStartFunction)();        ///< Start function for injection
-  void (*injEndFunction)();        ///< End function for injection
   virtual COMPARE_TYPE getFuelCounter(){return 0U;}; //Function for getting counter value
   virtual void setFuelCompare(COMPARE_TYPE compareValue){}; //Function for setting counter compare value
   virtual void fuelTimerDisable(){}; //Function to disable timer for specific channel
