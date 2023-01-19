@@ -132,35 +132,35 @@ void changeHalfToFullSync(void)
     switch (configPage2.nCylinders)
     {
       case 4:
-        fuelSchedule1.injStartFunction = openInjector1;
-        fuelSchedule1.injEndFunction = closeInjector1;
-        fuelSchedule2.injStartFunction = openInjector2;
-        fuelSchedule2.injEndFunction = closeInjector2;
+        fuelSchedule1.StartFunction = openInjector1;
+        fuelSchedule1.EndFunction = closeInjector1;
+        fuelSchedule2.StartFunction = openInjector2;
+        fuelSchedule2.EndFunction = closeInjector2;
         channel3InjEnabled = true;
         channel4InjEnabled = true;
         break;
             
       case 6:
-        fuelSchedule1.injStartFunction = openInjector1;
-        fuelSchedule1.injEndFunction = closeInjector1;
-        fuelSchedule2.injStartFunction = openInjector2;
-        fuelSchedule2.injEndFunction = closeInjector2;
-        fuelSchedule3.injStartFunction = openInjector3;
-        fuelSchedule3.injEndFunction = closeInjector3;
+        fuelSchedule1.StartFunction = openInjector1;
+        fuelSchedule1.EndFunction = closeInjector1;
+        fuelSchedule2.StartFunction = openInjector2;
+        fuelSchedule2.EndFunction = closeInjector2;
+        fuelSchedule3.StartFunction = openInjector3;
+        fuelSchedule3.EndFunction = closeInjector3;
         channel4InjEnabled = true;
         channel5InjEnabled = true;
         channel6InjEnabled = true;
         break;
 
       case 8:
-        fuelSchedule1.injStartFunction = openInjector1;
-        fuelSchedule1.injEndFunction = closeInjector1;
-        fuelSchedule2.injStartFunction = openInjector2;
-        fuelSchedule2.injEndFunction = closeInjector2;
-        fuelSchedule3.injStartFunction = openInjector3;
-        fuelSchedule3.injEndFunction = closeInjector3;
-        fuelSchedule4.injStartFunction = openInjector4;
-        fuelSchedule4.injEndFunction = closeInjector4;
+        fuelSchedule1.StartFunction = openInjector1;
+        fuelSchedule1.EndFunction = closeInjector1;
+        fuelSchedule2.StartFunction = openInjector2;
+        fuelSchedule2.EndFunction = closeInjector2;
+        fuelSchedule3.StartFunction = openInjector3;
+        fuelSchedule3.EndFunction = closeInjector3;
+        fuelSchedule4.StartFunction = openInjector4;
+        fuelSchedule4.EndFunction = closeInjector4;
         channel5InjEnabled = true;
         channel6InjEnabled = true;
         channel7InjEnabled = true;
@@ -223,43 +223,43 @@ void changeFullToHalfSync(void)
       case 4:
         if(configPage4.inj4cylPairing == INJ_PAIR_13_24)
         {
-          fuelSchedule1.injStartFunction = openInjector1and3;
-          fuelSchedule1.injEndFunction = closeInjector1and3;
-          fuelSchedule2.injStartFunction = openInjector2and4;
-          fuelSchedule2.injEndFunction = closeInjector2and4;
+          fuelSchedule1.StartFunction = openInjector1and3;
+          fuelSchedule1.EndFunction = closeInjector1and3;
+          fuelSchedule2.StartFunction = openInjector2and4;
+          fuelSchedule2.EndFunction = closeInjector2and4;
         }
         else
         {
-          fuelSchedule1.injStartFunction = openInjector1and4;
-          fuelSchedule1.injEndFunction = closeInjector1and4;
-          fuelSchedule2.injStartFunction = openInjector2and3;
-          fuelSchedule2.injEndFunction = closeInjector2and3;
+          fuelSchedule1.StartFunction = openInjector1and4;
+          fuelSchedule1.EndFunction = closeInjector1and4;
+          fuelSchedule2.StartFunction = openInjector2and3;
+          fuelSchedule2.EndFunction = closeInjector2and3;
         }
         channel3InjEnabled = false;
         channel4InjEnabled = false;
         break;
             
       case 6:
-        fuelSchedule1.injStartFunction = openInjector1and4;
-        fuelSchedule1.injEndFunction = closeInjector1and4;
-        fuelSchedule2.injStartFunction = openInjector2and5;
-        fuelSchedule2.injEndFunction = closeInjector2and5;
-        fuelSchedule3.injStartFunction = openInjector3and6;
-        fuelSchedule3.injEndFunction = closeInjector3and6;
+        fuelSchedule1.StartFunction = openInjector1and4;
+        fuelSchedule1.EndFunction = closeInjector1and4;
+        fuelSchedule2.StartFunction = openInjector2and5;
+        fuelSchedule2.EndFunction = closeInjector2and5;
+        fuelSchedule3.StartFunction = openInjector3and6;
+        fuelSchedule3.EndFunction = closeInjector3and6;
         channel4InjEnabled = false;
         channel5InjEnabled = false;
         channel6InjEnabled = false;
         break;
 
       case 8:
-        fuelSchedule1.injStartFunction = openInjector1and5;
-        fuelSchedule1.injEndFunction = closeInjector1and5;
-        fuelSchedule2.injStartFunction = openInjector2and6;
-        fuelSchedule2.injEndFunction = closeInjector2and6;
-        fuelSchedule3.injStartFunction = openInjector3and7;
-        fuelSchedule3.injEndFunction = closeInjector3and7;
-        fuelSchedule4.injStartFunction = openInjector4and8;
-        fuelSchedule4.injEndFunction = closeInjector4and8;
+        fuelSchedule1.StartFunction = openInjector1and5;
+        fuelSchedule1.EndFunction = closeInjector1and5;
+        fuelSchedule2.StartFunction = openInjector2and6;
+        fuelSchedule2.EndFunction = closeInjector2and6;
+        fuelSchedule3.StartFunction = openInjector3and7;
+        fuelSchedule3.EndFunction = closeInjector3and7;
+        fuelSchedule4.StartFunction = openInjector4and8;
+        fuelSchedule4.EndFunction = closeInjector4and8;
         channel5InjEnabled = false;
         channel6InjEnabled = false;
         channel7InjEnabled = false;
