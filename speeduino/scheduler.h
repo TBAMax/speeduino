@@ -122,7 +122,6 @@ struct Schedule {
   volatile COMPARE_TYPE nextStartCompare;      ///< Planned start of next schedule (when current schedule is RUNNING)
   volatile COMPARE_TYPE nextEndCompare;        ///< Planned end of next schedule (when current schedule is RUNNING)
   volatile bool hasNextSchedule = false; ///< Enable flag for planned next schedule (when current schedule is RUNNING)
-  volatile bool endScheduleSetByDecoder = false;
   int channelIgnDegrees=0; // The number of crank degrees until corresponding cylinder is at TDC (cylinder1 is obviously 0 for virtually ALL engines, but there's some weird ones)
 
   virtual COMPARE_TYPE getIgnCounter(){return 0U;}; //Function for getting counter value
