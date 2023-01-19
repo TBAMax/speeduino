@@ -1136,30 +1136,30 @@ void calculateIgnitionAngles()
   {
     //1 cylinder
     case 1:
-      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelIgnDegrees);
+      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelDegrees);
       break;
     //2 cylinders
     case 2:
-      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelIgnDegrees);
-      ignition2EndAngle=calculateIgnitionAngle(ignitionSchedule2.channelIgnDegrees);
+      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelDegrees);
+      ignition2EndAngle=calculateIgnitionAngle(ignitionSchedule2.channelDegrees);
       break;
     //3 cylinders
     case 3:
-      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelIgnDegrees);
-      ignition2EndAngle=calculateIgnitionAngle(ignitionSchedule2.channelIgnDegrees);
-      ignition3EndAngle=calculateIgnitionAngle(ignitionSchedule3.channelIgnDegrees);
+      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelDegrees);
+      ignition2EndAngle=calculateIgnitionAngle(ignitionSchedule2.channelDegrees);
+      ignition3EndAngle=calculateIgnitionAngle(ignitionSchedule3.channelDegrees);
       break;
     //4 cylinders
     case 4:
-      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelIgnDegrees);
-      ignition2EndAngle=calculateIgnitionAngle(ignitionSchedule2.channelIgnDegrees);
+      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelDegrees);
+      ignition2EndAngle=calculateIgnitionAngle(ignitionSchedule2.channelDegrees);
 
       #if IGN_CHANNELS >= 4
       if((configPage4.sparkMode == IGN_MODE_SEQUENTIAL) && currentStatus.hasSync)
       {
         if( CRANK_ANGLE_MAX_IGN != 720 ) { changeHalfToFullSync(); }
-        ignition3EndAngle=calculateIgnitionAngle(ignitionSchedule3.channelIgnDegrees);
-        ignition4EndAngle=calculateIgnitionAngle(ignitionSchedule4.channelIgnDegrees);
+        ignition3EndAngle=calculateIgnitionAngle(ignitionSchedule3.channelDegrees);
+        ignition4EndAngle=calculateIgnitionAngle(ignitionSchedule4.channelDegrees);
       }
       else if(configPage4.sparkMode == IGN_MODE_ROTARY)
       {
@@ -1178,25 +1178,25 @@ void calculateIgnitionAngles()
       break;
     //5 cylinders
     case 5:
-      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelIgnDegrees);
-      ignition2EndAngle=calculateIgnitionAngle(ignitionSchedule2.channelIgnDegrees);
-      ignition3EndAngle=calculateIgnitionAngle(ignitionSchedule3.channelIgnDegrees);
-      ignition4EndAngle=calculateIgnitionAngle(ignitionSchedule4.channelIgnDegrees);
-      ignition5EndAngle=calculateIgnitionAngle(ignitionSchedule5.channelIgnDegrees);
+      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelDegrees);
+      ignition2EndAngle=calculateIgnitionAngle(ignitionSchedule2.channelDegrees);
+      ignition3EndAngle=calculateIgnitionAngle(ignitionSchedule3.channelDegrees);
+      ignition4EndAngle=calculateIgnitionAngle(ignitionSchedule4.channelDegrees);
+      ignition5EndAngle=calculateIgnitionAngle(ignitionSchedule5.channelDegrees);
       break;
     //6 cylinders
     case 6:
-      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelIgnDegrees);
-      ignition2EndAngle=calculateIgnitionAngle(ignitionSchedule2.channelIgnDegrees);
-      ignition3EndAngle=calculateIgnitionAngle(ignitionSchedule3.channelIgnDegrees);
+      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelDegrees);
+      ignition2EndAngle=calculateIgnitionAngle(ignitionSchedule2.channelDegrees);
+      ignition3EndAngle=calculateIgnitionAngle(ignitionSchedule3.channelDegrees);
 
       #if IGN_CHANNELS >= 6
       if((configPage4.sparkMode == IGN_MODE_SEQUENTIAL) && currentStatus.hasSync)
       {
         if( CRANK_ANGLE_MAX_IGN != 720 ) { changeHalfToFullSync(); }
-      ignition4EndAngle=calculateIgnitionAngle(ignitionSchedule4.channelIgnDegrees);
-      ignition5EndAngle=calculateIgnitionAngle(ignitionSchedule5.channelIgnDegrees);
-      ignition6EndAngle=calculateIgnitionAngle(ignitionSchedule6.channelIgnDegrees);
+      ignition4EndAngle=calculateIgnitionAngle(ignitionSchedule4.channelDegrees);
+      ignition5EndAngle=calculateIgnitionAngle(ignitionSchedule5.channelDegrees);
+      ignition6EndAngle=calculateIgnitionAngle(ignitionSchedule6.channelDegrees);
       }
       else
       {
@@ -1206,19 +1206,19 @@ void calculateIgnitionAngles()
       break;
     //8 cylinders
     case 8:
-      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelIgnDegrees);
-      ignition2EndAngle=calculateIgnitionAngle(ignitionSchedule2.channelIgnDegrees);
-      ignition3EndAngle=calculateIgnitionAngle(ignitionSchedule3.channelIgnDegrees);
-      ignition4EndAngle=calculateIgnitionAngle(ignitionSchedule4.channelIgnDegrees);
+      ignition1EndAngle=calculateIgnitionAngle(ignitionSchedule1.channelDegrees);
+      ignition2EndAngle=calculateIgnitionAngle(ignitionSchedule2.channelDegrees);
+      ignition3EndAngle=calculateIgnitionAngle(ignitionSchedule3.channelDegrees);
+      ignition4EndAngle=calculateIgnitionAngle(ignitionSchedule4.channelDegrees);
 
       #if IGN_CHANNELS >= 8
       if((configPage4.sparkMode == IGN_MODE_SEQUENTIAL) && currentStatus.hasSync)
       {
       if( CRANK_ANGLE_MAX_IGN != 720 ) { changeHalfToFullSync(); }
-      ignition5EndAngle=calculateIgnitionAngle(ignitionSchedule5.channelIgnDegrees);
-      ignition6EndAngle=calculateIgnitionAngle(ignitionSchedule6.channelIgnDegrees);
-      ignition7EndAngle=calculateIgnitionAngle(ignitionSchedule7.channelIgnDegrees);
-      ignition8EndAngle=calculateIgnitionAngle(ignitionSchedule8.channelIgnDegrees);
+      ignition5EndAngle=calculateIgnitionAngle(ignitionSchedule5.channelDegrees);
+      ignition6EndAngle=calculateIgnitionAngle(ignitionSchedule6.channelDegrees);
+      ignition7EndAngle=calculateIgnitionAngle(ignitionSchedule7.channelDegrees);
+      ignition8EndAngle=calculateIgnitionAngle(ignitionSchedule8.channelDegrees);
       }
       else
       {
