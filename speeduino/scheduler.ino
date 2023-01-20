@@ -117,7 +117,7 @@ void setFuelSchedule (struct Schedule *targetSchedule, int16_t crankAngle, int16
     {      
       noInterrupts(); // make sure start and end values are updated simultaneously
       targetSchedule->endCompare = targetSchedule->getCounter() + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout)); //As there is a tick every 4uS, there are timeout/4 ticks until the interrupt should be triggered ( >>2 divides by 4)   
-      targetSchedule->setCompare(targetSchedule->endCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration))); // previously startCompare
+      targetSchedule->setCompare(targetSchedule->endCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration))); // set pulse start Compare value
       targetSchedule->Status = PENDING; //Turn this schedule on
       interrupts(); 
       targetSchedule->timerEnable();
@@ -129,7 +129,7 @@ void setFuelSchedule (struct Schedule *targetSchedule, int16_t crankAngle, int16
     //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
     injectorEndAngle += CRANK_ANGLE_MAX_INJ;
     timeout=(injectorEndAngle - crankAngle) * (unsigned long)timePerDegree;
-      if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + INJECTION_REFRESH_TRESHOLD)&&((COMPARE_TYPE)(targetSchedule->endCompare-targetSchedule->getCounter())>400U))
+      if((timeout < MAX_TIMER_PERIOD) && (timeout > duration + INJECTION_REFRESH_TRESHOLD)&&((COMPARE_TYPE)(targetSchedule->endCompare-targetSchedule->getCounter())>uS_TO_TIMER_COMPARE(INJECTION_REFRESH_TRESHOLD)))
       {
       noInterrupts();
       targetSchedule->nextEndCompare = targetSchedule->getCounter() + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(timeout));
@@ -343,7 +343,8 @@ void fuelScheduleInterrupt(struct Schedule *fuelSchedule)
     //If there is a next schedule queued up, activate it
     if(fuelSchedule->hasNextSchedule == true)
     {
-      if((fuelSchedule->nextEndCompare-fuelSchedule->nextStartCompare)+ uS_TO_TIMER_COMPARE(INJECTION_OVERLAP_TRESHOLD)>=(fuelSchedule->nextEndCompare-fuelSchedule->endCompare)) //check for possible overlap
+      //check for possible overlap
+      if((fuelSchedule->nextEndCompare-fuelSchedule->nextStartCompare)+ uS_TO_TIMER_COMPARE(INJECTION_OVERLAP_TRESHOLD)>=(fuelSchedule->nextEndCompare-fuelSchedule->endCompare)) 
       {
         fuelSchedule->setCompare(fuelSchedule->nextEndCompare);
         fuelSchedule->endCompare = fuelSchedule->nextEndCompare;

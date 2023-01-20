@@ -106,10 +106,9 @@ void setFuelSchedule (struct FuelSchedule *targetSchedule, int16_t crankAngle, i
 /** Schedule statuses.
  * - OFF - Schedule turned off and there is no scheduled plan
  * - PENDING - There's a scheduled plan, but is has not started to run yet
- * - STAGED - (???, Not used)
  * - RUNNING - Schedule is currently running
  */
-enum ScheduleStatus : uint8_t {OFF, PENDING, STAGED, RUNNING}; //The statuses that a schedule can have
+enum ScheduleStatus : uint8_t {OFF, PENDING, RUNNING}; //The statuses that a schedule can have
 
 /** Ignition schedule and Fuel Schedule, both use the same struct now.
  */
