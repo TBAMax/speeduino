@@ -73,8 +73,8 @@ static inline void checkAirConRPMLockout(void);
 #define VVT2_PIN_OFF()    VVT2_PIN_LOW();
 #define VVT_TIME_DELAY_MULTIPLIER  50
 
-#define FAN_ON()         ((configPage6.fanInv) ? FAN_PIN_LOW() : FAN_PIN_HIGH())
-#define FAN_OFF()        ((configPage6.fanInv) ? FAN_PIN_HIGH() : FAN_PIN_LOW())
+#define FAN_ON()         ((configPage6.fanInv) ? digitalWrite(pinFan, LOW) : digitalWrite(pinFan, HIGH))
+#define FAN_OFF()        ((configPage6.fanInv) ? digitalWrite(pinFan, HIGH) : digitalWrite(pinFan, LOW))
 
 #define WMI_TANK_IS_EMPTY() ((configPage10.wmiEmptyEnabled) ? ((configPage10.wmiEmptyPolarity) ? digitalRead(pinWMIEmpty) : !digitalRead(pinWMIEmpty)) : 1)
 
