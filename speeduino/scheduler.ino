@@ -30,37 +30,79 @@ A full copy of the license may be found in the projects root directory
 #include "scheduledIO.h"
 #include "crankMaths.h"
 
-Fuel1 fuelSchedule1;
-Fuel2 fuelSchedule2;
-Fuel3 fuelSchedule3;
-Fuel4 fuelSchedule4;
+static void fun_FUEL1_TIMER_DISABLE() { FUEL1_TIMER_DISABLE(); }
+static void fun_FUEL1_TIMER_ENABLE() { FUEL1_TIMER_ENABLE(); }
+Schedule fuelSchedule1(FUEL1_COUNTER, FUEL1_COMPARE, fun_FUEL1_TIMER_DISABLE, fun_FUEL1_TIMER_ENABLE);
+
+static void fun_FUEL2_TIMER_DISABLE() { FUEL2_TIMER_DISABLE(); }
+static void fun_FUEL2_TIMER_ENABLE() { FUEL2_TIMER_ENABLE(); }
+Schedule fuelSchedule2(FUEL2_COUNTER, FUEL2_COMPARE, fun_FUEL2_TIMER_DISABLE, fun_FUEL2_TIMER_ENABLE);
+
+static void fun_FUEL3_TIMER_DISABLE() { FUEL3_TIMER_DISABLE(); }
+static void fun_FUEL3_TIMER_ENABLE() { FUEL3_TIMER_ENABLE(); }
+Schedule fuelSchedule3(FUEL3_COUNTER, FUEL3_COMPARE, fun_FUEL3_TIMER_DISABLE, fun_FUEL3_TIMER_ENABLE);
+
+static void fun_FUEL4_TIMER_DISABLE() { FUEL4_TIMER_DISABLE(); }
+static void fun_FUEL4_TIMER_ENABLE() { FUEL4_TIMER_ENABLE(); }
+Schedule fuelSchedule4(FUEL4_COUNTER, FUEL4_COMPARE, fun_FUEL4_TIMER_DISABLE, fun_FUEL4_TIMER_ENABLE);
+
 #if (INJ_CHANNELS >= 5)
-Fuel5 fuelSchedule5;
+static void fun_FUEL5_TIMER_DISABLE() { FUEL5_TIMER_DISABLE(); }
+static void fun_FUEL5_TIMER_ENABLE() { FUEL5_TIMER_ENABLE(); }
+Schedule fuelSchedule5(FUEL5_COUNTER, FUEL5_COMPARE, fun_FUEL5_TIMER_DISABLE, fun_FUEL5_TIMER_ENABLE);
 #endif
 #if (INJ_CHANNELS >= 6)
-Fuel6 fuelSchedule6;
+static void fun_FUEL6_TIMER_DISABLE() { FUEL6_TIMER_DISABLE(); }
+static void fun_FUEL6_TIMER_ENABLE() { FUEL6_TIMER_ENABLE(); }
+Schedule fuelSchedule6(FUEL6_COUNTER, FUEL6_COMPARE, fun_FUEL6_TIMER_DISABLE, fun_FUEL6_TIMER_ENABLE);
 #endif
 #if (INJ_CHANNELS >= 7)
-Fuel7 fuelSchedule7;
+static void fun_FUEL7_TIMER_DISABLE() { FUEL7_TIMER_DISABLE(); }
+static void fun_FUEL7_TIMER_ENABLE() { FUEL7_TIMER_ENABLE(); }
+Schedule fuelSchedule7(FUEL7_COUNTER, FUEL7_COMPARE, fun_FUEL7_TIMER_DISABLE, fun_FUEL7_TIMER_ENABLE);
 #endif
 #if (INJ_CHANNELS >= 8)
-Fuel8 fuelSchedule8;
+static void fun_FUEL8_TIMER_DISABLE() { FUEL8_TIMER_DISABLE(); }
+static void fun_FUEL8_TIMER_ENABLE() { FUEL8_TIMER_ENABLE(); }
+Schedule fuelSchedule8(FUEL8_COUNTER, FUEL8_COMPARE, fun_FUEL8_TIMER_DISABLE, fun_FUEL8_TIMER_ENABLE);
 #endif
 
-Ign1 ignitionSchedule1;
-Ign2 ignitionSchedule2;
-Ign3 ignitionSchedule3;
-Ign4 ignitionSchedule4;
-Ign5 ignitionSchedule5;
+static void fun_IGN1_TIMER_DISABLE() { IGN1_TIMER_DISABLE(); }
+static void fun_IGN1_TIMER_ENABLE() { IGN1_TIMER_ENABLE(); }
+Schedule ignitionSchedule1(IGN1_COUNTER, IGN1_COMPARE, fun_IGN1_TIMER_DISABLE, fun_IGN1_TIMER_ENABLE);
+
+static void fun_IGN2_TIMER_DISABLE() { IGN2_TIMER_DISABLE(); }
+static void fun_IGN2_TIMER_ENABLE() { IGN2_TIMER_ENABLE(); }
+Schedule ignitionSchedule2(IGN2_COUNTER, IGN2_COMPARE, fun_IGN2_TIMER_DISABLE, fun_IGN2_TIMER_ENABLE);
+
+static void fun_IGN3_TIMER_DISABLE() { IGN3_TIMER_DISABLE(); }
+static void fun_IGN3_TIMER_ENABLE() { IGN3_TIMER_ENABLE(); }
+Schedule ignitionSchedule3(IGN3_COUNTER, IGN3_COMPARE, fun_IGN3_TIMER_DISABLE, fun_IGN3_TIMER_ENABLE);
+
+static void fun_IGN4_TIMER_DISABLE() { IGN4_TIMER_DISABLE(); }
+static void fun_IGN4_TIMER_ENABLE() { IGN4_TIMER_ENABLE(); }
+Schedule ignitionSchedule4(IGN4_COUNTER, IGN4_COMPARE, fun_IGN4_TIMER_DISABLE, fun_IGN4_TIMER_ENABLE);
+
+static void fun_IGN5_TIMER_DISABLE() { IGN5_TIMER_DISABLE(); }
+static void fun_IGN5_TIMER_ENABLE() { IGN5_TIMER_ENABLE(); }
+Schedule ignitionSchedule5(IGN5_COUNTER, IGN5_COMPARE, fun_IGN5_TIMER_DISABLE, fun_IGN5_TIMER_ENABLE);
+
 #if IGN_CHANNELS >= 6
-Ign6 ignitionSchedule6;
+static void fun_IGN6_TIMER_DISABLE() { IGN6_TIMER_DISABLE(); }
+static void fun_IGN6_TIMER_ENABLE() { IGN6_TIMER_ENABLE(); }
+Schedule ignitionSchedule6(IGN6_COUNTER, IGN6_COMPARE, fun_IGN6_TIMER_DISABLE, fun_IGN6_TIMER_ENABLE);
 #endif
 #if IGN_CHANNELS >= 7
-Ign7 ignitionSchedule7;
+static void fun_IGN7_TIMER_DISABLE() { IGN7_TIMER_DISABLE(); }
+static void fun_IGN7_TIMER_ENABLE() { IGN7_TIMER_ENABLE(); }
+Schedule ignitionSchedule7(IGN7_COUNTER, IGN7_COMPARE, fun_IGN7_TIMER_DISABLE, fun_IGN7_TIMER_ENABLE);
 #endif
 #if IGN_CHANNELS >= 8
-Ign8 ignitionSchedule8;
+static void fun_IGN8_TIMER_DISABLE() { IGN8_TIMER_DISABLE(); }
+static void fun_IGN8_TIMER_ENABLE() { IGN8_TIMER_ENABLE(); }
+Schedule ignitionSchedule8(IGN8_COUNTER, IGN8_COMPARE, fun_IGN8_TIMER_DISABLE, fun_IGN8_TIMER_ENABLE);
 #endif
+
 
 void initialiseSchedulers(void)
 {
