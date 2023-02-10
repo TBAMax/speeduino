@@ -134,7 +134,6 @@ struct Schedule {
   void (*StartFunction)();        ///< Start Callback function for schedule
   void (*EndFunction)();          ///< End Callback function for schedule
 
-  //pure virtual functions, these are really defined in sub-classes
   COMPARE_TYPE getCounter(void) { return counter; }; //Function for getting counter value
   void setCompare(COMPARE_TYPE compareValue) { compare=(COMPARE_TYPE)compareValue; }; //Function for setting counter compare value
   void timerDisable(void) { pTimerEndFunction(); }; //Function to disable timer for specific channel
