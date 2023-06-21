@@ -45,7 +45,7 @@ void (*triggerSecondaryHandler)(void); ///Pointer for the secondary trigger func
 void (*triggerTertiaryHandler)(void); ///Pointer for the tertiary trigger function (Gets pointed to the relevant decoder)
 uint16_t (*getRPM)(void); ///Pointer to the getRPM function (Gets pointed to the relevant decoder)
 int (*getCrankAngle)(void); ///Pointer to the getCrank Angle function (Gets pointed to the relevant decoder)
-void (*triggerSetEndTeeth)(void); ///Pointer to the triggerSetEndTeeth function of each decoder
+void (*triggerSetEndTeeth)(void) = triggerSetEndTeeth_missingTooth; ///Pointer to the triggerSetEndTeeth function of each decoder
 
 static void triggerRoverMEMSCommon(void);
 
