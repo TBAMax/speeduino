@@ -162,8 +162,11 @@ void loop(void)
     }
 
     currentLoopTime = micros_safe();
-    unsigned long timeToLastTooth = (currentLoopTime - toothLastToothTime);
-    if ( (timeToLastTooth < MAX_STALL_TIME) || (toothLastToothTime > currentLoopTime) ) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the latest time and doing the comparison
+    noInterrupts();
+    unsigned long tempToothLastToothTime=toothLastToothTime;
+    interrupts();
+    unsigned long timeToLastTooth = (currentLoopTime - tempToothLastToothTime);
+    if (timeToLastTooth < MAX_STALL_TIME) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the latest time and doing the comparison
     {
       currentStatus.longRPM = getRPM(); //Long RPM is included here
       currentStatus.RPM = currentStatus.longRPM;

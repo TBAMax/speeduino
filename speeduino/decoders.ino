@@ -708,6 +708,47 @@ void triggerThird_missingTooth(void)
     toothLastThirdToothTime = curTime3;
   } // Trigger filter
 }
+//calculate RPM over 4 last seen tooth (takes accunt the cap of the missing tooth)
+uint16_t getRPM_missingTooth(void){
+  uint16_t tempRPM = 0;
+  uint32_t timeInterval;
+  uint8_t x;
+  const uint8_t amountOfEdges=4; //amount of edges to use. Good to use power ot 2 values(4,8,of16), this gives better performance
+  
+  int16_t tempToothCurrentCount = (uint8_t)toothCurrentCount; //8bits , then there is no race condition for read.
+
+  // caclulate circular buffer index x, this gives us the position in the buffer where needed element is to be found.
+  // Take advantage of the fact that missing tooth(teeth) are always just before the buffer index(ToothCurrentCount) rollback.
+  if((tempToothCurrentCount - amountOfEdges)<1) 
+  {//we have missing tooth in the range
+    if(amountOfEdges-tempToothCurrentCount<configPage4.triggerMissingTeeth)
+    {
+        //move things back some, otherwise we can not get exact amount of tooth, because as we know, some are missing
+        tempToothCurrentCount=(amountOfEdges - configPage4.triggerMissingTeeth);        
+        x=(tempToothCurrentCount - amountOfEdges + configPage4.triggerMissingTeeth) + (triggerActualTeeth);//advance index by missing teeth amount because they do not have items.      
+    }
+    else    //advance index by missing teeth amount because they do not have items.
+    //Then we get the correct timing as if there were tooth in place of the gap.
+    {
+      x=(tempToothCurrentCount - amountOfEdges + configPage4.triggerMissingTeeth) + (triggerActualTeeth);
+    }    
+  }
+  else
+  {
+    x= tempToothCurrentCount - amountOfEdges;    //no missing tooth in the range
+  }
+  timeInterval=toothHistory[tempToothCurrentCount]-toothHistory[x]; //this is not wrapped in nointerrupts() just because assume the active writing to be in other parts of the buffer at this time.
+  //tempToothCurrentCount = constrain(tempToothCurrentCount,1,(TOOTH_LOG_SIZE-1));//safety cap index
+  //x=max(x,(TOOTH_LOG_SIZE-1));//safety cap index
+  
+  //begin RPM calculations
+  revolutionTime = timeInterval *  configPage4.triggerTeeth /amountOfEdges;
+  timePerDegreex16 = (unsigned long)(timeInterval*16U) / (triggerToothAngle*amountOfEdges);
+  tempRPM = (US_IN_MINUTE / revolutionTime);//reciprocal counting.
+  if( tempRPM >= MAX_RPM ) { tempRPM = MAX_RPM; } //Sanity check.
+
+  return tempRPM;
+}
 
 uint16_t getRPM_missingToothOld(void){
   uint16_t tempRPM = 0;

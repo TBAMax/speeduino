@@ -141,19 +141,7 @@ void doCrankSpeedCalcs(void)
       }
       else if (configPage4.TrigPattern == DECODER_MISSING_TOOTH)
       {
-        noInterrupts();
-          unsigned long tempCurGap = toothLastToothTime-toothLastMinusOneToothTime;
-          uint16_t temptoothCurrentCount = toothCurrentCount;
-        interrupts();
-
-        if(temptoothCurrentCount == 1) //missing tooth
-        {
-          timePerDegreex16=(unsigned long)(tempCurGap*16U) / uint16_t(triggerToothAngle*uint8_t(configPage4.triggerMissingTeeth+1U));
-        }
-        else //regular tooth
-        {
-          timePerDegreex16 = (unsigned long)(tempCurGap*16U) / triggerToothAngle;
-        }        
+        //for Missing Tooth decoder timePerDegreex16 caclulation is done wiht the getRPM() function
         timePerDegree = timePerDegreex16 / 16;
       }      
       else
