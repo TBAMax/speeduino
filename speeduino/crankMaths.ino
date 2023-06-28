@@ -113,14 +113,14 @@ void doCrankSpeedCalcs(void)
         {
           deltaToothCount = toothCurrentCount;
           int angle1, angle2; //These represent the crank angles that are travelled for the last 2 pulses
-          if(configPage4.TrigPattern == 4)
+          if(configPage4.TrigPattern == DECODER_4G63)
           {
             //Special case for 70/110 pattern on 4g63
             angle2 = triggerToothAngle; //Angle 2 is the most recent
             if (angle2 == 70) { angle1 = 110; }
             else { angle1 = 70; }
           }
-          else if(configPage4.TrigPattern == 0)
+          else if(configPage4.TrigPattern == DECODER_MISSING_TOOTH)
           {
             //Special case for missing tooth decoder where the missing tooth was one of the last 2 seen
             if(toothCurrentCount == 1) { angle2 = 2*triggerToothAngle; angle1 = triggerToothAngle; }
@@ -139,6 +139,23 @@ void doCrankSpeedCalcs(void)
           timePerDegreex16 = ldiv( 2666656L, currentStatus.RPM + rpmDelta).quot; //This gives accuracy down to 0.1 of a degree and can provide noticeably better timing results on low resolution triggers
           timePerDegree = timePerDegreex16 / 16;
       }
+      else if (configPage4.TrigPattern == DECODER_MISSING_TOOTH)
+      {
+        noInterrupts();
+          unsigned long tempCurGap = toothLastToothTime-toothLastMinusOneToothTime;
+          uint16_t temptoothCurrentCount = toothCurrentCount;
+        interrupts();
+
+        if(temptoothCurrentCount == 1) //missing tooth
+        {
+          timePerDegreex16=(unsigned long)(tempCurGap*16U) / uint16_t(triggerToothAngle*uint8_t(configPage4.triggerMissingTeeth+1U));
+        }
+        else //regular tooth
+        {
+          timePerDegreex16 = (unsigned long)(tempCurGap*16U) / triggerToothAngle;
+        }        
+        timePerDegree = timePerDegreex16 / 16;
+      }      
       else
       {
         //If we can, attempt to get the timePerDegree by comparing the times of the last two teeth seen. This is only possible for evenly spaced teeth
@@ -164,6 +181,6 @@ void doCrankSpeedCalcs(void)
           timePerDegree = timePerDegreex16 / 16;
         }
       }
-      degreesPeruSx2048 = 2048 / timePerDegree;
-      degreesPeruSx32768 = 524288 / timePerDegreex16;
+      //degreesPeruSx2048 = 2048 / timePerDegree;
+      //degreesPeruSx32768 = 524288 / timePerDegreex16;
 }
