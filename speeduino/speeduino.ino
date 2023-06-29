@@ -165,8 +165,8 @@ void loop(void)
     noInterrupts();
     unsigned long tempToothLastToothTime=toothLastToothTime;
     interrupts();
-    unsigned long timeToLastTooth = (currentLoopTime - tempToothLastToothTime);
-    if (timeToLastTooth < MAX_STALL_TIME) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the latest time and doing the comparison
+    unsigned long timeFromLastTooth = (unsigned long)(currentLoopTime - tempToothLastToothTime);
+    if (timeFromLastTooth < MAX_STALL_TIME) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the latest time and doing the comparison
     {
       currentStatus.longRPM = getRPM(); //Long RPM is included here
       currentStatus.RPM = currentStatus.longRPM;

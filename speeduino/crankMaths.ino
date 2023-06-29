@@ -32,7 +32,7 @@ unsigned long angleToTime(int16_t angle, byte method)
     if( (method == CRANKMATH_METHOD_INTERVAL_REV) || (method == CRANKMATH_METHOD_INTERVAL_DEFAULT) )
     {
         returnTime = div360(angle * revolutionTime);
-        //returnTime = angle * (unsigned long)timePerDegree;
+        //returnTime = angle * (unsigned long)timePerDegreex16 /16;
     }
     else if (method == CRANKMATH_METHOD_INTERVAL_TOOTH)
     {

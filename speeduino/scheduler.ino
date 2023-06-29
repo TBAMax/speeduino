@@ -130,8 +130,8 @@ void setFuelSchedule (struct Schedule *targetSchedule, int16_t crankAngle, int16
   noInterrupts(); // make sure start and end values are updated simultaneously and that schedule do not change state 
   if(targetSchedule->Status != RUNNING) //Check that we're not already part way through a schedule
   {
-    endTimeout=(injectorEndAngle - crankAngle) * (uint32_t)timePerDegree;
-    if((endTimeout < MAX_TIMER_PERIOD) && (endTimeout > duration + INJECTION_REFRESH_TRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed safety between setting the schedule and running it
+    endTimeout=(uint16_t)(injectorEndAngle - crankAngle) * (uint32_t)timePerDegreex16/16U;
+    if( (endTimeout > duration + INJECTION_REFRESH_TRESHOLD) && (endTimeout < MAX_TIMER_PERIOD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed safety between setting the schedule and running it
     {          
       targetSchedule->endCompare = targetSchedule->getCounter() + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(endTimeout)); //As there is a tick every 4uS, there are timeout/4 ticks until the interrupt should be triggered ( >>2 divides by 4)   
       targetSchedule->setCompare(targetSchedule->endCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration))); // set pulse start Compare value
@@ -458,6 +458,7 @@ void fuelScheduleInterrupt(struct Schedule *fuelSchedule)
       {
         fuelSchedule->setCompare(fuelSchedule->nextEndCompare);
         fuelSchedule->endCompare = fuelSchedule->nextEndCompare;
+        //fuelSchedule->StartFunction();//run startfunction again for just in case
         fuelSchedule->Status = RUNNING;
         fuelSchedule->hasNextSchedule = false;
       }
