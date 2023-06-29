@@ -554,11 +554,6 @@ void triggerPri_missingTooth(void)
             {
               currentStatus.hasSync = true;
               BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC); //the engine is fully synced so clear the Half Sync bit
-              if(configPage4.trigPatternSec == SEC_TRIGGER_SINGLE && secondaryToothCount > 20) {
-                { 
-                  secondaryToothCount = 1; //Reset the secondary tooth counter once every twenty rotations to prevent it from overflowing
-                } 
-              }
             }
             //else if(currentStatus.hasSync != true) { BIT_SET(currentStatus.status3, BIT_STATUS3_HALFSYNC); } //If there is primary trigger but no secondary we only have half sync.
             else{
@@ -578,17 +573,14 @@ void triggerPri_missingTooth(void)
               if ( configPage4.TrigSpeed == CAM_SPEED ) { currentStatus.startRevolutions++; } //Add an extra revolution count if we're running at cam speed
           }
           //triggerFilterTime = 0; //This is used to prevent a condition where serious intermittent signals (Eg someone furiously plugging the sensor wire in and out) can leave the filter in an unrecoverable state
-          BIT_CLEAR(decoderState, BIT_DECODER_TOOTH_ANG_CORRECT); //The tooth angle is double at this point
         
         }
         else //was not missing tooth
         {        //Regular (non-missing) tooth
-        BIT_SET(decoderState, BIT_DECODER_TOOTH_ANG_CORRECT);
         }
       }
       else //missing tooth detection optimised out, assume regular tooth
       {
-        BIT_SET(decoderState, BIT_DECODER_TOOTH_ANG_CORRECT);
       }
     toothHistory[toothCurrentCount]=toothLastToothTime;//this has to be after missing tooth detection so that the count is correct!
     //NEW IGNITION MODE
@@ -663,7 +655,11 @@ void triggerSec_missingTooth(void)
   else // if ( configPage4.trigPatternSec == SEC_TRIGGER_SINGLE )
   {
     //Standard single tooth cam trigger
-    //revolutionOne = true; //Sequential revolution reset
+    if(secondaryToothCount > 20) 
+    { 
+      secondaryToothCount = 1; //Reset the secondary tooth counter once every twenty rotations to prevent it from overflowing
+    } 
+              
     //triggerSecFilterTime = 20U; // just use fixed noise filter, if we get longer random pulses longer than this on the secondary everything is bad 
   }
 
