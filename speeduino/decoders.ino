@@ -496,11 +496,12 @@ void triggerPri_missingTooth(void)
     else //not primary trigger edge
     {
       //promote previous primary edge timestamp to tooth.
-      lastGap=toothLastToothTime - toothLastMinusOneToothTime; //first save the gap there was for comparing later
+      lastGap=toothLastToothTime - toothLastMinusOneToothTime; //first save the gap there was before for comparing later
       toothLastMinusOneToothTime = toothLastToothTime; 
       toothLastToothTime = lastActiveEdgeTime;
       toothCurrentCount++; //Increment the tooth counter
       BIT_SET(decoderState, BIT_DECODER_VALID_TRIGGER); //Flag this pulse as being a valid trigger (ie that it passed filters)
+
     }       
   }  
   //tooth detection and filtering complete
@@ -539,18 +540,10 @@ void triggerPri_missingTooth(void)
           }
 
           toothCurrentCount = 1;
-          if (configPage4.trigPatternSec == SEC_TRIGGER_POLL) // at tooth one check if the cam sensor is high or low in poll level mode
-          {
-            if (configPage4.PollLevelPolarity == READ_SEC_TRIGGER()) { revolutionOne = 1; }
-            else { revolutionOne = 0; }
-          }
-          else {revolutionOne = !revolutionOne;} //Flip sequential revolution tracker if poll level is not used
+          revolutionOne = !revolutionOne;//Flip sequential revolution tracker if poll level is not used
 
-          //if Sequential fuel or ignition is in use, further checks are needed before determining sync
-          if( (configPage4.sparkMode == IGN_MODE_SEQUENTIAL) || (configPage2.injLayout == INJ_SEQUENTIAL) )
-          {
             //If either fuel or ignition is sequential, only declare sync if the cam tooth has been seen OR if the missing wheel is on the cam
-            if( ((secondaryToothCount > 0)&&(curTime-toothLastSecToothTime < 1000000UL)) || (configPage4.TrigSpeed == CAM_SPEED) || (configPage4.trigPatternSec == SEC_TRIGGER_POLL) )
+            if( ((secondaryToothCount > 0)&&(curTime-toothLastSecToothTime < 1000000UL)) || (configPage4.TrigSpeed == CAM_SPEED))
             {
               currentStatus.hasSync = true;
               BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC); //the engine is fully synced so clear the Half Sync bit
@@ -562,10 +555,6 @@ void triggerPri_missingTooth(void)
               BIT_SET(currentStatus.status3, BIT_STATUS3_HALFSYNC);
               secondaryToothCount = 0;
             }
-          }
-          else { 
-            currentStatus.hasSync = true;  BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);  //If nothing is using sequential, we have sync and also clear half sync bit
-          }
 
           if((currentStatus.hasSync == true) || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC))
           {
@@ -627,14 +616,17 @@ void triggerSec_missingTooth(void)
     else if(toothLastSecToothTime!=lastSecActiveEdgeTime) //account for possibility that tooth is already confirmed during some primary teeth(should be normally)
     {
         revolutionOne = true; //Sequential revolution reset
-        //lastMinusOneGap=toothLastSecToothTime-toothLastMinusOneSecToothTime; //save some history
-        //toothLastMinusOneSecToothTime=toothLastSecToothTime;                 //save some history
         toothLastSecToothTime=lastSecActiveEdgeTime; //noise free tooth confirm. Promote activeEdge to confirmed tooth.
         secondaryToothCount++;
     }
-    else{}         
+    else
+    {}//skip as it is already picked up by the primary trigger         
   }
-  else{lastEdge = thisEdge; return;} //ignore this pulse    
+  else
+  {
+    lastEdge = thisEdge; 
+    return;//ignore this pulse as it did not passed filters 
+  } 
 
   if ( configPage4.trigPatternSec == SEC_TRIGGER_4_1 )
   {
@@ -667,7 +659,7 @@ void triggerSec_missingTooth(void)
   if( (configPage6.vvtEnabled > 0) && (revolutionOne == 1) )
   {
     int16_t curAngle;
-    curAngle = getCrankAngle(); //getCrankAngle() not supposed to be called from interrupt!
+    curAngle = getCrankAngle(); //getCrankAngle() not supposed to be called from interrupt! More so from high priority trigger interrupt!
     while(curAngle > 360) { curAngle -= 360; }
     curAngle -= configPage4.triggerAngle; //Value at TDC
     if( configPage6.vvtMode == VVT_MODE_CLOSED_LOOP ) { curAngle -= configPage10.vvtCL0DutyAng; }
@@ -709,38 +701,37 @@ uint16_t getRPM_missingTooth(void){
   uint16_t tempRPM = 0;
   uint32_t timeInterval;
   uint8_t x;
-  const uint8_t amountOfEdges=4; //amount of edges to use. Good to use power ot 2 values(4,8,of16), this gives better performance
+  const uint8_t amountOfEdges=4; //amount of edges to use. Good to use power ot 2 values(4,8,of16), this gives better performance (compiler optimizes division to bit shift)
   
-  int16_t tempToothCurrentCount = (uint8_t)toothCurrentCount; //8bits , then there is no race condition for read.
+  uint8_t tempToothCurrentCount = (uint8_t)toothCurrentCount; //8bits , then there is no race condition for read.
 
   // caclulate circular buffer index x, this gives us the position in the buffer where needed element is to be found.
   // Take advantage of the fact that missing tooth(teeth) are always just before the buffer index(ToothCurrentCount) rollback.
-  if((tempToothCurrentCount - amountOfEdges)<1) 
+  if((tempToothCurrentCount) <= amountOfEdges) 
   {//we have missing tooth in the range
-    if(amountOfEdges-tempToothCurrentCount<configPage4.triggerMissingTeeth)
+    if(configPage4.triggerMissingTeeth+tempToothCurrentCount > amountOfEdges)
     {
-        //move things back some, otherwise we can not get exact amount of tooth, because as we know, some are missing
-        tempToothCurrentCount=(amountOfEdges - configPage4.triggerMissingTeeth);        
-        x=(tempToothCurrentCount - amountOfEdges + configPage4.triggerMissingTeeth) + (triggerActualTeeth);//advance index by missing teeth amount because they do not have items.      
+        return currentStatus.RPM; //just use the previous value for this period, because there is no fresh info because of the missing tooth gap
     }
-    else    //advance index by missing teeth amount because they do not have items.
-    //Then we get the correct timing as if there were tooth in place of the gap.
+    else    
     {
-      x=(tempToothCurrentCount - amountOfEdges + configPage4.triggerMissingTeeth) + (triggerActualTeeth);
+      x=tempToothCurrentCount  + configPage4.triggerTeeth - amountOfEdges;//use full teeth amount, because then we get the correct interval timing as if there were tooth in place of the gap.
     }    
   }
   else
   {
     x= tempToothCurrentCount - amountOfEdges;    //no missing tooth in the range
   }
-  timeInterval=toothHistory[tempToothCurrentCount]-toothHistory[x]; //this is not wrapped in nointerrupts() just because assume the active writing to be in other parts of the buffer at this time.
+  
   //tempToothCurrentCount = constrain(tempToothCurrentCount,1,(TOOTH_LOG_SIZE-1));//safety cap index
   //x=max(x,(TOOTH_LOG_SIZE-1));//safety cap index
-  
-  //begin RPM calculations
-  revolutionTime = timeInterval *  configPage4.triggerTeeth /amountOfEdges;
-  timePerDegreex16 = (unsigned long)(timeInterval*16U) / (triggerToothAngle*amountOfEdges);
-  tempRPM = (US_IN_MINUTE / revolutionTime);//reciprocal counting.
+    timeInterval=toothHistory[tempToothCurrentCount]-toothHistory[x]; //this is not wrapped in nointerrupts() just because assume the active writing to be in other parts of the buffer at this time.
+    revolutionTime = timeInterval *  configPage4.triggerTeeth / amountOfEdges; //revolutiontime here is actually calculated only form the amount of tooth. No need to wait for full rotation.
+    if(configPage4.TrigSpeed == CAM_SPEED){revolutionTime/=2;}
+    timePerDegreex16=revolutionTime *16U /360U;
+    //timePerDegreex16 = (uint32_t)(timeInterval*configPage4.triggerTeeth*16U) / (360U*amountOfEdges) ;
+    tempRPM = (US_IN_MINUTE / revolutionTime);//reciprocal counting.     
+ 
   if( tempRPM >= MAX_RPM ) { tempRPM = MAX_RPM; } //Sanity check.
 
   return tempRPM;
@@ -785,8 +776,7 @@ int getCrankAngle_missingTooth(void)
     //Sequential check (simply sets whether we're on the first or 2nd revolution of the cycle)
     if ( (tempRevolutionOne == true) && (configPage4.TrigSpeed == CRANK_SPEED) ) { crankAngle += 360; }
 
-    unsigned long praegu = micros();
-    unsigned long interval = (praegu - tempToothLastToothTime);
+    unsigned long interval = (unsigned long)(micros() - tempToothLastToothTime);
     
     if(tempToothCurrentCount==1)//in case last cap was from missing tooth(teeth)    
     {
@@ -796,8 +786,6 @@ int getCrankAngle_missingTooth(void)
     {
       crankAngle += ( (unsigned long)(interval * triggerToothAngle) / tempCurGap);
     }
-    //crankAngle += timeToAngle(interval, CRANKMATH_METHOD_INTERVAL_REV);
-
     //if (crankAngle >= 720) { crankAngle -= 720; }
     if (crankAngle >= CRANK_ANGLE_MAX) { crankAngle -= CRANK_ANGLE_MAX; }
     if (crankAngle < 0) { crankAngle += CRANK_ANGLE_MAX; }

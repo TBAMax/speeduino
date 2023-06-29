@@ -141,7 +141,7 @@ void doCrankSpeedCalcs(void)
       }
       else if (configPage4.TrigPattern == DECODER_MISSING_TOOTH)
       {
-        //for Missing Tooth decoder timePerDegreex16 caclulation is done wiht the getRPM() function
+        //for Missing Tooth decoder timePerDegreex16 caclulation is done in the getRPM() function
         timePerDegree = timePerDegreex16 / 16;
       }      
       else
