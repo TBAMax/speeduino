@@ -3680,8 +3680,10 @@ void changeHalfToFullSync(void)
     {
     case 4:
       ignitionSchedule1.StartFunction = beginCoil1Charge;
+      ignitionSchedule1.EndFunction();
       ignitionSchedule1.EndFunction = endCoil1Charge;
       ignitionSchedule2.StartFunction = beginCoil2Charge;
+      ignitionSchedule2.EndFunction();
       ignitionSchedule2.EndFunction = endCoil2Charge;
       break;
 

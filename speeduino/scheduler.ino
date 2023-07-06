@@ -183,29 +183,33 @@ void setIgnitionSchedule(struct Schedule *targetSchedule ,  int16_t crankAngle, 
   uint32_t endTimeout;
 
   while (ignitionEndAngle <= crankAngle)   { ignitionEndAngle += CRANK_ANGLE_MAX_IGN; } //calculate into the next cycle
-  //endTimeout=(ignitionEndAngle - crankAngle) * (unsigned long)timePerDegree;  
+  //endTimeout=(ignitionEndAngle - crankAngle) * (unsigned long)timePerDegree;
+  //only set schedule when the angle to the future is less than 90 degrees. This is to prevent jumping to the next cycle
+  uint16_t angleGap = ignitionEndAngle - crankAngle;
+  noInterrupts(); // make sure start and end values are updated simultaneously
   if (targetSchedule->Status != RUNNING) //Check that we're not already part way through a schedule
   {
-    endTimeout= angleToTime((ignitionEndAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
-    if((endTimeout < MAX_TIMER_PERIOD) && (endTimeout > duration + IGNITION_REFRESH_THRESHOLD)) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
-    {      
-      noInterrupts(); // make sure start and end values are updated simultaneously
+    //endTimeout= angleToTime((angleGap), CRANKMATH_METHOD_INTERVAL_REV);
+    endTimeout=(uint16_t)(angleGap) * (uint32_t)timePerDegreex16/16U;
+    if((endTimeout < MAX_TIMER_PERIOD) && (endTimeout > duration + IGNITION_REFRESH_THRESHOLD) ) //Need to check that the timeout doesn't exceed the overflow, also allow for fixed 230us safety between setting the schedule and running it
+    {            
       targetSchedule->endCompare = targetSchedule->getCounter() + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(endTimeout)); //calculate and prepare the end compare value. As there is a tick every 4uS, there are timeout/4 ticks until the interrupt should be triggered ( >>2 divides by 4)   
       targetSchedule->startCompare =targetSchedule->endCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration)); //calculate the start value, this needs to be stored only for applying dwell range limits when refreshing
       targetSchedule->setCompare(targetSchedule->startCompare); // apply the start value
       targetSchedule->Status = PENDING; //Turn this schedule on
-      interrupts(); 
+       
       targetSchedule->timerEnable();
     }
   }
-  else 
-  {
+  interrupts();
+ /* else
+   {
     //If the schedule is already running, we can set the next schedule so it is ready to go
     //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
-    ignitionEndAngle += CRANK_ANGLE_MAX_IGN;
+    angleGap += CRANK_ANGLE_MAX_IGN;
     //endTimeout=(ignitionEndAngle - crankAngle) * (unsigned long)timePerDegree;
-    endTimeout= angleToTime((ignitionEndAngle - crankAngle), CRANKMATH_METHOD_INTERVAL_REV);
-      if(endTimeout < MAX_TIMER_PERIOD)
+    endTimeout= angleToTime((angleGap), CRANKMATH_METHOD_INTERVAL_REV);
+      if(endTimeout < MAX_TIMER_PERIOD-4)
       {
       noInterrupts();
       targetSchedule->nextEndCompare = targetSchedule->getCounter() + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(endTimeout));
@@ -213,8 +217,9 @@ void setIgnitionSchedule(struct Schedule *targetSchedule ,  int16_t crankAngle, 
       targetSchedule->hasNextSchedule = true;
       interrupts();
       }
-  }
+  }*/  
 }
+
 
 //overload function for starting schedule(dwell) immediately, this is used in the fixed cranking ignition
 void setIgnitionSchedule(struct Schedule *ignitionSchedule)

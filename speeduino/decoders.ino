@@ -41,6 +41,9 @@ A full copy of the license may be found in the projects root directory
 #include "scheduler.h"
 #include "crankMaths.h"
 #include "timers.h"
+#if defined(CORE_AVR) || defined(CORE_TEENSY)
+#include <util/atomic.h>
+#endif
 
 void (*triggerHandler)(void); ///Pointer for the trigger function (Gets pointed to the relevant decoder)
 void (*triggerSecondaryHandler)(void); ///Pointer for the secondary trigger function (Gets pointed to the relevant decoder)
@@ -474,14 +477,11 @@ void triggerPri_missingTooth(void)
   //check for unconfirmed(unfiltered) edge on the secondary and only accept if secondary is stable within specified time
   if(toothLastSecToothTime!=lastSecActiveEdgeTime && curGap2 >=triggerSecFilterTime){
         revolutionOne = true; //Sequential revolution reset
-        //lastMinusOneGap=toothLastSecToothTime-toothLastMinusOneSecToothTime; //save some history
-        //toothLastMinusOneSecToothTime=toothLastSecToothTime;                 //save some history
         toothLastSecToothTime=lastSecActiveEdgeTime; //noise free tooth confirm. Promote activeEdge to confirmed tooth.
         secondaryToothCount++;
   }
-
-  BIT_CLEAR(decoderState, BIT_DECODER_VALID_TRIGGER); //pre clear flag, if all goes well this is set again later  
-  if(READ_PRI_TRIGGER() ==true) {
+ 
+  if((bool)READ_PRI_TRIGGER() ==true) {
     thisEdge = RISING;
   }
   else{
@@ -496,13 +496,16 @@ void triggerPri_missingTooth(void)
     else //not primary trigger edge
     {
       //promote previous primary edge timestamp to tooth.
-      lastGap=toothLastToothTime - toothLastMinusOneToothTime; //first save the gap there was before for comparing later
-      toothLastMinusOneToothTime = toothLastToothTime; 
+      //lastGap=toothLastToothTime - toothLastMinusOneToothTime; //first save the gap there was before for comparing later
+      //toothLastMinusOneToothTime = toothLastToothTime; 
       toothLastToothTime = lastActiveEdgeTime;
       toothCurrentCount++; //Increment the tooth counter
       //tooth detection and filtering complete
-  
-      curGap=toothLastToothTime-toothLastMinusOneToothTime; //recalculate correct gap between tooth (all edges filtered)            
+      toothCurrentCount &= 0x3F;//safety, prevent buffer overflow use 0x3F (63)here because current buffer size is strange 127(not128) 
+      #if TOOTH_LOG_SIZE <= (0x3F) //64 teeth max accepted because this is fast to guard with bitwise AND. Can not guard 127 element buffer the same way, 1 possibility is left for overrunning
+      #  warning "possibility for buffer overrun" 
+      #endif      
+      toothHistory[toothCurrentCount]=toothLastToothTime;     
       /*
       Performance Optimisation:
       Only need to try and detect the missing tooth if:
@@ -513,6 +516,8 @@ void triggerPri_missingTooth(void)
       if( (currentStatus.hasSync == false) || (currentStatus.RPM < 2000) || (toothCurrentCount >= (3 * triggerActualTeeth >> 2)) )
       {
         //Begin the missing tooth detection
+        lastGap=(uint32_t)(toothHistory[toothCurrentCount-1] - toothHistory[toothCurrentCount-2]);
+        curGap=(uint32_t)(toothLastToothTime-toothHistory[toothCurrentCount-1]); //recalculate correct gap between tooth (all edges filtered)            
         //If the time between the current tooth and the last is greater than 1.5x the time between the last tooth and the tooth before that, we make the assertion that we must be at the first tooth after the gap
         if(configPage4.triggerMissingTeeth == 1) { targetGap = (3 * (lastGap)) >> 1; } //Multiply by 1.5 (Checks for a gap 1.5x greater than the last one) (Uses bitshift to multiply by 3 then divide by 2. Much faster than multiplying by 1.5)
         else { targetGap =((lastGap) * configPage4.triggerMissingTeeth); } //Multiply by 2 (Checks for a gap 2x greater than the last one)
@@ -520,9 +525,9 @@ void triggerPri_missingTooth(void)
         {
           //Missing tooth detected
           //setFilter(lastGap);//re calc filters, can not use the gap with missing tooth
-          if(triggerFilterTime==0){triggerFilterTime=10U;} //set min value            
-          toothOneMinusOneTime=toothOneTime;
-          toothOneTime=toothLastToothTime;
+          //if(triggerFilterTime==0){triggerFilterTime=10U;} //set min value            
+          //toothOneMinusOneTime=toothOneTime;
+          //toothOneTime=toothLastToothTime;
           //check if we have fallen out of sync
           if( (toothCurrentCount != triggerActualTeeth+1) && (currentStatus.hasSync == true)) 
           { 
@@ -533,6 +538,7 @@ void triggerPri_missingTooth(void)
               //currentStatus.startRevolutions = 1;
           }
           toothCurrentCount = 1;
+          toothHistory[1]=toothLastToothTime;
           revolutionOne = !revolutionOne;//Flip sequential revolution tracker if poll level is not used
 
             //If either fuel or ignition is sequential, only declare sync if the cam tooth has been seen OR if the missing wheel is on the cam
@@ -561,12 +567,6 @@ void triggerPri_missingTooth(void)
       }
       else{} //missing tooth detection optimised out, assume regular tooth
 
-      toothCurrentCount &= 0x3F;//safety, prevent buffer overflow use 0x3F (63)here because current buffer size is strange 127(not128) 
-      #if TOOTH_LOG_SIZE <= (0x3F) //64 teeth max accepted because this is fast to guard with bitwise AND. Can not guard 127 element buffer the same way, 1 possibility is left for overrunning
-      #  warning "possibility for buffer overrun" 
-      #endif      
-      toothHistory[toothCurrentCount]=toothLastToothTime;//this has to be after missing tooth detection so that the tooth count is correct!
-  
       //NEW IGNITION MODE
       if( (configPage2.perToothIgn == true) && (!BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK)) ) 
       {
@@ -711,33 +711,32 @@ uint16_t getRPM_missingTooth(void){
   uint16_t tempRPM = 0;
   uint32_t timeInterval;
   uint8_t x;
-  const uint8_t amountOfEdges=4; //amount of edges to use. Good to use power ot 2 values(4,8,of16), this gives better performance (compiler optimizes division to bit shift)
+  const uint8_t amountOfEdges=16; //amount of edges to use. Good to use power ot 2 values(4,8,16 or 32), this gives better performance (compiler optimizes division to bit shift)
   
   uint8_t tempToothCurrentCount = (uint8_t)toothCurrentCount; //8bits , then there is no race condition for read.
 
   // caclulate circular buffer index x, this gives us the position in the buffer where needed element is to be found.
   // Take advantage of the fact that missing tooth(teeth) are always just before the buffer index(ToothCurrentCount) rollback.
-  if((tempToothCurrentCount) <= amountOfEdges) 
-  {//we have missing tooth in the range
-    if(configPage4.triggerMissingTeeth+tempToothCurrentCount > amountOfEdges)
-    {
-        return currentStatus.RPM; //just use the previous value for this period, because there is no fresh info because of the missing tooth gap
-    }
-    else    
-    {
-      x=tempToothCurrentCount  + configPage4.triggerTeeth - amountOfEdges;//use full teeth amount, because then we get the correct interval timing as if there were tooth in place of the gap.
-    }    
-  }
-  else
+  if(tempToothCurrentCount > amountOfEdges)
   {
     x= tempToothCurrentCount - amountOfEdges;    //no missing tooth in the range
   }
+  else if(tempToothCurrentCount+configPage4.triggerMissingTeeth > amountOfEdges) //we have missing tooth in the far end of range  
+  {
+    return currentStatus.RPM; //just use the previous value for this period, as there is no fresh info because of the missing tooth gap
+  }
+  else//we have missing tooth in the range
+  {
+    x=tempToothCurrentCount  + configPage4.triggerTeeth - amountOfEdges;//fold back, use full teeth amount, because then we get the correct interval timing as if there were tooth in place of the gap.
+  }    
     timeInterval=toothHistory[tempToothCurrentCount]-toothHistory[x]; //this is not wrapped in nointerrupts() just because assume the active writing to be in other parts of the buffer at this time.
     revolutionTime = timeInterval *  configPage4.triggerTeeth / amountOfEdges; //revolutiontime here is actually calculated only form the amount of tooth. No need to wait for full rotation.
     if(configPage4.TrigSpeed == CAM_SPEED){revolutionTime/=2;}
     timePerDegreex16=revolutionTime *16U /360U;
     //timePerDegreex16 = (uint32_t)(timeInterval*configPage4.triggerTeeth*16U) / (360U*amountOfEdges) ;
-    tempRPM = (US_IN_MINUTE / revolutionTime);//reciprocal counting.     
+    tempRPM = (US_IN_MINUTE / revolutionTime);//reciprocal counting.
+          //degreesPeruSx2048 = 2048 / timePerDegree;
+      //degreesPeruSx32768 = 524288 / timePerDegreex16;     
  
   if( tempRPM >= MAX_RPM ) { tempRPM = MAX_RPM; } //Sanity check.
 
@@ -766,37 +765,73 @@ uint16_t getRPM_missingToothOld(void){
 int getCrankAngle_missingTooth(void)
 {
     //This is the current angle ATDC the engine is at. This is the last known position based on what tooth was last 'seen'. It is only accurate to the resolution of the trigger wheel (Eg 36-1 is 10 degrees)    
-    uint16_t tempToothCurrentCount;
     bool tempRevolutionOne;
-    unsigned long tempToothLastToothTime;
-    unsigned long tempCurGap;
+    uint8_t tempToothCurrentCount;
+    uint32_t timeInterval;
+    uint8_t x,y;
+    const uint8_t amountOfEdges=16; //amount of edges to use. Good to use power ot 2 values(4,8,16 or 32), this gives better performance (compiler optimizes division to bit shift)
+ 
     //Grab some variables that are used in the trigger code and assign them to temp variables.
+    #if defined(CORE_AVR) || defined(CORE_TEENSY)
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) //stm32 do not have atomic.h library, so just goes without it
+    {
+    tempToothCurrentCount = (uint8_t)toothCurrentCount; //only need 8bits
+    tempRevolutionOne = revolutionOne;      
+    }
+    #else
+    {
     noInterrupts();
-    tempToothCurrentCount = toothCurrentCount;
+    tempToothCurrentCount = (uint8_t)toothCurrentCount; //only need 8bits
     tempRevolutionOne = revolutionOne;
-    tempToothLastToothTime = toothLastToothTime;
-    tempCurGap=curGap;
-    interrupts();
+    interrupts();    
+    }
+    #endif
+
+  // calculate circular buffer index x and y, this gives us the position in the buffer where needed element is to be found.
+  // Take advantage of the fact that missing tooth(teeth) are always just before the buffer index(ToothCurrentCount) rollback.
+  if(tempToothCurrentCount > amountOfEdges)
+  {
+    x= tempToothCurrentCount - amountOfEdges;    //no missing tooth in the range
+    y= tempToothCurrentCount;
+  }
+  else if(tempToothCurrentCount+configPage4.triggerMissingTeeth > amountOfEdges) //we have missing tooth in the far end of range  
+  {
+    y=amountOfEdges-configPage4.triggerMissingTeeth; //use last usable measurable interval
+    //x=configPage4.triggerTeeth-configPage4.triggerMissingTeeth;
+    x=triggerActualTeeth;//last edge before gap
+  }
+  else//we have missing tooth in the range
+  {
+    y=tempToothCurrentCount;
+    x=tempToothCurrentCount  + configPage4.triggerTeeth - amountOfEdges;//fold back, use full teeth amount, because then we get the correct interval timing as if there were tooth in place of the gap.
+  }    
+    timeInterval=toothHistory[y]-toothHistory[x]; //this is not wrapped in nointerrupts() just because assume the active writing to be in other parts of the buffer at this time.
 
     int crankAngle = ((tempToothCurrentCount - 1) * triggerToothAngle) + configPage4.triggerAngle; //Number of teeth that have passed since tooth 1, multiplied by the angle each tooth represents, plus the angle that tooth 1 is ATDC. This gives accuracy only to the nearest tooth.
+  
+       //Sequential check (simply sets whether we're on the first or 2nd revolution of the cycle)
+    if ( (tempRevolutionOne == true) && (configPage4.TrigSpeed == CRANK_SPEED) ) { crankAngle += 360; }
+
+    unsigned long interval2 = (unsigned long)(micros() - toothHistory[tempToothCurrentCount]);
     
+      crankAngle += ( (unsigned long)(interval2 * triggerToothAngle * amountOfEdges) / timeInterval);
+    
+    if (crankAngle >= 720) { crankAngle -= 720; }
+    if (crankAngle > CRANK_ANGLE_MAX) { crankAngle -= CRANK_ANGLE_MAX; }
+    if (crankAngle < 0) { crankAngle += CRANK_ANGLE_MAX; }
+
+/* 
     //Sequential check (simply sets whether we're on the first or 2nd revolution of the cycle)
     if ( (tempRevolutionOne == true) && (configPage4.TrigSpeed == CRANK_SPEED) ) { crankAngle += 360; }
 
-    unsigned long interval = (unsigned long)(micros() - tempToothLastToothTime);
-    
-    if(tempToothCurrentCount==1)//in case last cap was from missing tooth(teeth)    
-    {
-      crankAngle += ( (unsigned long)(interval * triggerToothAngle*(configPage4.triggerMissingTeeth+1)) / tempCurGap);
-    }     
-    else //normal tooth
-    {
-      crankAngle += ( (unsigned long)(interval * triggerToothAngle) / tempCurGap);
-    }
-    //if (crankAngle >= 720) { crankAngle -= 720; }
-    if (crankAngle >= CRANK_ANGLE_MAX) { crankAngle -= CRANK_ANGLE_MAX; }
-    if (crankAngle < 0) { crankAngle += CRANK_ANGLE_MAX; }
+    lastCrankAngleCalc = micros();
+    elapsedTime = (lastCrankAngleCalc - tempToothLastToothTime);
+    crankAngle += timeToAngle(elapsedTime, CRANKMATH_METHOD_INTERVAL_REV);
 
+    if (crankAngle >= 720) { crankAngle -= 720; }
+    else if (crankAngle > CRANK_ANGLE_MAX) { crankAngle -= CRANK_ANGLE_MAX; }
+    if (crankAngle < 0) { crankAngle += CRANK_ANGLE_MAX; }
+ */
     return crankAngle;
 }
 
