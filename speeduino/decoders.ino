@@ -17,8 +17,6 @@ A full copy of the license may be found in the projects root directory
  * - **getRPM_xxxx** - Returns the current RPM, as calculated by the decoder
  * - **getCrankAngle_xxxx** - Returns the current crank angle, as calculated by the decoder
  * - **getCamAngle_xxxx** - Returns the current CAM angle, as calculated by the decoder
- * - **getTimePerDegreex16_xxxx** --returns time [microseconds] that 16degrees take at current speed
- * - **refreshSettings_xxxx** - optional, used for refreshing settings such as teeth count, edge type, etc. this is called once a sec
  *
  * Each decoder must utilise at least the following variables:
  * 
