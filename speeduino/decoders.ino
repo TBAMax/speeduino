@@ -483,7 +483,7 @@ void triggerPri_missingTooth(void)
     thisEdge = RISING;
   }
   else{
-    thisEdge= FALLING;
+    thisEdge = FALLING;
   } 
   if(curGap >= triggerFilterTime && thisEdge != lastEdge ){
     lastEdge = thisEdge;
@@ -494,13 +494,11 @@ void triggerPri_missingTooth(void)
     else //not primary trigger edge
     {
       //promote previous primary edge timestamp to tooth.
-      //lastGap=toothLastToothTime - toothLastMinusOneToothTime; //first save the gap there was before for comparing later
-      //toothLastMinusOneToothTime = toothLastToothTime; 
       toothLastToothTime = lastActiveEdgeTime;
       toothCurrentCount++; //Increment the tooth counter
       //tooth detection and filtering complete
       toothCurrentCount &= 0x3F;//safety, prevent buffer overflow use 0x3F (63)here because current buffer size is strange 127(not128) 
-      #if TOOTH_LOG_SIZE <= (0x3F) //64 teeth max accepted because this is fast to guard with bitwise AND. Can not guard 127 element buffer the same way, 1 possibility is left for overrunning
+      #if TOOTH_LOG_SIZE <= (0x3F) //64 teeth max accepted because this is fast to guard with bitwise AND. Can not guard 127 element buffer the same way: 1 possibility is left for overrunning
       #  warning "possibility for buffer overrun" 
       #endif      
       toothHistory[toothCurrentCount]=toothLastToothTime;     
@@ -785,8 +783,8 @@ int getCrankAngle_missingTooth(void)
     }
     #endif
 
-  // calculate circular buffer index x and y, this gives us the position in the buffer where needed element is to be found.
-  // Take advantage of the fact that missing tooth(teeth) are always just before the buffer index(ToothCurrentCount) rollback.
+  // calculate circular buffer index x and y, this gives us the position in the buffer where needed elements are to be found.
+  // Take advantage of the fact that missing tooth(teeth) are always just before the buffer index rollback.
   if(tempToothCurrentCount > amountOfEdges)
   {
     x= tempToothCurrentCount - amountOfEdges;    //no missing tooth in the range
@@ -795,7 +793,6 @@ int getCrankAngle_missingTooth(void)
   else if(tempToothCurrentCount+configPage4.triggerMissingTeeth > amountOfEdges) //we have missing tooth in the far end of range  
   {
     y=amountOfEdges-configPage4.triggerMissingTeeth; //use last usable measurable interval
-    //x=configPage4.triggerTeeth-configPage4.triggerMissingTeeth;
     x=triggerActualTeeth;//last edge before gap
   }
   else//we have missing tooth in the range
@@ -807,29 +804,16 @@ int getCrankAngle_missingTooth(void)
 
     int crankAngle = ((tempToothCurrentCount - 1) * triggerToothAngle) + configPage4.triggerAngle; //Number of teeth that have passed since tooth 1, multiplied by the angle each tooth represents, plus the angle that tooth 1 is ATDC. This gives accuracy only to the nearest tooth.
   
-       //Sequential check (simply sets whether we're on the first or 2nd revolution of the cycle)
+      //Sequential check (simply sets whether we're on the first or 2nd revolution of the cycle)
     if ( (tempRevolutionOne == true) && (configPage4.TrigSpeed == CRANK_SPEED) ) { crankAngle += 360; }
 
-    unsigned long interval2 = (unsigned long)(micros() - toothHistory[tempToothCurrentCount]);
-    
-      crankAngle += ( (unsigned long)(interval2 * triggerToothAngle * amountOfEdges) / timeInterval);
-    
+    unsigned long interval2 = (unsigned long)(micros() - toothHistory[tempToothCurrentCount]);    
+    crankAngle += ( (unsigned long)(interval2 * triggerToothAngle * amountOfEdges) / timeInterval);    
+
     if (crankAngle >= 720) { crankAngle -= 720; }
     if (crankAngle > CRANK_ANGLE_MAX) { crankAngle -= CRANK_ANGLE_MAX; }
     if (crankAngle < 0) { crankAngle += CRANK_ANGLE_MAX; }
 
-/* 
-    //Sequential check (simply sets whether we're on the first or 2nd revolution of the cycle)
-    if ( (tempRevolutionOne == true) && (configPage4.TrigSpeed == CRANK_SPEED) ) { crankAngle += 360; }
-
-    lastCrankAngleCalc = micros();
-    elapsedTime = (lastCrankAngleCalc - tempToothLastToothTime);
-    crankAngle += timeToAngle(elapsedTime, CRANKMATH_METHOD_INTERVAL_REV);
-
-    if (crankAngle >= 720) { crankAngle -= 720; }
-    else if (crankAngle > CRANK_ANGLE_MAX) { crankAngle -= CRANK_ANGLE_MAX; }
-    if (crankAngle < 0) { crankAngle += CRANK_ANGLE_MAX; }
- */
     return crankAngle;
 }
 
