@@ -3633,7 +3633,8 @@ void changeHalfToFullSync(void)
   interrupts();
 
   //Need to do another check for sparkMode as this function can be called from injection
-  if( (configPage4.sparkMode == IGN_MODE_SEQUENTIAL) && (CRANK_ANGLE_MAX_IGN != 720) )
+  noInterrupts();
+  if( (configPage4.sparkMode == IGN_MODE_SEQUENTIAL) && (CRANK_ANGLE_MAX_IGN != 720) && ignitionSchedule1.Status!=RUNNING && ignitionSchedule2.Status!=RUNNING && ignitionSchedule3.Status!=RUNNING && ignitionSchedule4.Status!=RUNNING)
   {
     CRANK_ANGLE_MAX_IGN = 720;
     maxIgnOutputs = configPage2.nCylinders;
@@ -3671,6 +3672,7 @@ void changeHalfToFullSync(void)
       
     }
   }
+  interrupts();
 }
 
 /** Change injectors or/and ignition angles to 360deg.
