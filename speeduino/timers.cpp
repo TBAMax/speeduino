@@ -163,14 +163,6 @@ void getTimerFlags(void)
     BIT_SET(TIMER_mask, BIT_TIMER_1HZ);
 
     //**************************************************************************************************************************************************
-    //This updates the runSecs variable
-    //If the engine is running or cranking, we need to update the run time counter.
-    if (currentStatus.engineIsRunning)
-    { //NOTE - There is a potential for a ~1sec gap between engine crank starting and the runSec number being incremented. This may delay ASE!
-      if (currentStatus.runSecs <= (UINT8_MAX-1U)) //Ensure we cap out at 255 and don't overflow. (which would reset ASE and cause problems with the closed loop fuelling (Which has to wait for the O2 to warmup))
-        { currentStatus.runSecs++; } //Increment our run counter by 1 second.
-    }
-    //**************************************************************************************************************************************************
     //This records the number of main loops the system has completed in the last second
     currentStatus.loopsPerSecond = mainLoopCount;
     mainLoopCount = 0;
