@@ -1264,11 +1264,11 @@ uint16_t PW(int REQ_FUEL, byte VE, long MAP, uint16_t corrections, int injOpen)
   //100% float free version, does sacrifice a little bit of accuracy, but not much.
  
   //iVE = ((unsigned int)VE << 7) / 100;
-  iVE = div100(((uint16_t)VE << 7U));
+  iVE = div100(((uint16_t)VE << 7U));// iVE= ((uint16_t)VE * 128) / 100;
 
   //Check whether either of the multiply MAP modes is turned on
   //if ( configPage2.multiplyMAP == MULTIPLY_MAP_MODE_100) { iMAP = ((unsigned int)MAP << 7) / 100; }
-  if ( configPage2.multiplyMAP == MULTIPLY_MAP_MODE_100) { iMAP = div100( ((uint16_t)MAP << 7U) ); }
+  if ( configPage2.multiplyMAP == MULTIPLY_MAP_MODE_100) { iMAP = div100( ((uint16_t)MAP << 7U) ); }// iMAP = ((uint16_t)MAP * 128) / 100; }
   else if( configPage2.multiplyMAP == MULTIPLY_MAP_MODE_BARO) { iMAP = ((unsigned int)MAP << 7U) / currentStatus.baro; }
   
   if ( (configPage2.includeAFR == true) && (configPage6.egoType == EGO_TYPE_WIDE) && (currentStatus.runSecs > configPage6.ego_sdelay) ) {
@@ -1291,7 +1291,7 @@ uint16_t PW(int REQ_FUEL, byte VE, long MAP, uint16_t corrections, int injOpen)
 
   //If corrections are huge, use less bitshift to avoid overflow. Sacrifices a bit more accuracy (basically only during very cold temp cranking)
   if (corrections < 512 ) { 
-    intermediate = rshift<7U>(intermediate * div100(lshift<7U>(corrections))); 
+    intermediate = rshift<7U>(intermediate * div100(lshift<7U>(corrections))); //i.e. intermediate = ((intermediate * (corrections * 128)) / 100)/128;
   } else if (corrections < 1024 ) { 
     intermediate = rshift<6U>(intermediate * div100(lshift<6U>(corrections)));
   } else {
