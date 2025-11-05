@@ -257,7 +257,7 @@ void __attribute__((always_inline)) loop(void)
       #endif
 
       //Check for any outstanding EEPROM writes.
-      if( (isEepromWritePending() == true) && (serialStatusFlag == SERIAL_INACTIVE) && ((micros()-lastEEPROMWriteMicros) > EEPROM_DEFER_DELAY)) { writeAllConfig(); } 
+      if( (isEepromWritePending() == true) && (serialStatusFlag == SERIAL_INACTIVE) && ((uint16_t)((uint16_t)millis()-lastEEPROMWriteMillis) > EEPROM_DEFER_DELAY)) { writeAllConfig(); } 
     }
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_15HZ)) //Every 32 loops
     {

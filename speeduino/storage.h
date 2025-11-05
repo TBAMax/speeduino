@@ -142,7 +142,7 @@ uint32_t readCalibrationCRC32(uint8_t calibrationPageNum);
 uint16_t getEEPROMSize(void);
 bool isEepromWritePending(void);
 
-extern uint32_t lastEEPROMWriteMicros;
+extern uint16_t lastEEPROMWriteMillis;
 
 #define EEPROM_CONFIG1_MAP    3
 #define EEPROM_CONFIG2_START  291
@@ -196,6 +196,6 @@ extern uint32_t lastEEPROMWriteMicros;
 #define EEPROM_CALIBRATION_IAT_OLD  3071
 #define EEPROM_CALIBRATION_CLT_OLD  3583
 
-#define EEPROM_DEFER_DELAY          MICROS_PER_SEC //1.0 second pause after large comms before writing to EEPROM
+#define EEPROM_DEFER_DELAY          (uint16_t)1000U //[ms] 1.0 second pause after large comms before writing to EEPROM
 
 #endif // STORAGE_H
