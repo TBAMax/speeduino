@@ -33,7 +33,7 @@ static constexpr uint16_t EEPROM_CALIBRATION_O2_BINS =   EEPROM_CALIBRATION_O2_V
 static constexpr uint16_t EEPROM_LAST_BARO = (EEPROM_CALIBRATION_O2_BINS-(uint16_t)1);
 
 
-uint32_t deferEEPROMWritesUntil = 0;
+uint32_t lastEEPROMWriteMicros = 0;
 
 bool isEepromWritePending(void)
 {

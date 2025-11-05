@@ -147,12 +147,6 @@ void __attribute__((always_inline)) loop(void)
           }
         }   
       #endif
-          
-    if(currentLoopTime > micros())
-    {
-      //Occurs when micros() has overflowed
-      deferEEPROMWritesUntil = 0; //Required to ensure that EEPROM writes are not deferred indefinitely
-    }
 
     currentLoopTime = micros();
     if ( engineIsRunning(currentLoopTime) )
@@ -263,7 +257,7 @@ void __attribute__((always_inline)) loop(void)
       #endif
 
       //Check for any outstanding EEPROM writes.
-      if( (isEepromWritePending() == true) && (serialStatusFlag == SERIAL_INACTIVE) && (micros() > deferEEPROMWritesUntil)) { writeAllConfig(); } 
+      if( (isEepromWritePending() == true) && (serialStatusFlag == SERIAL_INACTIVE) && ((micros()-lastEEPROMWriteMicros) > EEPROM_DEFER_DELAY)) { writeAllConfig(); } 
     }
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_15HZ)) //Every 32 loops
     {

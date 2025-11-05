@@ -326,7 +326,7 @@ static bool updatePageValues(uint8_t pageNum, uint16_t offset, const byte *buffe
     {
       setPageValue(pageNum, (offset + i), buffer[i]);
     }
-    deferEEPROMWritesUntil = micros() + EEPROM_DEFER_DELAY;
+    lastEEPROMWriteMicros =micros();
     return true;
   }
 
@@ -588,7 +588,7 @@ void processSerialCommand(void)
       break;
 
     case 'b': // New EEPROM burn command to only burn a single page at a time 
-      if( (micros() > deferEEPROMWritesUntil)) { writeConfig(serialPayload[2]); } //Read the table number and perform burn. Note that byte 1 in the array is unused
+      if((micros()-lastEEPROMWriteMicros) > EEPROM_DEFER_DELAY) { writeConfig(serialPayload[2]); } //Read the table number and perform burn. Note that byte 1 in the array is unused
       else { currentStatus.burnPending = true; }
       
       sendReturnCodeMsg(SERIAL_RC_BURN_OK);
@@ -596,8 +596,8 @@ void processSerialCommand(void)
 
     case 'B': // Same as above, but for the comms compat mode. Slows down the burn rate and increases the defer time
       currentStatus.commCompat = true; //Force the compat mode
-      deferEEPROMWritesUntil += (EEPROM_DEFER_DELAY/4); //Add 25% more to the EEPROM defer time
-      if( (micros() > deferEEPROMWritesUntil)) { writeConfig(serialPayload[2]); } //Read the table number and perform burn. Note that byte 1 in the array is unused
+       //Add 25% more to the EEPROM defer time
+      if( (micros()-lastEEPROMWriteMicros) > EEPROM_DEFER_DELAY + (EEPROM_DEFER_DELAY/4)) { writeConfig(serialPayload[2]); } //Read the table number and perform burn. Note that byte 1 in the array is unused
       else { currentStatus.burnPending = true; }
       
       sendReturnCodeMsg(SERIAL_RC_BURN_OK);
