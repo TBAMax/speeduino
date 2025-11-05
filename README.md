@@ -17,7 +17,11 @@
 
 ## Speeduino
 The Speeduino project is a flexible, fully featured Engine Management Systems (EMS aka ECU) based on the low cost and open source Arduino platform. It provides the hardware, firmware and software components that make up an engine management system, all provided under open licenses. With over 1000 installations, Speeduino has matured into a product that meets the needs of the hobbyist and enthusiast community without driving prices to the levels of traditional aftermarket ECUs.
-
+## Notes for this branch
+This is a light branch aimed for development purposes. Some functions are removed in this branch, to facilitate the ease of development of others.
+Notes:
+* Tacho sweep removed 5.11.25
+* Hardware tacho output functionality removed. Use only digital dash tacho or external tacho controller for now! 5.11.25
 ## Documentation
 The Speeduino online manual can be found at: https://wiki.speeduino.com
 

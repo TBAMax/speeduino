@@ -185,4 +185,16 @@ void nullCallback(void);
 
 typedef void (*voidVoidCallback)(void);
 
+#if(defined(CORE_TEENSY) || defined(CORE_STM32))
+  #define TACHO_PULSE_LOW()         (digitalWrite(pinTachOut, LOW))
+  #define TACHO_PULSE_HIGH()        (digitalWrite(pinTachOut, HIGH))
+#else
+  #define TACHO_PULSE_HIGH()        (*tach_pin_port |= (tach_pin_mask))
+  #define TACHO_PULSE_LOW()         (*tach_pin_port &= ~(tach_pin_mask))
+#endif
+enum TachoOutputStatus {TACHO_INACTIVE, READY, ACTIVE}; //The 3 statuses that the tacho output pulse can have. NOTE: Cannot just use 'INACTIVE' as this is already defined within the Teensy Libs
+
+extern volatile TachoOutputStatus tachoOutputFlag;
+
+
 #endif

@@ -36,10 +36,6 @@ volatile int loopSec;
 
 volatile unsigned int dwellLimit_uS;
 
-volatile uint8_t tachoEndTime; //The time (in ms) that the tacho pulse needs to end at
-volatile TachoOutputStatus tachoOutputFlag;
-volatile uint16_t tachoSweepIncr;
-volatile uint16_t tachoSweepAccum;
 volatile uint8_t testInjectorPulseCount = 0;
 volatile uint8_t testIgnitionPulseCount = 0;
 
@@ -83,55 +79,6 @@ void getTimerFlags(void)
   {
     previousMillis1ms=lowByte(currentMillis);
     BIT_SET(TIMER_mask, BIT_TIMER_1KHZ);
-  
-  //Tacho is flagged as being ready for a pulse by the ignition outputs, or the sweep interval upon startup
-
-  // See if we're in power-on sweep mode
-  if( currentStatus.tachoSweepEnabled )
-  {
-    if( (currentStatus.engineIsRunning) || (currentStatus.engineIsCranking) || (ms_counter >= TACHO_SWEEP_TIME_MS) )  { currentStatus.tachoSweepEnabled = false; }  // Stop the sweep after SWEEP_TIME, or if real tach signals have started
-    else 
-    {
-      // Ramp the needle smoothly to the max over the SWEEP_RAMP time
-      if( ms_counter < TACHO_SWEEP_RAMP_MS ) { tachoSweepAccum += map(ms_counter, 0, TACHO_SWEEP_RAMP_MS, 0, tachoSweepIncr); }
-      else                                   { tachoSweepAccum += tachoSweepIncr;                                             }
-             
-      // Each time it rolls over, it's time to pulse the Tach
-      if( tachoSweepAccum >= MS_PER_SEC ) 
-      {  
-        tachoOutputFlag = READY;
-        tachoSweepAccum -= MS_PER_SEC;
-      }
-    }
-  }
-
-  //Tacho output check. This code will not do anything if tacho pulse duration is fixed to coil dwell.
-  if(tachoOutputFlag == READY)
-  {
-    //Check for half speed tacho
-    if( (configPage2.tachoDiv == 0) || (currentStatus.tachoAlt == true) ) 
-    { 
-      TACHO_PULSE_LOW();
-      //ms_counter is cast down to a byte as the tacho duration can only be in the range of 1-6, so no extra resolution above that is required
-      tachoEndTime = (uint8_t)ms_counter + configPage2.tachoDuration;
-      tachoOutputFlag = ACTIVE;
-    }
-    else
-    {
-      //Don't run on this pulse (Half speed tacho)
-      tachoOutputFlag = TACHO_INACTIVE;
-    }
-    currentStatus.tachoAlt = !currentStatus.tachoAlt; //Flip the alternating value in case half speed tacho is in use. 
-  }
-  else if(tachoOutputFlag == ACTIVE)
-  {
-    //If the tacho output is already active, check whether it's reached it's end time
-    if((uint8_t)ms_counter == tachoEndTime)
-    {
-      TACHO_PULSE_HIGH();
-      tachoOutputFlag = TACHO_INACTIVE;
-    }
-  }
   }
   //200Hz loop
   interval=lowByte(currentMillis) - previousMillis5ms;
