@@ -23,9 +23,6 @@ Hence we will preload the timer with 131 cycles to leave 125 until overflow (1ms
 
 #define SET_COMPARE(compare, value) compare = (COMPARE_TYPE)(value) // It is important that we cast this to the actual overflow limit of the timer. The compare variables type can be bigger than the timer overflow.
 
-
-extern volatile unsigned int dwellLimit_uS;
-
 #if defined (CORE_TEENSY)
   extern IntervalTimer lowResTimer;
   void oneMSInterval(void);

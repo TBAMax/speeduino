@@ -34,8 +34,6 @@ volatile byte loop100ms;
 volatile byte loop250ms;
 volatile int loopSec;
 
-volatile unsigned int dwellLimit_uS;
-
 volatile uint8_t testInjectorPulseCount = 0;
 volatile uint8_t testIgnitionPulseCount = 0;
 
@@ -164,7 +162,6 @@ void getTimerFlags(void)
     previousMillis1000ms=(uint16_t)currentMillis;
     BIT_SET(TIMER_mask, BIT_TIMER_1HZ);
 
-    dwellLimit_uS = (1000 * configPage4.dwellLimit); //Update uS value in case setting has changed
     currentStatus.crankRPM = ((unsigned int)configPage4.crankRPM * 10);
 
     //**************************************************************************************************************************************************
