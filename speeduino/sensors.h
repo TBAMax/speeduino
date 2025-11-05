@@ -32,7 +32,7 @@ extern volatile uint32_t flexPulseWidth;
 #endif
 
 #define BIT_SENSORS_AUX_ENBL        0
-#define BIT_SENSORS_BARO_SAVED      1
+#define BIT_SENSORS_BARO_SAVED      1 //currently unused
 #define BIT_SENSORS_UNUSED2         2
 #define BIT_SENSORS_UNUSED3         3
 #define BIT_SENSORS_UNUSED4         4

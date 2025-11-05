@@ -638,11 +638,10 @@ static inline void setBaroFromMAP(void)
   if (isValidBaro(tempReading)) //Safety check to ensure the baro reading is within the physical limits
   {
     currentStatus.baro = tempReading;
-    if(!BIT_CHECK(statusSensors, BIT_SENSORS_BARO_SAVED))
-    {
-      storeLastBaro(currentStatus.baro); 
-      BIT_SET(statusSensors, BIT_SENSORS_BARO_SAVED); //Flag baro as having been saved. This prevents multiple writes happening, which can cause issues on stm32 with internal flash
-    }
+  }
+  else
+  {
+    currentStatus.baro = 100; //Default to 100kPa if the reading is invalid
   }
 }
 
@@ -673,10 +672,6 @@ void initialiseMAPBaro(void)
   }
   else
   {
-    //Attempt to use the last known good baro reading from EEPROM as a starting point
-    uint8_t lastBaro = readLastBaro();
-    // Make sure it's not invalid (Possible on first run etc)
-    currentStatus.baro = isValidBaro(lastBaro) ? lastBaro : 100U;
     // We assume external callers already made sure the engine isn't running
     setBaroFromMAP();
   }
