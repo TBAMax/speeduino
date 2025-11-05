@@ -162,8 +162,6 @@ void getTimerFlags(void)
     previousMillis1000ms=(uint16_t)currentMillis;
     BIT_SET(TIMER_mask, BIT_TIMER_1HZ);
 
-    currentStatus.crankRPM = ((unsigned int)configPage4.crankRPM * 10);
-
     //**************************************************************************************************************************************************
     //This updates the runSecs variable
     //If the engine is running or cranking, we need to update the run time counter.
