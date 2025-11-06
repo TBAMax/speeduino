@@ -386,7 +386,13 @@ void __attribute__((always_inline)) loop(void)
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_1HZ)) //Once per second)
     {
       BIT_CLEAR(TIMER_mask, BIT_TIMER_1HZ);
-
+      //**************************************************************************************************************************************************
+      //Check the fan output status
+      if (configPage2.fanEnable != 0)
+      {
+        fanControl();            // Function to turn the cooling fan on/off
+      }
+      //**************************************************************************************************************************************************
       currentStatus.crankRPM = ((unsigned int)configPage4.crankRPM * 10);//Update the crank RPM treshold in case it has been changed
 
     //**************************************************************************************************************************************************

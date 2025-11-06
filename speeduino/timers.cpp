@@ -155,13 +155,6 @@ void getTimerFlags(void)
     previousMillis1000ms=(uint16_t)currentMillis;
     BIT_SET(TIMER_mask, BIT_TIMER_1HZ);
 
-    //**************************************************************************************************************************************************
-    //Check the fan output status
-    if (configPage2.fanEnable >= 1)
-    {
-       fanControl();            // Function to turn the cooling fan on/off
-    }
-
     //Check whether fuel pump priming is complete
     if(currentStatus.fpPrimed == false)
     {
