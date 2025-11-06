@@ -156,13 +156,6 @@ void getTimerFlags(void)
     BIT_SET(TIMER_mask, BIT_TIMER_1HZ);
 
     //**************************************************************************************************************************************************
-    //This records the number of main loops the system has completed in the last second
-    currentStatus.loopsPerSecond = mainLoopCount;
-    mainLoopCount = 0;
-    //**************************************************************************************************************************************************
-    //increment secl (secl is simply a counter that increments every second and is used to track whether the system has unexpectedly reset
-    currentStatus.secl++;
-    //**************************************************************************************************************************************************
     //Check the fan output status
     if (configPage2.fanEnable >= 1)
     {

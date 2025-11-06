@@ -390,6 +390,14 @@ void __attribute__((always_inline)) loop(void)
       currentStatus.crankRPM = ((unsigned int)configPage4.crankRPM * 10);//Update the crank RPM treshold in case it has been changed
 
     //**************************************************************************************************************************************************
+    //This records the number of main loops the system has completed in the last second
+    currentStatus.loopsPerSecond = mainLoopCount;
+    mainLoopCount = 0;
+    //**************************************************************************************************************************************************
+    //increment secl (secl is simply a counter that increments every second and is used to track whether the system has unexpectedly reset
+    currentStatus.secl++;
+      
+    //**************************************************************************************************************************************************
     //This updates the runSecs variable
     //If the engine is running or cranking, we need to update the run time counter.
     if (currentStatus.engineIsRunning)
