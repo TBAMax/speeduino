@@ -4,6 +4,11 @@
 #include "maths.h"
 #include "globals.h"
 
+typedef uint32_t UQ24X8_t;
+typedef uint16_t UQ1X15_t;
+
+extern const uint8_t microsPerDegree_Shift;
+extern UQ24X8_t microsPerDegree;
 /**
  * @brief Makes one pass at nudging the angle to within [0,CRANK_ANGLE_MAX_IGN]
  * 

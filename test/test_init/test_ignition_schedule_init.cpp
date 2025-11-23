@@ -30,21 +30,21 @@ static void assert_ignition_schedules(uint16_t crankAngle, uint16_t expectedOutp
   strcpy_P(msg, PSTR("maxIgnOutputs"));
   TEST_ASSERT_EQUAL_UINT16_MESSAGE(expectedOutputs, maxIgnOutputs, msg);
 
-  assert_ignition_channel(angle[0], 0, channel1IgnDegrees, ignitionSchedule1.pStartCallback, ignitionSchedule1.pEndCallback);
-  assert_ignition_channel(angle[1], 1, channel2IgnDegrees, ignitionSchedule2.pStartCallback, ignitionSchedule2.pEndCallback);
-  assert_ignition_channel(angle[2], 2, channel3IgnDegrees, ignitionSchedule3.pStartCallback, ignitionSchedule3.pEndCallback);
-  assert_ignition_channel(angle[3], 3, channel4IgnDegrees, ignitionSchedule4.pStartCallback, ignitionSchedule4.pEndCallback);
+  assert_ignition_channel(angle[0], 0, ignitionSchedule1.channelDegrees, ignitionSchedule1.pStartCallback, ignitionSchedule1.pEndCallback);
+  assert_ignition_channel(angle[1], 1, ignitionSchedule2.channelDegrees, ignitionSchedule2.pStartCallback, ignitionSchedule2.pEndCallback);
+  assert_ignition_channel(angle[2], 2, ignitionSchedule3.channelDegrees, ignitionSchedule3.pStartCallback, ignitionSchedule3.pEndCallback);
+  assert_ignition_channel(angle[3], 3, ignitionSchedule4.channelDegrees, ignitionSchedule4.pStartCallback, ignitionSchedule4.pEndCallback);
 #if IGN_CHANNELS>=5
-  assert_ignition_channel(angle[4], 4, channel5IgnDegrees, ignitionSchedule5.pStartCallback, ignitionSchedule5.pEndCallback);
+  assert_ignition_channel(angle[4], 4, ignitionSchedule5.channelDegrees, ignitionSchedule5.pStartCallback, ignitionSchedule5.pEndCallback);
 #endif
 #if IGN_CHANNELS>=6
-  assert_ignition_channel(angle[5], 5, channel6IgnDegrees, ignitionSchedule6.pStartCallback, ignitionSchedule6.pEndCallback);
+  assert_ignition_channel(angle[5], 5, ignitionSchedule6.channelDegrees, ignitionSchedule6.pStartCallback, ignitionSchedule6.pEndCallback);
 #endif
 #if IGN_CHANNELS>=7
-  assert_ignition_channel(angle[6], 6, channel7IgnDegrees, ignitionSchedule7.pStartCallback, ignitionSchedule7.pEndCallback);
+  assert_ignition_channel(angle[6], 6, ignitionSchedule7.channelDegrees, ignitionSchedule7.pStartCallback, ignitionSchedule7.pEndCallback);
 #endif
 #if IGN_CHANNELS>=8
-  assert_ignition_channel(angle[7], 7, channel8IgnDegrees, ignitionSchedule8.pStartCallback, ignitionSchedule8.pEndCallback);
+  assert_ignition_channel(angle[7], 7, ignitionSchedule8.channelDegrees, ignitionSchedule8.pStartCallback, ignitionSchedule8.pEndCallback);
 #endif 
 }
 
