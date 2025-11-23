@@ -205,7 +205,6 @@ extern volatile uint16_t mainLoopCount;
 extern uint32_t revolutionTime; //The time in uS that one revolution would take at current speed (The time tooth 1 was last seen, minus the time it was seen prior to that)
 extern volatile unsigned long timer5_overflow_count; //Increments every time counter 5 overflows. Used for the fast version of micros()
 extern volatile unsigned long ms_counter; //A counter that increments once per ms
-extern uint16_t fixedCrankingOverride;
 extern volatile uint32_t toothHistory[TOOTH_LOG_SIZE];
 extern volatile uint8_t compositeLogHistory[TOOTH_LOG_SIZE];
 extern volatile unsigned int toothHistoryIndex;

@@ -301,6 +301,8 @@ extern volatile unsigned long lastGap;
 extern volatile unsigned long targetGap;
 
 extern volatile uint16_t toothCurrentCount; //The current number of teeth (Once sync has been achieved, this can never actually be 0
+extern volatile unsigned long toothLastToothTime; //The time (micros()) that the last tooth was registered
+extern volatile int16_t toothLastToothAngle; //The crank angle of the last tooth 'seen'
 extern volatile unsigned long toothSystemLastToothTime; //As below, but used for decoders where not every tooth count is used for calculation
 extern volatile unsigned long toothLastThirdToothTime; //The time (micros()) that the last tooth was registered on the second cam input
 extern volatile unsigned long toothLastMinusOneToothTime; //The time (micros()) that the tooth before the last tooth was registered

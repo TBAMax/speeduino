@@ -14,11 +14,11 @@ typedef uint32_t UQ24X8_t;
 static constexpr uint8_t UQ24X8_Shift = 8U;
 
 /** @brief uS per degree at current RPM in UQ24.8 fixed point */
-static  UQ24X8_t microsPerDegree;
-static constexpr uint8_t microsPerDegree_Shift = UQ24X8_Shift;
+  UQ24X8_t microsPerDegree;
+ constexpr uint8_t microsPerDegree_Shift = UQ24X8_Shift;
 
 typedef uint16_t UQ1X15_t;
-static constexpr uint8_t UQ1X15_Shift = 15U;
+static constexpr const uint8_t UQ1X15_Shift = 15U;
 
 /** @brief Degrees per uS in UQ1.15 fixed point.
  * 
@@ -28,8 +28,8 @@ static UQ1X15_t degreesPerMicro;
 static constexpr uint8_t degreesPerMicro_Shift = UQ1X15_Shift;
 
 void setAngleConverterRevolutionTime(uint32_t revolutionTime) {
-  microsPerDegree = div360(lshift<microsPerDegree_Shift>(revolutionTime));
-  degreesPerMicro = (uint16_t)UDIV_ROUND_CLOSEST(lshift<degreesPerMicro_Shift>(UINT32_C(360)), revolutionTime, uint32_t);
+  microsPerDegree = div360(lshift<microsPerDegree_Shift>(revolutionTime));//microsPerDegree = revolutionTime / 360 * 256;
+  degreesPerMicro = (uint16_t)UDIV_ROUND_CLOSEST(lshift<degreesPerMicro_Shift>(UINT32_C(360)), revolutionTime, uint32_t);//degreesPerMicro = 360 * 32768 / revolutionTime;
 }
 
 uint32_t angleToTimeMicroSecPerDegree(uint16_t angle) {

@@ -9,279 +9,128 @@ A full copy of the license may be found in the projects root directory
  * 
  * ## Scheduling structures
  * 
- * Structures @ref FuelSchedule and @ref Schedule describe (from scheduler.h) describe the scheduling info for Fuel and Ignition respectively.
+ * Structures @ref FuelSchedule and @ref IgnitionSchedule describe the scheduling info for Fuel and Ignition respectively.
  * They contain duration, current activity status, start timing, end timing, callbacks to carry out action, etc.
  * 
  * ## Scheduling Functions
  * 
- * For Injection:
- * - setFuelSchedule*(tout,dur) - **Setup** schedule for (next) injection on the channel
- * - inj*StartFunction() - Execute **start** of injection (Interrupt handler)
- * - inj*EndFunction() - Execute **end** of injection (interrupt handler)
- * 
- * For Ignition (has more complex schedule setup):
- * - setIgnitionSchedule*(cb_st,tout,dur,cb_end) - **Setup** schedule for (next) ignition on the channel
- * - ign*StartFunction() - Execute **start** of ignition (Interrupt handler)
- * - ign*EndFunction() - Execute **end** of ignition (Interrupt handler)
+ * - setSchedule*(EndAngle, duration) - **Setup** schedule for (next) pulse on the channel
+ * - pStartCallback() - Execute at the **start** of event (Interrupt handler)
+ * - pEndCallback() - Execute at the **end** of event (Interrupt handler)
  */
 #include "globals.h"
+#include "decoders.h"
 #include "scheduler.h"
-#include "scheduledIO.h"
 #include "timers.h"
 #include "schedule_calcs.h"
 #include "utilities.h"
 #include "units.h"
+#include "crankMaths.h"
 
-FuelSchedule fuelSchedule1(FUEL1_COUNTER, FUEL1_COMPARE, FUEL1_TIMER_DISABLE, FUEL1_TIMER_ENABLE);
-FuelSchedule fuelSchedule2(FUEL2_COUNTER, FUEL2_COMPARE, FUEL2_TIMER_DISABLE, FUEL2_TIMER_ENABLE);
-FuelSchedule fuelSchedule3(FUEL3_COUNTER, FUEL3_COMPARE, FUEL3_TIMER_DISABLE, FUEL3_TIMER_ENABLE);
-FuelSchedule fuelSchedule4(FUEL4_COUNTER, FUEL4_COMPARE, FUEL4_TIMER_DISABLE, FUEL4_TIMER_ENABLE);
-
+FuelSchedule fuelSchedule1(FUEL1_COUNTER, FUEL1_COMPARE); //cppcheck-suppress misra-c2012-8.4
+FuelSchedule fuelSchedule2(FUEL2_COUNTER, FUEL2_COMPARE); //cppcheck-suppress misra-c2012-8.4
+FuelSchedule fuelSchedule3(FUEL3_COUNTER, FUEL3_COMPARE); //cppcheck-suppress misra-c2012-8.4
+FuelSchedule fuelSchedule4(FUEL4_COUNTER, FUEL4_COMPARE); //cppcheck-suppress misra-c2012-8.4
 #if (INJ_CHANNELS >= 5)
-FuelSchedule fuelSchedule5(FUEL5_COUNTER, FUEL5_COMPARE, FUEL5_TIMER_DISABLE, FUEL5_TIMER_ENABLE);
+FuelSchedule fuelSchedule5(FUEL5_COUNTER, FUEL5_COMPARE); //cppcheck-suppress misra-c2012-8.4
 #endif
 #if (INJ_CHANNELS >= 6)
-FuelSchedule fuelSchedule6(FUEL6_COUNTER, FUEL6_COMPARE, FUEL6_TIMER_DISABLE, FUEL6_TIMER_ENABLE);
+FuelSchedule fuelSchedule6(FUEL6_COUNTER, FUEL6_COMPARE); //cppcheck-suppress misra-c2012-8.4
 #endif
 #if (INJ_CHANNELS >= 7)
-FuelSchedule fuelSchedule7(FUEL7_COUNTER, FUEL7_COMPARE, FUEL7_TIMER_DISABLE, FUEL7_TIMER_ENABLE);
+FuelSchedule fuelSchedule7(FUEL7_COUNTER, FUEL7_COMPARE); //cppcheck-suppress misra-c2012-8.4
 #endif
 #if (INJ_CHANNELS >= 8)
-FuelSchedule fuelSchedule8(FUEL8_COUNTER, FUEL8_COMPARE, FUEL8_TIMER_DISABLE, FUEL8_TIMER_ENABLE);
+FuelSchedule fuelSchedule8(FUEL8_COUNTER, FUEL8_COMPARE); //cppcheck-suppress misra-c2012-8.4
 #endif
 
-IgnitionSchedule ignitionSchedule1(IGN1_COUNTER, IGN1_COMPARE, IGN1_TIMER_DISABLE, IGN1_TIMER_ENABLE);
-IgnitionSchedule ignitionSchedule2(IGN2_COUNTER, IGN2_COMPARE, IGN2_TIMER_DISABLE, IGN2_TIMER_ENABLE);
-IgnitionSchedule ignitionSchedule3(IGN3_COUNTER, IGN3_COMPARE, IGN3_TIMER_DISABLE, IGN3_TIMER_ENABLE);
-IgnitionSchedule ignitionSchedule4(IGN4_COUNTER, IGN4_COMPARE, IGN4_TIMER_DISABLE, IGN4_TIMER_ENABLE);
-IgnitionSchedule ignitionSchedule5(IGN5_COUNTER, IGN5_COMPARE, IGN5_TIMER_DISABLE, IGN5_TIMER_ENABLE);
-
+IgnitionSchedule ignitionSchedule1(IGN1_COUNTER, IGN1_COMPARE); //cppcheck-suppress misra-c2012-8.4
+IgnitionSchedule ignitionSchedule2(IGN2_COUNTER, IGN2_COMPARE); //cppcheck-suppress misra-c2012-8.4
+IgnitionSchedule ignitionSchedule3(IGN3_COUNTER, IGN3_COMPARE); //cppcheck-suppress misra-c2012-8.4
+IgnitionSchedule ignitionSchedule4(IGN4_COUNTER, IGN4_COMPARE); //cppcheck-suppress misra-c2012-8.4
+IgnitionSchedule ignitionSchedule5(IGN5_COUNTER, IGN5_COMPARE); //cppcheck-suppress misra-c2012-8.4
 #if IGN_CHANNELS >= 6
-IgnitionSchedule ignitionSchedule6(IGN6_COUNTER, IGN6_COMPARE, IGN6_TIMER_DISABLE, IGN6_TIMER_ENABLE);
+IgnitionSchedule ignitionSchedule6(IGN6_COUNTER, IGN6_COMPARE); //cppcheck-suppress misra-c2012-8.4
 #endif
 #if IGN_CHANNELS >= 7
-IgnitionSchedule ignitionSchedule7(IGN7_COUNTER, IGN7_COMPARE, IGN7_TIMER_DISABLE, IGN7_TIMER_ENABLE);
+IgnitionSchedule ignitionSchedule7(IGN7_COUNTER, IGN7_COMPARE); //cppcheck-suppress misra-c2012-8.4
 #endif
 #if IGN_CHANNELS >= 8
-IgnitionSchedule ignitionSchedule8(IGN8_COUNTER, IGN8_COMPARE, IGN8_TIMER_DISABLE, IGN8_TIMER_ENABLE);
+IgnitionSchedule ignitionSchedule8(IGN8_COUNTER, IGN8_COMPARE); //cppcheck-suppress misra-c2012-8.4
 #endif
 
-static void reset(FuelSchedule &schedule) 
-{
-    schedule.Status = OFF;
-    schedule.pTimerEnable();
-}
+void Schedule::setSchedule(int16_t EndAngle, unsigned long duration, int crankAngleMax)
+{  
+  noInterrupts(); // make sure start and end values are updated simultaneously and that schedule do not change state
+  //decoder.getLastToothAngle();
+  if(toothCurrentCount == 0) { toothCurrentCount = configPage4.triggerTeeth; }
+  int16_t LastToothAngle = ((toothCurrentCount - 1) * triggerToothAngle) + configPage4.triggerAngle; //Number of teeth that have passed since tooth 1, multiplied by the angle each tooth represents, plus the angle that tooth 1 is ATDC. This gives accuracy only to the nearest tooth.   
+  //Sequential check (simply sets whether we're on the first or 2nd revolution of the cycle)
+  if ( (revolutionOne == true) && (configPage4.TrigSpeed == CRANK_SPEED) ) { LastToothAngle += 360; }
+  LastToothAngle = nudge(0, crankAngleMax, LastToothAngle, crankAngleMax);
 
-static void reset(IgnitionSchedule &schedule) 
-{
-    schedule.Status = OFF;
-    schedule.pTimerEnable();
-}
-
-void initialiseSchedulers()
-{
-    reset(fuelSchedule1);
-    reset(fuelSchedule2);
-    reset(fuelSchedule3);
-    reset(fuelSchedule4);
-#if INJ_CHANNELS >= 5
-    reset(fuelSchedule5);
-#endif
-#if INJ_CHANNELS >= 6
-    reset(fuelSchedule6);
-#endif
-#if INJ_CHANNELS >= 7
-    reset(fuelSchedule7);
-#endif
-#if INJ_CHANNELS >= 8
-    reset(fuelSchedule8);
-#endif
-
-    reset(ignitionSchedule1);
-    reset(ignitionSchedule2);
-    reset(ignitionSchedule3);
-    reset(ignitionSchedule4);
-    reset(ignitionSchedule5);
-#if (IGN_CHANNELS >= 5)
-    reset(ignitionSchedule5);
-#endif
-#if IGN_CHANNELS >= 6
-    reset(ignitionSchedule6);
-#endif
-#if IGN_CHANNELS >= 7
-    reset(ignitionSchedule7);
-#endif
-#if IGN_CHANNELS >= 8
-    reset(ignitionSchedule8);
-#endif
-
-  fuelSchedule1.pStartFunction = nullCallback;
-  fuelSchedule1.pEndFunction = nullCallback;
-  fuelSchedule2.pStartFunction = nullCallback;
-  fuelSchedule2.pEndFunction = nullCallback;
-  fuelSchedule3.pStartFunction = nullCallback;
-  fuelSchedule3.pEndFunction = nullCallback;
-  fuelSchedule4.pStartFunction = nullCallback;
-  fuelSchedule4.pEndFunction = nullCallback;
-#if (INJ_CHANNELS >= 5)  
-  fuelSchedule5.pStartFunction = nullCallback;
-  fuelSchedule5.pEndFunction = nullCallback;
-#endif
-#if (INJ_CHANNELS >= 6)
-  fuelSchedule6.pStartFunction = nullCallback;
-  fuelSchedule6.pEndFunction = nullCallback;
-#endif
-#if (INJ_CHANNELS >= 7)
-  fuelSchedule7.pStartFunction = nullCallback;
-  fuelSchedule7.pEndFunction = nullCallback;
-#endif
-#if (INJ_CHANNELS >= 8)
-  fuelSchedule8.pStartFunction = nullCallback;
-  fuelSchedule8.pEndFunction = nullCallback;
-#endif
-
-  ignitionSchedule1.pStartCallback = nullCallback;
-  ignitionSchedule1.pEndCallback = nullCallback;
-  ignition1StartAngle=0;
-  ignition1EndAngle=0;
-  channel1IgnDegrees=0; /**< The number of crank degrees until cylinder 1 is at TDC (This is obviously 0 for virtually ALL engines, but there's some weird ones) */
-
-  ignitionSchedule2.pStartCallback = nullCallback;
-  ignitionSchedule2.pEndCallback = nullCallback;
-  ignition2StartAngle=0;
-  ignition2EndAngle=0;
-  channel2IgnDegrees=0; /**< The number of crank degrees until cylinder 2 (and 5/6/7/8) is at TDC */
-
-  ignitionSchedule3.pStartCallback = nullCallback;
-  ignitionSchedule3.pEndCallback = nullCallback;
-  ignition3StartAngle=0;
-  ignition3EndAngle=0;
-  channel3IgnDegrees=0; /**< The number of crank degrees until cylinder 2 (and 5/6/7/8) is at TDC */
-
-  ignitionSchedule4.pStartCallback = nullCallback;
-  ignitionSchedule4.pEndCallback = nullCallback;
-  ignition4StartAngle=0;
-  ignition4EndAngle=0;
-  channel4IgnDegrees=0; /**< The number of crank degrees until cylinder 2 (and 5/6/7/8) is at TDC */
-
-#if (IGN_CHANNELS >= 5)
-  ignitionSchedule5.pStartCallback = nullCallback;
-  ignitionSchedule5.pEndCallback = nullCallback;
-  ignition5StartAngle=0;
-  ignition5EndAngle=0;
-  channel5IgnDegrees=0; /**< The number of crank degrees until cylinder 2 (and 5/6/7/8) is at TDC */
-#endif
-#if (IGN_CHANNELS >= 6)
-  ignitionSchedule6.pStartCallback = nullCallback;
-  ignitionSchedule6.pEndCallback = nullCallback;
-  ignition6StartAngle=0;
-  ignition6EndAngle=0;
-  channel6IgnDegrees=0; /**< The number of crank degrees until cylinder 2 (and 5/6/7/8) is at TDC */
-#endif
-#if (IGN_CHANNELS >= 7)
-  ignitionSchedule7.pStartCallback = nullCallback;
-  ignitionSchedule7.pEndCallback = nullCallback;
-  ignition7StartAngle=0;
-  ignition7EndAngle=0;
-  channel7IgnDegrees=0; /**< The number of crank degrees until cylinder 2 (and 5/6/7/8) is at TDC */
-#endif
-#if (IGN_CHANNELS >= 8)
-  ignitionSchedule8.pStartCallback = nullCallback;
-  ignitionSchedule8.pEndCallback = nullCallback;
-  ignition8StartAngle=0;
-  ignition8EndAngle=0;
-  channel8IgnDegrees=0; /**< The number of crank degrees until cylinder 2 (and 5/6/7/8) is at TDC */
-#endif
-
-	channel1InjDegrees = 0; /**< The number of crank degrees until cylinder 1 is at TDC (This is obviously 0 for virtually ALL engines, but there's some weird ones) */
-	channel2InjDegrees = 0; /**< The number of crank degrees until cylinder 2 (and 5/6/7/8) is at TDC */
-	channel3InjDegrees = 0; /**< The number of crank degrees until cylinder 3 (and 5/6/7/8) is at TDC */
-	channel4InjDegrees = 0; /**< The number of crank degrees until cylinder 4 (and 5/6/7/8) is at TDC */
-#if (INJ_CHANNELS >= 5)
-	channel5InjDegrees = 0; /**< The number of crank degrees until cylinder 5 is at TDC */
-#endif
-#if (INJ_CHANNELS >= 6)
-	channel6InjDegrees = 0; /**< The number of crank degrees until cylinder 6 is at TDC */
-#endif
-#if (INJ_CHANNELS >= 7)
-	channel7InjDegrees = 0; /**< The number of crank degrees until cylinder 7 is at TDC */
-#endif
-#if (INJ_CHANNELS >= 8)
-	channel8InjDegrees = 0; /**< The number of crank degrees until cylinder 8 is at TDC */
-#endif
-
-}
-
-void _setFuelScheduleRunning(FuelSchedule &schedule, unsigned long timeout, unsigned long duration)
-{
-  //The following must be enclosed in the noInterupts block to avoid contention caused if the relevant interrupt fires before the state is fully set
-  noInterrupts();
-
-  //The duration of the pulsewidth cannot be longer than the maximum timer period. This is unlikely as pulse widths should never get that long, but it's here for safety
-  if(duration >= MAX_TIMER_PERIOD) { schedule.duration = MAX_TIMER_PERIOD - 1; }
-  else { schedule.duration = duration; }
-
-  schedule.startCompare = schedule.counter + uS_TO_TIMER_COMPARE(timeout);
-  SET_COMPARE(schedule.compare, schedule.startCompare);
-  schedule.Status = PENDING; //Turn this schedule on
-  interrupts();
-  schedule.pTimerEnable();
-}
-
-void _setFuelScheduleNext(FuelSchedule &schedule, unsigned long timeout, unsigned long duration)
-{
-  noInterrupts();
-  //The duration of the pulsewidth cannot be longer than the maximum timer period. This is unlikely as pulse widths should never get that long, but it's here for safety
-  //Duration can safely be set here as the schedule is already running at the previous duration value already used
-  if(duration >= MAX_TIMER_PERIOD) { schedule.duration = MAX_TIMER_PERIOD - 1; }
-  else { schedule.duration = duration; }
-
-  schedule.nextStartCompare = schedule.counter + uS_TO_TIMER_COMPARE(timeout);
-  schedule.hasNextSchedule = true;
-  interrupts();
-}
-
-void _setIgnitionScheduleRunning(IgnitionSchedule &schedule, unsigned long timeout, unsigned long duration)
-{
-  //The duration of the dwell cannot be longer than the maximum timer period. This is unlikely as dwell timess should never get that long, but it's here for safety
-  if(duration >= MAX_TIMER_PERIOD) { schedule.duration = MAX_TIMER_PERIOD - 1; }
-  else { schedule.duration = duration; }
-
-  COMPARE_TYPE timeout_timer_compare = uS_TO_TIMER_COMPARE(timeout);
-
-  noInterrupts();
-  schedule.startCompare = schedule.counter + timeout_timer_compare; //As there is a tick every 4uS, there are timeout/4 ticks until the interrupt should be triggered ( >>2 divides by 4)
-  //if(schedule.endScheduleSetByDecoder == false) { schedule.endCompare = schedule.startCompare + uS_TO_TIMER_COMPARE(schedule.duration); } //The .endCompare value is also set by the per tooth timing in decoders.ino. The check here is so that it's not getting overridden. 
-  SET_COMPARE(schedule.compare, schedule.startCompare);
-  schedule.Status = PENDING; //Turn this schedule on
-  interrupts();
-  schedule.pTimerEnable();
-}
-
-void _setIgnitionScheduleNext(IgnitionSchedule &schedule, unsigned long timeout, unsigned long duration)
-{
-  //If the schedule is already running, we can set the next schedule so it is ready to go
-  //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule
-  noInterrupts();
-  schedule.nextStartCompare = schedule.counter + uS_TO_TIMER_COMPARE(timeout);
-  if(duration >= MAX_TIMER_PERIOD) { schedule.duration = MAX_TIMER_PERIOD - 1; }
-  else { schedule.duration = duration; }
-  schedule.hasNextSchedule = true;
-  interrupts();
-}
-
-
-void refreshIgnitionSchedule1(unsigned long timeToEnd)
-{
-  if( (ignitionSchedule1.Status == RUNNING) && (timeToEnd < ignitionSchedule1.duration) )
-  //Must have the threshold check here otherwise it can cause a condition where the compare fires twice, once after the other, both for the end
-  //if( (timeToEnd < ignitionSchedule1.duration) && (timeToEnd > IGNITION_REFRESH_THRESHOLD) )
-  {
-    noInterrupts();
-    ignitionSchedule1.endCompare = IGN1_COUNTER + uS_TO_TIMER_COMPARE(timeToEnd);
-    SET_COMPARE(IGN1_COMPARE, ignitionSchedule1.endCompare);
-    interrupts();
+  int16_t deltaAngle = (int16_t)(EndAngle - LastToothAngle);//Calculate angle difference from last tooth seen to pulse end angle   
+  if(deltaAngle < 0)// Only allow positive angle difference numbers 
+  { 
+    deltaAngle += crankAngleMax; //calculate into the next cycle
   }
+  uint16_t timeFromLastTooth = (uint16_t)((uint16_t)micros() - toothLastToothTime);//Time since last tooth in uS
+
+  if(Status != RUNNING) //Check that we're not already part way through a schedule
+  {
+    //Calculate when the injection should end
+    uint32_t endTimeout = ((uint16_t)deltaAngle * (uint32_t)microsPerDegree >> microsPerDegree_Shift) - timeFromLastTooth;//time in uS until the injector should be turned off
+
+    if((endTimeout < MAX_TIMER_PERIOD) && (endTimeout > (uint32_t)(duration + SCHEDULE_REFRESH_THRESHOLD))) //Allow for fixed safety between setting the schedule and running it
+    {          
+      endCompare = (COMPARE_TYPE)_counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(endTimeout)); //As there is a tick every 4uS, there are timeout/4 ticks until the interrupt should be triggered ( >>2 divides by 4)   
+      _compare = (COMPARE_TYPE)(endCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration))); // set pulse start Compare value
+      Status = PENDING; //Turn this schedule on
+    }
+  }
+  else
+  {
+    //When the schedule is already running set the next schedule
+    //This is required in cases of high rpm and high DC where there otherwise would not be enough time to set the schedule(or no time in case of 100% DC)
+    if(deltaAngle < crankAngleMax-180 )//Avoid jumping over the cycle, allow for up to 180 degree overlap
+    {
+      deltaAngle += crankAngleMax;
+    } 
+    uint32_t nextEndTimeout=((uint16_t)deltaAngle * (uint32_t)microsPerDegree >> microsPerDegree_Shift) - timeFromLastTooth;       
+    //use half of the maximum period here because next schedule is really only used at high RPM
+    if(nextEndTimeout < MAX_TIMER_PERIOD/2)
+    {
+      nextEndCompare = _counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(nextEndTimeout));
+      nextStartCompare = nextEndCompare - (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration));                
+      hasNextSchedule = true;
+      //check for overlap of schedules(100% duty cycle case)
+      if((COMPARE_TYPE)(nextEndCompare-nextStartCompare)+ (COMPARE_TYPE)uS_TO_TIMER_COMPARE(SCHEDULE_OVERLAP_THRESHOLD) >= (COMPARE_TYPE)(nextEndCompare-endCompare)){
+        overlap = true;//interrupts use this
+      }
+      else
+      {
+        overlap = false;//interrupts use this
+      }             
+    }
+    else
+    {
+      hasNextSchedule = false;
+    }
+  }
+  interrupts();
+}
+
+//Set schedule to run immediately for duration specified
+void Schedule::setSchedule(unsigned long duration)
+{
+  noInterrupts(); // make sure start and end values are updated simultaneously and that schedule do not change state
+  if(Status != RUNNING) //Check that we're not already part way through a schedule
+  {
+    pStartCallback();    
+    _compare = (COMPARE_TYPE)_counter + (COMPARE_TYPE)(uS_TO_TIMER_COMPARE(duration));
+    Status = RUNNING; //Turn this schedule on
+  }
+  interrupts();
 }
 
 static table2D_u8_u8_4 PrimingPulseTable(&configPage2.primeBins, &configPage2.primePulse);
@@ -296,71 +145,75 @@ extern void beginInjectorPriming(void)
   if( (primingValue > 0) && (currentStatus.TPS <= configPage4.floodClear) )
   {
     primingValue = primingValue * 100 * 5; //to achieve long enough priming pulses, the values in tuner studio are divided by 0.5 instead of 0.1, so multiplier of 5 is required.
-    if ( maxInjOutputs >= 1 ) { setFuelSchedule(fuelSchedule1, 100, primingValue); }
+    if ( maxInjOutputs >= 1 ) {fuelSchedule1.setSchedule(primingValue); }
 #if (INJ_CHANNELS >= 2)
-    if ( maxInjOutputs >= 2 ) { setFuelSchedule(fuelSchedule2, 100, primingValue); }
+    if ( maxInjOutputs >= 2 ) {fuelSchedule2.setSchedule(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 3)
-    if ( maxInjOutputs >= 3 ) { setFuelSchedule(fuelSchedule3, 100, primingValue); }
+    if ( maxInjOutputs >= 3 ) {fuelSchedule3.setSchedule(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 4)
-    if ( maxInjOutputs >= 4 ) { setFuelSchedule(fuelSchedule4, 100, primingValue); }
+    if ( maxInjOutputs >= 4 ) {fuelSchedule4.setSchedule(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 5)
-    if ( maxInjOutputs >= 5 ) { setFuelSchedule(fuelSchedule5, 100, primingValue); }
+    if ( maxInjOutputs >= 5 ) {fuelSchedule5.setSchedule(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 6)
-    if ( maxInjOutputs >= 6 ) { setFuelSchedule(fuelSchedule6, 100, primingValue); }
+    if ( maxInjOutputs >= 6 ) {fuelSchedule6.setSchedule(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 7)
-    if ( maxInjOutputs >= 7) { setFuelSchedule(fuelSchedule7, 100, primingValue); }
+    if ( maxInjOutputs >= 7) {fuelSchedule7.setSchedule(primingValue); }
 #endif
 #if (INJ_CHANNELS >= 8)
-    if ( maxInjOutputs >= 8 ) { setFuelSchedule(fuelSchedule8, 100, primingValue); }
+    if ( maxInjOutputs >= 8 ) {fuelSchedule8.setSchedule(primingValue); }
 #endif
   }
 }
 
-// Shared ISR function for all fuel timers.
+// Shared ISR function for all fuel and ignition timers.
 // This is completely inlined into the ISR - there is no function call
 // overhead.
-static inline __attribute__((always_inline)) void fuelScheduleISR(FuelSchedule &schedule)
+static inline __attribute__((always_inline)) void scheduleISR(Schedule &schedule)
 {
   if (schedule.Status == PENDING) //Check to see if this schedule is turn on
   {
-    schedule.pStartFunction();
+    schedule.pStartCallback();
     schedule.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
-    SET_COMPARE(schedule.compare, schedule.counter + uS_TO_TIMER_COMPARE(schedule.duration) ); //Doing this here prevents a potential overflow on restarts
+    schedule._compare = schedule.endCompare;
   }
   else if (schedule.Status == RUNNING)
   {
-    schedule.pEndFunction();
-    schedule.Status = OFF; //Turn off the schedule
-
     //If there is a next schedule queued up, activate it
     if(schedule.hasNextSchedule == true)
-    {
-      SET_COMPARE(schedule.compare, schedule.nextStartCompare); //Flip the next start compare time to be the current one. The duration of this next pulse will already have been set in _setFuelScheduleNext()
-      schedule.Status = PENDING;
+      {      
+      if(schedule.overlap == true) //if there is overlap with the last pulse, keep the schedule running
+      {
+        schedule._compare = schedule.nextEndCompare;  
+      }
+      else //no overlap
+      {
+        schedule.pEndCallback();
+        schedule._compare = schedule.nextStartCompare;        
+        schedule.Status = PENDING;
+      }
+      schedule.endCompare = schedule.nextEndCompare;
       schedule.hasNextSchedule = false;
     }
     else
-    { 
-      schedule.pTimerDisable(); 
+    {
+      schedule.pEndCallback();
+      schedule.Status = OFF; //Turn off the schedule    
     }
   }
-  else if (schedule.Status == OFF) 
+  else // if (schedule.Status == OFF) 
   { 
-    schedule.pTimerDisable(); //Safety check. Turn off this output compare unit and return without performing any action
+    //no action required
   } 
 } 
 
 /*******************************************************************************************************************************************************************************************************/
 /** fuelSchedule*Interrupt (All 8 ISR functions below) get called (as timed interrupts) when either the start time or the duration time are reached.
-* This calls the relevant callback function (startCallback or endCallback) depending on the status (PENDING => Needs to run, RUNNING => Needs to stop) of the schedule.
-* The status of schedule is managed here based on startCallback /endCallback function called:
-* - startCallback - change scheduler into RUNNING state
-* - endCallback - change scheduler into OFF state (or PENDING if schedule.hasNextSchedule is set)
+* This calls the relevant callback function (pStartCallback or pEndCallback) depending on the status (PENDING => Needs to run, RUNNING => Needs to stop) of the schedule.
 */
 //Timer3A (fuel schedule 1) Compare Vector
 #ifdef CORE_AVR //AVR chips use the ISR for this
@@ -370,7 +223,7 @@ ISR(TIMER3_COMPA_vect) //cppcheck-suppress misra-c2012-8.2
 void fuelSchedule1Interrupt() //Most ARM chips can simply call a function
 #endif
   {
-    fuelScheduleISR(fuelSchedule1);
+    scheduleISR(fuelSchedule1);
   }
 
 
@@ -380,7 +233,7 @@ ISR(TIMER3_COMPB_vect) //cppcheck-suppress misra-c2012-8.2
 void fuelSchedule2Interrupt() //Most ARM chips can simply call a function
 #endif
   {
-    fuelScheduleISR(fuelSchedule2);
+    scheduleISR(fuelSchedule2);
   }
 
 
@@ -390,7 +243,7 @@ ISR(TIMER3_COMPC_vect) //cppcheck-suppress misra-c2012-8.2
 void fuelSchedule3Interrupt() //Most ARM chips can simply call a function
 #endif
   {
-    fuelScheduleISR(fuelSchedule3);
+    scheduleISR(fuelSchedule3);
   }
 
 
@@ -400,7 +253,7 @@ ISR(TIMER4_COMPB_vect) //cppcheck-suppress misra-c2012-8.2
 void fuelSchedule4Interrupt() //Most ARM chips can simply call a function
 #endif
   {
-    fuelScheduleISR(fuelSchedule4);
+    scheduleISR(fuelSchedule4);
   }
 
 #if INJ_CHANNELS >= 5
@@ -410,7 +263,7 @@ ISR(TIMER4_COMPC_vect) //cppcheck-suppress misra-c2012-8.2
 void fuelSchedule5Interrupt() //Most ARM chips can simply call a function
 #endif
   {
-    fuelScheduleISR(fuelSchedule5);
+    scheduleISR(fuelSchedule5);
   }
 #endif
 
@@ -421,7 +274,7 @@ ISR(TIMER4_COMPA_vect) //cppcheck-suppress misra-c2012-8.2
 void fuelSchedule6Interrupt() //Most ARM chips can simply call a function
 #endif
   {
-    fuelScheduleISR(fuelSchedule6);
+    scheduleISR(fuelSchedule6);
   }
 #endif
 
@@ -432,7 +285,7 @@ ISR(TIMER5_COMPC_vect) //cppcheck-suppress misra-c2012-8.2
 void fuelSchedule7Interrupt() //Most ARM chips can simply call a function
 #endif
   {
-    fuelScheduleISR(fuelSchedule7);
+    scheduleISR(fuelSchedule7);
   }
 #endif
 
@@ -443,49 +296,9 @@ ISR(TIMER5_COMPB_vect) //cppcheck-suppress misra-c2012-8.2
 void fuelSchedule8Interrupt() //Most ARM chips can simply call a function
 #endif
   {
-    fuelScheduleISR(fuelSchedule8);
+    scheduleISR(fuelSchedule8);
   }
 #endif
-
-// Shared ISR function for all ignition timers.
-// This is completely inlined into the ISR - there is no function call
-// overhead.
-static inline __attribute__((always_inline)) void ignitionScheduleISR(IgnitionSchedule &schedule)
-{
-  if (schedule.Status == PENDING) //Check to see if this schedule is turn on
-  {
-    schedule.pStartCallback();
-    schedule.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
-    schedule.startTime = micros();
-    if(schedule.endScheduleSetByDecoder == true) { SET_COMPARE(schedule.compare, schedule.endCompare); }
-    else { SET_COMPARE(schedule.compare, schedule.counter + uS_TO_TIMER_COMPARE(schedule.duration) ); } //Doing this here prevents a potential overflow on restarts
-  }
-  else if (schedule.Status == RUNNING)
-  {
-    schedule.pEndCallback();
-    schedule.Status = OFF; //Turn off the schedule
-    schedule.endScheduleSetByDecoder = false;
-    ignitionCount = ignitionCount + 1; //Increment the ignition counter
-    currentStatus.actualDwell = DWELL_AVERAGE( (micros() - schedule.startTime) );
-
-    //If there is a next schedule queued up, activate it
-    if(schedule.hasNextSchedule == true)
-    {
-      SET_COMPARE(schedule.compare, schedule.nextStartCompare);
-      schedule.Status = PENDING;
-      schedule.hasNextSchedule = false;
-    }
-    else
-    { 
-      schedule.pTimerDisable(); 
-    }
-  }
-  else if (schedule.Status == OFF)
-  {
-    //This occurs after a hard cut is active to prevent the future schedules from ever being run
-    schedule.pTimerDisable(); 
-  }
-}
 
 #if defined(CORE_AVR) //AVR chips use the ISR for this
 ISR(TIMER5_COMPA_vect) //cppcheck-suppress misra-c2012-8.2
@@ -493,7 +306,7 @@ ISR(TIMER5_COMPA_vect) //cppcheck-suppress misra-c2012-8.2
 void ignitionSchedule1Interrupt(void) //Most ARM chips can simply call a function
 #endif
   {
-    ignitionScheduleISR(ignitionSchedule1);
+    scheduleISR(ignitionSchedule1);
   }
 
 #if IGN_CHANNELS >= 2
@@ -503,7 +316,7 @@ ISR(TIMER5_COMPB_vect) //cppcheck-suppress misra-c2012-8.2
 void ignitionSchedule2Interrupt(void) //Most ARM chips can simply call a function
 #endif
   {
-    ignitionScheduleISR(ignitionSchedule2);
+    scheduleISR(ignitionSchedule2);
   }
 #endif
 
@@ -514,7 +327,7 @@ ISR(TIMER5_COMPC_vect) //cppcheck-suppress misra-c2012-8.2
 void ignitionSchedule3Interrupt(void) //Most ARM chips can simply call a function
 #endif
   {
-    ignitionScheduleISR(ignitionSchedule3);
+    scheduleISR(ignitionSchedule3);
   }
 #endif
 
@@ -525,7 +338,7 @@ ISR(TIMER4_COMPA_vect) //cppcheck-suppress misra-c2012-8.2
 void ignitionSchedule4Interrupt(void) //Most ARM chips can simply call a function
 #endif
   {
-    ignitionScheduleISR(ignitionSchedule4);
+    scheduleISR(ignitionSchedule4);
   }
 #endif
 
@@ -536,7 +349,7 @@ ISR(TIMER4_COMPC_vect) //cppcheck-suppress misra-c2012-8.2
 void ignitionSchedule5Interrupt(void) //Most ARM chips can simply call a function
 #endif
   {
-    ignitionScheduleISR(ignitionSchedule5);
+    scheduleISR(ignitionSchedule5);
   }
 #endif
 
@@ -547,7 +360,7 @@ ISR(TIMER4_COMPB_vect) //cppcheck-suppress misra-c2012-8.2
 void ignitionSchedule6Interrupt(void) //Most ARM chips can simply call a function
 #endif
   {
-    ignitionScheduleISR(ignitionSchedule6);
+    scheduleISR(ignitionSchedule6);
   }
 #endif
 
@@ -558,7 +371,7 @@ ISR(TIMER3_COMPC_vect) //cppcheck-suppress misra-c2012-8.2
 void ignitionSchedule7Interrupt(void) //Most ARM chips can simply call a function
 #endif
   {
-    ignitionScheduleISR(ignitionSchedule7);
+    scheduleISR(ignitionSchedule7);
   }
 #endif
 
@@ -569,7 +382,7 @@ ISR(TIMER3_COMPB_vect) //cppcheck-suppress misra-c2012-8.2
 void ignitionSchedule8Interrupt(void) //Most ARM chips can simply call a function
 #endif
   {
-    ignitionScheduleISR(ignitionSchedule8);
+    scheduleISR(ignitionSchedule8);
   }
 #endif
 
@@ -689,4 +502,52 @@ void disableAllIgnSchedules()
   disableIgnSchedule(5);
   disableIgnSchedule(6);
   disableIgnSchedule(7);
+}
+  void Schedule::setCallbacks(voidVoidCallback pStartCallback, voidVoidCallback pEndCallback)
+{
+  ATOMIC()
+  {
+  if(Status==RUNNING)
+  {
+    pEndCallback();
+    Status=OFF;
+  }
+  pStartCallback = pStartCallback;
+  pEndCallback = pEndCallback;
+  }
+}
+
+//Start all schedulers. Timers are always running, even if schedule is OFF. Timers are defined in board_*.h. 
+void initialiseSchedulers(void){
+  IGN1_TIMER_ENABLE();
+  IGN2_TIMER_ENABLE();
+  IGN3_TIMER_ENABLE();
+  IGN4_TIMER_ENABLE();  
+  IGN5_TIMER_ENABLE();
+#if IGN_CHANNELS >= 6
+  IGN6_TIMER_ENABLE();
+#endif
+#if IGN_CHANNELS >= 7
+  IGN7_TIMER_ENABLE();
+#endif
+#if IGN_CHANNELS >= 8
+  IGN8_TIMER_ENABLE();
+#endif
+
+  FUEL1_TIMER_ENABLE();
+  FUEL2_TIMER_ENABLE();
+  FUEL3_TIMER_ENABLE();
+  FUEL4_TIMER_ENABLE();
+#if INJ_CHANNELS >= 5
+  FUEL5_TIMER_ENABLE();
+#endif
+#if INJ_CHANNELS >= 6
+  FUEL6_TIMER_ENABLE();
+#endif
+#if INJ_CHANNELS >= 7
+  FUEL7_TIMER_ENABLE();
+#endif
+#if INJ_CHANNELS >= 8
+  FUEL8_TIMER_ENABLE();
+#endif
 }
