@@ -56,6 +56,8 @@ A full copy of the license may be found in the projects root directory
 #include "unit_testing.h"
 #include "atomic.h"
 
+static void triggerRoverMEMSCommon(void); //local forward declaration
+
 static void nullTriggerHandler (void){return;} //initialisation function for triggerhandlers, does exactly nothing
 static uint16_t nullGetRPM(void){return 0;} //initialisation function for getRpm, returns safe value of 0
 static int nullGetCrankAngle(void){return 0;} //initialisation function for getCrankAngle, returns safe value of 0
@@ -67,7 +69,6 @@ uint16_t (*getRPM)(void) = nullGetRPM; ///Pointer to the getRPM function (Gets p
 int (*getCrankAngle)(void) = nullGetCrankAngle; ///Pointer to the getCrank Angle function (Gets pointed to the relevant decoder)
 void (*triggerSetEndTeeth)(void) = triggerSetEndTeeth_missingTooth; ///Pointer to the triggerSetEndTeeth function of each decoder
 
-static void triggerRoverMEMSCommon(void);
 static inline void triggerRecordVVT1Angle (void);
 
 uint32_t DecoderBase::toothLastToothTime=0;
@@ -5460,7 +5461,7 @@ static void triggerRoverMEMSCommon(void)
   {
     toothCurrentCount = 1;
     toothOneMinusOneTime = toothOneTime;
-    toothOneTime = curTime;
+    toothOneTime = micros();
     revolutionOne = !revolutionOne; //Flip sequential revolution tracker   
   }
 
