@@ -313,27 +313,6 @@ void loggerTertiaryISR(void)
   }  
 }
 
-#if false
-#if !defined(UNIT_TEST)
-static
-#endif
-uint32_t angleToTimeIntervalTooth(uint16_t angle) {
-  noInterrupts();
-  if(BIT_CHECK(decoderState, BIT_DECODER_TOOTH_ANG_CORRECT))
-  {
-    unsigned long toothTime = (toothLastToothTime - toothLastMinusOneToothTime);
-    uint16_t tempTriggerToothAngle = triggerToothAngle; // triggerToothAngle is set by interrupts
-    interrupts();
-    
-    return (toothTime * (uint32_t)angle) / tempTriggerToothAngle;
-  }
-  //Safety check. This can occur if the last tooth seen was outside the normal pattern etc
-  else { 
-    interrupts();
-    return angleToTimeMicroSecPerDegree(angle); 
-  }
-}
-#endif
 
 static uint16_t timeToAngleIntervalTooth(uint32_t time)
 {
