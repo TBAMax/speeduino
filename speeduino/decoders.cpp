@@ -60,7 +60,6 @@ void (*triggerSetEndTeeth)(void) = triggerSetEndTeeth_missingTooth; ///Pointer t
 static void triggerRoverMEMSCommon(void);
 static inline void triggerRecordVVT1Angle (void);
 
-volatile unsigned long curTime;
 volatile unsigned long curGap;
 volatile unsigned long curTime2;
 volatile unsigned long curGap2;
@@ -569,7 +568,7 @@ void triggerSetup_missingTooth(void)
 
 void triggerPri_missingTooth(void)
 {
-   curTime = micros();
+   unsigned long curTime = micros();
    curGap = curTime - toothLastToothTime;
    if ( curGap >= triggerFilterTime ) //Pulses should never be less than triggerFilterTime, so if they are it means a false trigger. (A 36-1 wheel at 8000pm will have triggers approx. every 200uS)
    {
@@ -924,7 +923,7 @@ void triggerSetup_DualWheel(void)
  * */
 void triggerPri_DualWheel(void)
 {
-    curTime = micros();
+    unsigned long curTime = micros();
     curGap = curTime - toothLastToothTime;
     if ( curGap >= triggerFilterTime )
     {
@@ -1122,7 +1121,7 @@ void triggerSetup_BasicDistributor(void)
 
 void triggerPri_BasicDistributor(void)
 {
-  curTime = micros();
+  unsigned long curTime = micros();
   curGap = curTime - toothLastToothTime;
   if ( (curGap >= triggerFilterTime) )
   {
@@ -1316,7 +1315,7 @@ void triggerSetup_GM7X(void)
 void triggerPri_GM7X(void)
 {
     lastGap = curGap;
-    curTime = micros();
+    unsigned long curTime = micros();
     curGap = curTime - toothLastToothTime;
     toothCurrentCount++; //Increment the tooth counter
     BIT_SET(decoderState, BIT_DECODER_VALID_TRIGGER); //Flag this pulse as being a valid trigger (ie that it passed filters)
@@ -1494,7 +1493,7 @@ void triggerSetup_4G63(void)
 
 void triggerPri_4G63(void)
 {
-  curTime = micros();
+  unsigned long curTime = micros();
   curGap = curTime - toothLastToothTime;
   if ( (curGap >= triggerFilterTime) || (currentStatus.startRevolutions == 0) )
   {
@@ -1913,7 +1912,7 @@ void triggerPri_24X(void)
   if(toothCurrentCount == 25) { currentStatus.hasSync = false; } //Indicates sync has not been achieved (Still waiting for 1 revolution of the crank to take place)
   else
   {
-    curTime = micros();
+    unsigned long curTime = micros();
     curGap = curTime - toothLastToothTime;
 
     if(toothCurrentCount == 0)
@@ -2022,7 +2021,7 @@ void triggerPri_Jeep2000(void)
   if(toothCurrentCount == 13) { currentStatus.hasSync = false; } //Indicates sync has not been achieved (Still waiting for 1 revolution of the crank to take place)
   else
   {
-    curTime = micros();
+    unsigned long curTime = micros();
     curGap = curTime - toothLastToothTime;
     if ( curGap >= triggerFilterTime )
     {
@@ -2113,7 +2112,7 @@ void triggerSetup_Audi135(void)
 
 void triggerPri_Audi135(void)
 {
-   curTime = micros();
+   unsigned long curTime = micros();
    curGap = curTime - toothSystemLastToothTime;
    if ( (curGap > triggerFilterTime) || (currentStatus.startRevolutions == 0) )
    {
@@ -2227,7 +2226,7 @@ void triggerSetup_HondaD17(void)
 void triggerPri_HondaD17(void)
 {
    lastGap = curGap;
-   curTime = micros();
+   unsigned long curTime = micros();
    curGap = curTime - toothLastToothTime;
    toothCurrentCount++; //Increment the tooth counter
 
@@ -2348,7 +2347,7 @@ void triggerPri_HondaJ32(void)
   // This function is called only on rising edges, which occur as we lose sight of a tooth.
   // This function sets the following state variables for use in other functions:
   // toothLastToothTime, toothOneTime, revolutionOne (just toggles - not correct)
-  curTime = micros();
+  unsigned long curTime = micros();
   curGap = curTime - toothLastToothTime;
   toothLastToothTime = curTime;
 
@@ -2501,7 +2500,7 @@ void triggerSetup_Miata9905(void)
 
 void triggerPri_Miata9905(void)
 {
-  curTime = micros();
+  unsigned long curTime = micros();
   curGap = curTime - toothLastToothTime;
   if ( (curGap >= triggerFilterTime) || (currentStatus.startRevolutions == 0) )
   {
@@ -2752,7 +2751,7 @@ void triggerSetup_MazdaAU(void)
 
 void triggerPri_MazdaAU(void)
 {
-  curTime = micros();
+  unsigned long curTime = micros();
   curGap = curTime - toothLastToothTime;
   if ( curGap >= triggerFilterTime )
   {
@@ -2968,7 +2967,7 @@ void triggerSetup_Nissan360(void)
 
 void triggerPri_Nissan360(void)
 {
-   curTime = micros();
+   unsigned long curTime = micros();
    curGap = curTime - toothLastToothTime;
    if ( curGap < triggerFilterTime ) { return; }
    
@@ -3209,7 +3208,7 @@ void triggerSetup_Subaru67(void)
 
 void triggerPri_Subaru67(void)
 {
-  curTime = micros();
+  unsigned long curTime = micros();
   curGap = curTime - toothLastToothTime;
   if ( curGap < triggerFilterTime ) 
   { return; }
@@ -3484,7 +3483,7 @@ void triggerSetup_Daihatsu(void)
 
 void triggerPri_Daihatsu(void)
 {
-  curTime = micros();
+  unsigned long curTime = micros();
   curGap = curTime - toothLastToothTime;
 
   //if ( curGap >= triggerFilterTime || (currentStatus.startRevolutions == 0 )
@@ -3628,7 +3627,7 @@ void triggerSetup_Harley(void)
 void triggerPri_Harley(void)
 {
   lastGap = curGap;
-  curTime = micros();
+  unsigned long curTime = micros();
   curGap = curTime - toothLastToothTime;
   setFilter(curGap); // Filtering adjusted according to setting
   if (curGap > triggerFilterTime)
@@ -3775,7 +3774,7 @@ void triggerSetup_ThirtySixMinus222(void)
 
 void triggerPri_ThirtySixMinus222(void)
 {
-   curTime = micros();
+   unsigned long curTime = micros();
    curGap = curTime - toothLastToothTime;
    if ( curGap >= triggerFilterTime ) //Pulses should never be less than triggerFilterTime, so if they are it means a false trigger. (A 36-1 wheel at 8000pm will have triggers approx. every 200uS)
    {
@@ -3955,7 +3954,7 @@ void triggerSetup_ThirtySixMinus21(void)
 
 void triggerPri_ThirtySixMinus21(void)
 {
-   curTime = micros();
+   unsigned long curTime = micros();
    curGap = curTime - toothLastToothTime;
    if ( curGap >= triggerFilterTime ) //Pulses should never be less than triggerFilterTime, so if they are it means a false trigger. (A 36-1 wheel at 8000pm will have triggers approx. every 200uS)
    {
@@ -4102,7 +4101,7 @@ void triggerSetup_420a(void)
 
 void triggerPri_420a(void)
 {
-  curTime = micros();
+  unsigned long curTime = micros();
   curGap = curTime - toothLastToothTime;
   if ( curGap >= triggerFilterTime ) //Pulses should never be less than triggerFilterTime, so if they are it means a false trigger. (A 36-1 wheel at 8000pm will have triggers approx. every 200uS)
   {
@@ -4250,7 +4249,7 @@ Uses DualWheel decoders, There can be no missing teeth on the primary wheel.
 */
 void triggerPri_Webber(void)
 {
-  curTime = micros();
+  unsigned long curTime = micros();
   curGap = curTime - toothLastToothTime;
   if ( curGap >= triggerFilterTime )
   {
@@ -4613,7 +4612,7 @@ void triggerSetup_NGC(void)
 
 void triggerPri_NGC(void) 
 {
-  curTime = micros();
+  unsigned long curTime = micros();
   // We need to know the polarity of the missing tooth to determine position
   if (READ_PRI_TRIGGER() == HIGH) {
     toothLastToothRisingTime = curTime;
@@ -4918,7 +4917,7 @@ void triggerSetup_Vmax(void)
 
 void triggerPri_Vmax(void)
 {
-  curTime = micros();
+  unsigned long curTime = micros();
   if(READ_PRI_TRIGGER() == primaryTriggerEdge){// Forwarded from the config page to setup the primary trigger edge (rising or falling). Inverting VR-conditioners require FALLING, non-inverting VR-conditioners require RISING in the Trigger edge setup.
     curGap2 = curTime;
     curGap = curTime - toothLastToothTime;
@@ -5132,7 +5131,7 @@ void triggerSetup_Renix(void)
 
 void triggerPri_Renix(void)
 {
-  curTime = micros();
+  unsigned long curTime = micros();
   curGap = curTime - renixSystemLastToothTime;
 
   if ( curGap >= triggerFilterTime )   
@@ -5286,7 +5285,7 @@ void triggerSetup_RoverMEMS()
 
 void triggerPri_RoverMEMS()
 {
-  curTime = micros();
+  unsigned long curTime = micros();
   curGap = curTime - toothLastToothTime;      
 
   if ( curGap >= triggerFilterTime ) //Pulses should never be less than triggerFilterTime, so if they are it means a false trigger. (A 36-1 wheel at 8000pm will have triggers approx. every 200uS)
@@ -5695,7 +5694,7 @@ void triggerSetup_SuzukiK6A(void)
 
 void triggerPri_SuzukiK6A(void)
 {
-  curTime = micros();  
+  unsigned long curTime = micros();  
   curGap = curTime - toothLastToothTime;
   if ( (curGap >= triggerFilterTime) || (currentStatus.startRevolutions == 0U) )
   {    
@@ -6006,7 +6005,7 @@ void triggerSetup_FordTFI(void)
  * */
 void triggerPri_FordTFI(void)
 {
-  curTime = micros(); // Get current time and gap duration with micros rollover
+  unsigned long curTime = micros(); // Get current time and gap duration with micros rollover
   if (curTime >= toothLastToothTime) 
     { curGap = curTime - toothLastToothTime; } 
   else

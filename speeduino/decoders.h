@@ -293,7 +293,6 @@ extern uint16_t (*getRPM)(void); //Pointer to the getRPM function (Gets pointed 
 extern int (*getCrankAngle)(void); //Pointer to the getCrank Angle function (Gets pointed to the relevant decoder)
 extern void (*triggerSetEndTeeth)(void); //Pointer to the triggerSetEndTeeth function of each decoder
 
-extern volatile unsigned long curTime;
 extern volatile unsigned long curGap;
 extern volatile unsigned long curTime2;
 extern volatile unsigned long curGap2;
