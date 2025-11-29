@@ -53,13 +53,6 @@
 #define BIT_TIMER_200HZ           6
 #define BIT_TIMER_1KHZ            7
 
-#ifndef UNIT_TEST 
-#define TOOTH_LOG_SIZE      127U
-#else
-#define TOOTH_LOG_SIZE      1U
-#endif
-// Some code relies on TOOTH_LOG_SIZE being uint8_t.
-static_assert(TOOTH_LOG_SIZE<UINT8_MAX, "Check all uses of TOOTH_LOG_SIZE");
 
 #define O2_CALIBRATION_PAGE   2U
 #define IAT_CALIBRATION_PAGE  1U
@@ -203,9 +196,6 @@ extern byte fpPrimeTime; //The time (in seconds, based on currentStatus.secl) th
 extern uint8_t softLimitTime; //The time (in 0.1 seconds, based on seclx10) that the soft limiter started
 extern volatile uint16_t mainLoopCount;
 extern uint32_t revolutionTime; //The time in uS that one revolution would take at current speed (The time tooth 1 was last seen, minus the time it was seen prior to that)
-extern volatile uint32_t toothHistory[TOOTH_LOG_SIZE];
-extern volatile uint8_t compositeLogHistory[TOOTH_LOG_SIZE];
-extern volatile unsigned int toothHistoryIndex;
 extern volatile uint16_t ignitionCount; /**< The count of ignition events that have taken place since the engine started */
 //The below shouldn't be needed and probably should be cleaned up, but the Atmel SAM (ARM) boards use a specific type for the trigger edge values rather than a simple byte/int
 #if defined(CORE_SAMD21)

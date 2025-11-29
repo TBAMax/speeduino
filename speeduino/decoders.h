@@ -3,6 +3,14 @@
 
 #include "globals.h"
 
+#ifndef UNIT_TEST 
+#define TOOTH_LOG_SIZE      127U
+#else
+#define TOOTH_LOG_SIZE      1U
+#endif
+// Some code relies on TOOTH_LOG_SIZE being uint8_t.
+static_assert(TOOTH_LOG_SIZE<UINT8_MAX, "Check all uses of TOOTH_LOG_SIZE");
+
 #if defined(CORE_AVR)
   #define READ_PRI_TRIGGER() ((*triggerPri_pin_port & triggerPri_pin_mask) ? true : false)
   #define READ_SEC_TRIGGER() ((*triggerSec_pin_port & triggerSec_pin_mask) ? true : false)
@@ -56,10 +64,21 @@
 #define TRIGGER_FILTER_MEDIUM           2
 #define TRIGGER_FILTER_AGGRESSIVE       3
 
-//220 bytes free
+typedef void (*voidVoidCallback)(void);
+
+extern int16_t toothAngles[24]; //An array for storing fixed tooth angles. Currently sized at 24 for the GM 24X decoder, but may grow later if there are other decoders that use this style
+extern volatile uint32_t toothHistory[TOOTH_LOG_SIZE];
+extern volatile uint8_t compositeLogHistory[TOOTH_LOG_SIZE];
+extern volatile unsigned int toothHistoryIndex;
 extern volatile uint8_t decoderState;
 extern unsigned long MAX_STALL_TIME;
 
+struct toothEvent{
+  uint32_t time; //The time (in uS) when the tooth was seen
+  uint16_t angle; //The crank angle (in degrees) when the tooth was seen
+};
+
+//static void nullTriggerHandler(void);
 
 struct DecoderBase{
   private:
@@ -346,7 +365,6 @@ extern uint16_t ignition6EndTooth;
 extern uint16_t ignition7EndTooth;
 extern uint16_t ignition8EndTooth;
 
-extern int16_t toothAngles[24]; //An array for storing fixed tooth angles. Currently sized at 24 for the GM 24X decoder, but may grow later if there are other decoders that use this style
 
 #define CRANK_SPEED 0U
 #define CAM_SPEED   1U

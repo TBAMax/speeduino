@@ -69,6 +69,10 @@ uint16_t (*getRPM)(void) = nullGetRPM; ///Pointer to the getRPM function (Gets p
 int (*getCrankAngle)(void) = nullGetCrankAngle; ///Pointer to the getCrank Angle function (Gets pointed to the relevant decoder)
 void (*triggerSetEndTeeth)(void) = triggerSetEndTeeth_missingTooth; ///Pointer to the triggerSetEndTeeth function of each decoder
 
+int16_t toothAngles[24]; //An array for storing fixed tooth angles. Currently sized at 24 for the GM 24X decoder, but may grow later if there are other decoders that use this style
+volatile uint32_t toothHistory[TOOTH_LOG_SIZE]; ///< Tooth trigger history - delta time (in uS) from last tooth (Indexed by @ref toothHistoryIndex)
+volatile uint8_t compositeLogHistory[TOOTH_LOG_SIZE]; 
+volatile unsigned int toothHistoryIndex = 0; ///< Current index to @ref toothHistory array
 static inline void triggerRecordVVT1Angle (void);
 
 uint32_t DecoderBase::toothLastToothTime=0;
@@ -134,7 +138,7 @@ uint16_t ignition6EndTooth = 0;
 uint16_t ignition7EndTooth = 0;
 uint16_t ignition8EndTooth = 0;
 
-int16_t toothAngles[24]; //An array for storing fixed tooth angles. Currently sized at 24 for the GM 24X decoder, but may grow later if there are other decoders that use this style
+
 
 #ifdef USE_LIBDIVIDE
 #include "src/libdivide/libdivide.h"
