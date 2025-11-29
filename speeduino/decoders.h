@@ -58,21 +58,13 @@
 
 //220 bytes free
 extern volatile uint8_t decoderState;
+extern unsigned long MAX_STALL_TIME;
 
-/**
- * @brief Is the engine running?
- * 
- * This is based on whether or not the decoder has detected a tooth recently
- * 
- * @param curTime The time in µS to use for the liveness check. Typically the result of a recent call to micros() 
- * @return true If the engine is turning
- * @return false If the engine is not turning
- */
-bool engineIsRunning(uint32_t curTime);
+
 struct DecoderBase{
   private:
-    static uint32_t toothLastToothTime;       // The time (in µS) when the last tooth was seen
     static int16_t toothLastToothAngle;    // The crank angle (in degrees) when the last tooth was seen   
+    static uint32_t toothLastToothTime;       // The time (in µS) when the last tooth was seen  
   public:
     static uint8_t decoderState;
     virtual void triggerSetup(void);
@@ -86,7 +78,8 @@ struct DecoderBase{
     virtual uint32_t getMicrosPerDegree(void);
     virtual uint16_t getDegreesPerMicros(void);
     virtual uint32_t getRotationTimeMicros(void);
-    bool engineIsRunning(uint32_t curTime);
+    static bool engineIsRunning(uint32_t atLeastMicros= MAX_STALL_TIME);
+    static bool engineIsStopped(uint32_t atLeastMicros);
 };
 
 /*

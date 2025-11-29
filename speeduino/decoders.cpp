@@ -70,6 +70,9 @@ void (*triggerSetEndTeeth)(void) = triggerSetEndTeeth_missingTooth; ///Pointer t
 static void triggerRoverMEMSCommon(void);
 static inline void triggerRecordVVT1Angle (void);
 
+uint32_t DecoderBase::toothLastToothTime=0;
+int16_t DecoderBase::toothLastToothAngle=0;
+
 volatile unsigned long curGap;
 volatile unsigned long curTime2;
 volatile unsigned long curGap2;
@@ -350,14 +353,38 @@ static inline bool IsCranking(const statuses &status) {
   return (status.RPM < status.crankRPM) && (status.startRevolutions == 0U);
 }
 
-bool engineIsRunning(uint32_t curTime) {
+/**
+ * @brief Is the engine running?
+ * 
+ * This is based on whether or not the decoder has detected a tooth recently
+ * 
+ * @param curTime The time in µS to use for the liveness check. Typically the result of a recent call to micros() 
+ * @return true If the engine is turning
+ * @return false If the engine is not turning
+ */
+bool DecoderBase::engineIsRunning(uint32_t atLeastMicros) {
   // Check how long ago the last tooth was seen compared to now. 
   // If it was more than MAX_STALL_TIME then the engine is probably stopped. 
-  // toothLastToothTime can be greater than curTime if a pulse occurs between getting the latest time and doing the comparison
-  ATOMIC() {
-    return (toothLastToothTime > curTime) || ((curTime - toothLastToothTime) < MAX_STALL_TIME); 
+  uint32_t localLastToothTime;
+  ATOMIC(){localLastToothTime=toothLastToothTime;}
+  uint32_t curTime= micros();
+  if(curTime - localLastToothTime <= atLeastMicros){
+    return true;
   }
-  return false; // Just here to avoid compiler warning.
+  else{
+    return false;
+  }
+}
+bool DecoderBase::engineIsStopped(uint32_t atLeastMicros){  
+  uint32_t localLastToothTime;
+  ATOMIC(){localLastToothTime=toothLastToothTime;}
+  uint32_t curTime= micros();
+  if((uint32_t)(curTime - localLastToothTime) > atLeastMicros){
+    return true;
+  }
+  else{
+    return false;
+  }
 }
 
 void resetDecoder(void) {

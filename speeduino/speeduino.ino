@@ -148,8 +148,7 @@ void __attribute__((always_inline)) loop(void)
         }   
       #endif
 
-    currentLoopTime = micros();
-    if ( engineIsRunning(currentLoopTime) )
+    if (DecoderBase::engineIsRunning() )
     {
       currentStatus.longRPM = getRPM(); //Long RPM is included here
       currentStatus.RPM = currentStatus.longRPM;

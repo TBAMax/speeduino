@@ -652,7 +652,7 @@ void readBaro(void)
     // readings
     setBaroFromSensorReading(LOW_PASS_FILTER(readMAPSensor(pinBaro), configPage4.ADCFILTER_BARO, currentStatus.baroADC)); //Very weak filter
   // If no dedicated baro sensor is available, attempt to get a reading from the MAP sensor. This can only be done if the engine is not running. 
-  } else if ((currentStatus.RPM == 0U) && !engineIsRunning(micros()-MICROS_PER_SEC)) {
+  } else if ((currentStatus.RPM == 0U) && DecoderBase::engineIsStopped(MICROS_PER_SEC)) {
     setBaroFromMAP();
   } else {
     // Do nothing - baro remains at last read value & MISRA checker is kept happy.

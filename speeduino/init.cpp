@@ -2,6 +2,7 @@
  * Speeduino Initialisation (called at Arduino setup()).
  */
 #include "globals.h"
+#include "decoders.h"
 #include "init.h"
 #include "storage.h"
 #include "updates.h"
@@ -16,7 +17,6 @@
 #include "schedule_calcs.h"
 #include "auxiliaries.h"
 #include "sensors.h"
-#include "decoders.h"
 #include "corrections.h"
 #include "idle.h"
 #include "table2d.h"
@@ -281,7 +281,6 @@ void initialiseAll(void)
     }
 
     //Initial values for loop times
-    currentLoopTime = micros();
     mainLoopCount = 0;
 
     if(configPage2.divider == 0) { currentStatus.nSquirts = 2; } //Safety check.
