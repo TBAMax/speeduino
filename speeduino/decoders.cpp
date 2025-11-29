@@ -11,14 +11,24 @@ A full copy of the license may be found in the projects root directory
  * Crank and Cam decoders
  * 
  * This file contains the various crank and cam wheel decoder functions.
- * Each decoder must have the following 4 functions (Where xxxx is the decoder name):
+ *  Each decoder must have at least the following 5 functions:
  * 
- * - **triggerSetup_xxxx** - Called once from within setup() and configures any required variables
- * - **triggerPri_xxxx** - Called each time the primary (No. 1) crank/cam signal is triggered (Called as an interrupt, so variables must be declared volatile)
- * - **triggerSec_xxxx** - Called each time the secondary (No. 2) crank/cam signal is triggered (Called as an interrupt, so variables must be declared volatile)
- * - **getRPM_xxxx** - Returns the current RPM, as calculated by the decoder
- * - **getCrankAngle_xxxx** - Returns the current crank angle, as calculated by the decoder
- * - **getCamAngle_xxxx** - Returns the current CAM angle, as calculated by the decoder
+ * - **triggerPri** - Called each time the primary (No. 1) crank/cam signal is triggered (Called as an interrupt, so variables must be declared volatile)
+ * - **triggerSec** - Called each time the secondary (No. 2) crank/cam signal is triggered (Called as an interrupt, so variables must be declared volatile)
+ * - **getLastToothAngle** - Returns the crank angle of the last primary tooth seen
+ * - **getLastToothTime** - Returns the time (in uS) that the last primary tooth was seen
+ * - **getMicrosPerDegree** - Returns the current filtered microsPerDegree value, used for scheduling
+ *    
+ *  Optionally, decoders may also override the following functions:
+ * - **triggerSetup** - Called once from within setup() and configures any required variables* 
+ *  - **getRPM** - Returns the current RPM, as calculated by the decoder
+ * - **getCrankAngle** - Returns the current crank angle, as calculated by the decoder
+ * - **getRotationTimeMicros** - Returns the current time for one full rotation of the crank (in uS)
+ * - **isRunning** - Returns whether or not the engine is currently running, as calculated by the decoder
+ * 
+ *  Also Optionally decoders may have following functions if required:
+ * - **triggerTertiary** - Called each time the tertiary (No. 3) crank/cam signal is triggered
+ * - **getCamAngle** - Returns the current CAM angle, as calculated by the decoder
  *
  * Each decoder must utilise at least the following variables:
  * 

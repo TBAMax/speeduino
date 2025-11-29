@@ -69,6 +69,25 @@ extern volatile uint8_t decoderState;
  * @return false If the engine is not turning
  */
 bool engineIsRunning(uint32_t curTime);
+struct DecoderBase{
+  private:
+    static uint32_t toothLastToothTime;       // The time (in µS) when the last tooth was seen
+    static int16_t toothLastToothAngle;    // The crank angle (in degrees) when the last tooth was seen   
+  public:
+    static uint8_t decoderState;
+    virtual void triggerSetup(void);
+    virtual void triggerPri(void) = 0;
+    virtual void triggerSec(void) = 0;
+    virtual void triggerTertiary(void) = 0;    
+    virtual int16_t getLastToothAngle(void);
+    virtual uint32_t getLastToothTime(void);
+    virtual uint16_t getRPM(void);
+    virtual int getCrankAngle(void);
+    virtual uint32_t getMicrosPerDegree(void);
+    virtual uint16_t getDegreesPerMicros(void);
+    virtual uint32_t getRotationTimeMicros(void);
+    bool engineIsRunning(uint32_t curTime);
+};
 
 /*
 extern volatile bool validTrigger; //Is set true when the last trigger (Primary or secondary) was valid (ie passed filters)
