@@ -70,13 +70,12 @@ int (*getCrankAngle)(void) = nullGetCrankAngle; ///Pointer to the getCrank Angle
 void (*triggerSetEndTeeth)(void) = triggerSetEndTeeth_missingTooth; ///Pointer to the triggerSetEndTeeth function of each decoder
 
 int16_t toothAngles[24]; //An array for storing fixed tooth angles. Currently sized at 24 for the GM 24X decoder, but may grow later if there are other decoders that use this style
-volatile uint32_t toothHistory[TOOTH_LOG_SIZE]; ///< Tooth trigger history - delta time (in uS) from last tooth (Indexed by @ref toothHistoryIndex)
+uint32_t toothHistory[TOOTH_LOG_SIZE]; ///< Tooth trigger history - delta time (in uS) from last tooth (Indexed by @ref toothHistoryIndex)
+CircularBuffer64 toothHistoryBuffer(toothHistory);
 volatile uint8_t compositeLogHistory[TOOTH_LOG_SIZE]; 
 volatile unsigned int toothHistoryIndex = 0; ///< Current index to @ref toothHistory array
 static inline void triggerRecordVVT1Angle (void);
 
-uint32_t DecoderBase::toothLastToothTime=0;
-int16_t DecoderBase::toothLastToothAngle=0;
 
 volatile unsigned long curGap;
 volatile unsigned long curTime2;
@@ -86,7 +85,7 @@ volatile unsigned long curGap3;
 volatile unsigned long lastGap;
 volatile unsigned long targetGap;
 
-TESTABLE_STATIC unsigned long MAX_STALL_TIME = MICROS_PER_SEC/2U; //The maximum time (in uS) that the system will continue to function before the engine is considered stalled/stopped. This is unique to each decoder, depending on the number of teeth etc. 500000 (half a second) is used as the default value, most decoders will be much less.
+//TESTABLE_STATIC unsigned long MAX_STALL_TIME = MICROS_PER_SEC/2U; //The maximum time (in uS) that the system will continue to function before the engine is considered stalled/stopped. This is unique to each decoder, depending on the number of teeth etc. 500000 (half a second) is used as the default value, most decoders will be much less.
 volatile uint16_t toothCurrentCount = 0; //The current number of teeth (Once sync has been achieved, this can never actually be 0
 static volatile byte toothSystemCount = 0; //Used for decoders such as Audi 135 where not every tooth is used for calculating crank angle. This variable stores the actual number of teeth, not the number being used to calculate crank angle
 volatile unsigned long toothSystemLastToothTime = 0; //As below, but used for decoders where not every tooth count is used for calculation
@@ -377,6 +376,73 @@ void resetDecoder(void) {
   toothSystemCount = 0;
   secondaryToothCount = 0;
 }
+// Missing tooth decoder gap coefficient getter
+uint16_t DecoderMissingTooth::getGapCoeff(uint8_t toothNum) {    
+  switch (toothNum) {
+    case 0: return 512;  //unique signature needs to be in the begginning of the sequence, otherwise sync detection will be problematic
+    case 1: return 128;  //zero angle is at tooth number 1
+    default: return 256; //all other teeth
+  }
+}
+
+uint16_t DecoderMissingTooth::getToothAngle(uint8_t toothNum) {
+  switch (toothNum) {
+    case 0: return 340; //last tooth before missing tooth gap
+    case 1: return 0; //tooth 1 is at 0 degrees
+    default: return (uint16_t)((toothNum-1) * 10); //all other teeth up to tooth 34 (330 degrees)
+  }
+} 
+
+void DecoderMissingTooth::triggerSetup(void) {
+  resetDecoder();
+}
+void DecoderMissingTooth::triggerPri(void) {
+  // Missing tooth decoder primary trigger handler
+  uint32_t curTime = micros();
+  uint32_t curGap = curTime - toothLastToothTime; //use buffer here!
+  //sync detection
+  uint32_t expectedGap = uint32_t(lastGap * getGapCoeff(toothCurrentCount)) >> 8U; //calculate expected gap based on target gap and tooth coefficient
+  //filtering
+  uint32_t triggerFilterTime = (expectedGap / 4); //1/4 of expected gap
+  if (curGap <= triggerFilterTime) {
+    //filter failed on the fast side, assume noise around the trigger tooth and adjust last tooth time,this is to rather retard the ignition in case of noise, without yet losing sync.
+    toothHistoryBuffer.updateLast(curTime);
+    lastGap = curTime - toothHistoryBuffer.try_get(-1); //adjust the last gap  
+  }
+  else if ((curGap < uint32_t(expectedGap - triggerFilterTime)) || (curGap > uint32_t(expectedGap + triggerFilterTime))) {
+    //filter failed, assume the wrong tooth, or unrecoverable noise.
+    currentStatus.hasSync = false;
+    toothCurrentCount = 0; // this forces decoder to start looking for the signature pattern
+    totalToothCount = 0; //thus reset the overall tooth counter
+    lastGap = curGap;
+  }
+  else { 
+    //filter passed
+    //saving to the buffer
+    toothHistoryBuffer.push(curTime);
+    toothCurrentCount++; //increment tooth count
+    if(toothCurrentCount == triggerActualTeeth) {toothCurrentCount = 0;}
+    //total tooth counter
+    if(totalToothCount != UINT8_MAX) totalToothCount++;
+    //sync check
+    if (totalToothCount >= teethToSync) {
+      //time to check for sync
+        currentStatus.hasSync = true;
+    }
+    lastGap = curGap; //save last gap so that it must not be recalculated again
+  }
+}
+
+void DecoderMissingTooth::triggerSec(void) {
+  // Missing tooth decoder secondary trigger handler
+  noInterrupts();
+  unsigned long curTime = micros();
+  curGap2 = curTime - toothLastSecToothTime;
+  toothLastSecToothTime = curTime;
+  secondaryToothCount++;
+  interrupts();
+
+}
 
 #if defined(UNIT_TEST)
 bool SetRevolutionTime(uint32_t revTime)
@@ -451,13 +517,13 @@ static void setFilter(unsigned long curGap)
       triggerFilterTime = 0;
       break;
     case TRIGGER_FILTER_LITE: 
-      triggerFilterTime = curGap >> 2;
+      triggerFilterTime = curGap >> 2; //1/4 of previous gap
       break;
     case TRIGGER_FILTER_MEDIUM: 
-      triggerFilterTime = curGap >> 1;
+      triggerFilterTime = curGap >> 1; //1/2 of previous gap
       break;
     case TRIGGER_FILTER_AGGRESSIVE: 
-      triggerFilterTime = (curGap * 3) >> 2;
+      triggerFilterTime = (curGap * 3) >> 2; //3/4 of previous gap
       break;
     default:
       triggerFilterTime = 0;

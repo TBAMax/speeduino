@@ -66,39 +66,85 @@ static_assert(TOOTH_LOG_SIZE<UINT8_MAX, "Check all uses of TOOTH_LOG_SIZE");
 
 typedef void (*voidVoidCallback)(void);
 
-extern int16_t toothAngles[24]; //An array for storing fixed tooth angles. Currently sized at 24 for the GM 24X decoder, but may grow later if there are other decoders that use this style
 extern volatile uint32_t toothHistory[TOOTH_LOG_SIZE];
 extern volatile uint8_t compositeLogHistory[TOOTH_LOG_SIZE];
 extern volatile unsigned int toothHistoryIndex;
 extern volatile uint8_t decoderState;
 extern unsigned long MAX_STALL_TIME;
 
-struct toothEvent{
-  uint32_t time; //The time (in uS) when the tooth was seen
-  uint16_t angle; //The crank angle (in degrees) when the tooth was seen
-};
 
 //static void nullTriggerHandler(void);
 
+//64 element circular buffer, holding uint32_t values
+class CircularBuffer64 {
+public:
+    CircularBuffer64(uint32_t *buffer_ptr)
+        : buffer(buffer_ptr)
+    {}
+    //uint16_t buffer[64] = {0};
+    //  Advance the head and push new value (overwrite oldest)
+    void push(uint16_t v) {
+        head = (head + 1) & 0x3F;  //bitwise AND is used for wrap-around at 64
+        buffer[head] = v;
+    }
+
+    // Update newest element WITHOUT advancing the buffer
+    void updateLast(uint16_t v) {
+        buffer[head] = v;
+    }
+
+    // Get element relative to head.
+    // pos = 0 → newest
+    // pos = -1 → previous
+    // pos = -2 → two behind newest, etc.
+    // pos can be max 64 (positive or negative).
+    uint32_t try_get(int8_t relativePos) {
+        uint8_t idx = (head + relativePos) & 0x3F; //wrap-around at 64
+        return buffer[idx];
+    }
+
+private:
+    uint8_t   head;
+    uint8_t   tail;
+    uint32_t *buffer; // pointer to external buffer
+};
+
 struct DecoderBase{
   private:
-    static int16_t toothLastToothAngle;    // The crank angle (in degrees) when the last tooth was seen   
-    static uint32_t toothLastToothTime;       // The time (in µS) when the last tooth was seen  
-  public:
+    virtual uint16_t getGapCoeff(uint8_t toothNum) = 0; //Get the next expected time gap after the tooth, relative to the previous gap seen. expressed in 1/256ths  
+    virtual uint16_t getToothAngle(uint8_t toothNum) = 0; //Get the angle of a specific tooth number
+  protected:
+    static uint8_t triggerActualTeeth;      //The number of physical teeth on the wheel.
+    static uint8_t checkSyncToothCount; //How many teeth must've been seen successfully before we try to confirm sync (Useful for missing tooth type decoders)
+    static uint32_t lastGap; // The time gap (in uS) between the last 2 teeth seen
+    static uint8_t toothcurrentCount; //The current number of teeth. 0-th tooth is the tooth before 0 degrees
+    static uint8_t totalToothCount; //Total teeth seen since last sync, caps at 255
+    public:
     static uint8_t decoderState;
-    virtual void triggerSetup(void);
-    virtual void triggerPri(void) = 0;
-    virtual void triggerSec(void) = 0;
-    virtual void triggerTertiary(void) = 0;    
+    virtual void triggerSetup(void) = 0;
+    virtual void triggerPri(void) = 0;    //latin "primus" = "first"
+    virtual void triggerSec(void) = 0;    //latin "secundus" = "second"
+    virtual void triggerTert(void) = 0;    //latin "tertius" = "third"
     virtual int16_t getLastToothAngle(void);
     virtual uint32_t getLastToothTime(void);
     virtual uint16_t getRPM(void);
     virtual int getCrankAngle(void);
-    virtual uint32_t getMicrosPerDegree(void);
+    virtual uint32_t getMicrosPerDegree(void) = 0;
     virtual uint16_t getDegreesPerMicros(void);
     virtual uint32_t getRotationTimeMicros(void);
-    static bool engineIsRunning(uint32_t atLeastMicros= MAX_STALL_TIME);
-    static bool engineIsStopped(uint32_t atLeastMicros);
+    bool engineIsRunning(uint32_t atLeastMicros= MAX_STALL_TIME);
+    bool engineIsStopped(uint32_t atLeastMicros);
+};
+//Missing tooth decoder
+const PROGMEM uint8_t teethToSync = 6; //Number of teeth matching in the pattern before we assume successful sync
+
+struct DecoderMissingTooth : public DecoderBase {
+    void triggerSetup(void) override;
+    void triggerPri(void) override;
+    void triggerSec(void) override;
+    uint16_t getGapCoeff(uint8_t toothNum) override;
+    uint16_t getToothAngle(uint8_t toothNum) override;   
+    uint32_t getMicrosPerDegree(void) override;
 };
 
 /*
