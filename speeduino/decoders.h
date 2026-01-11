@@ -67,7 +67,6 @@ static_assert(TOOTH_LOG_SIZE<UINT8_MAX, "Check all uses of TOOTH_LOG_SIZE");
 typedef void (*voidVoidCallback)(void);
 
 extern uint32_t toothHistory[TOOTH_LOG_SIZE];
-extern volatile uint8_t compositeLogHistory[TOOTH_LOG_SIZE];
 extern volatile unsigned int toothHistoryIndex;
 extern volatile uint8_t decoderState;
 extern unsigned long MAX_STALL_TIME;

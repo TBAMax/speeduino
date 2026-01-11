@@ -28,15 +28,6 @@ bool is2ByteEntry(uint8_t key);
 void startToothLogger(void);
 void stopToothLogger(void);
 
-void startCompositeLogger(void);
-void stopCompositeLogger(void);
-
-void startCompositeLoggerTertiary(void);
-void stopCompositeLoggerTertiary(void);
-
-void startCompositeLoggerCams(void);
-void stopCompositeLoggerCams(void);
-
 /** @brief Build the TunerStudio engine status byte from the current status */
 byte buildEngineStatus(const statuses &current);
 

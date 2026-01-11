@@ -191,12 +191,12 @@ void legacySerialCommand(void)
       break;
 
     case 'J': //Start the composite logger
-      startCompositeLogger();
+      //startCompositeLogger();
       primarySerial.write(1); //TS needs an acknowledgement that this was received. I don't know if this is the correct response, but it seems to work
       break;
 
     case 'j': //Stop the composite logger
-      stopCompositeLogger();
+      //stopCompositeLogger();
       break;
 
     case 'L': // List the contents of current page in human readable form
@@ -220,21 +220,21 @@ void legacySerialCommand(void)
       break;
 
     case 'O': //Start the composite logger 2nd cam (teritary)
-      startCompositeLoggerTertiary();
+      //startCompositeLoggerTertiary();
       primarySerial.write(1); //TS needs an acknowledgement that this was received. I don't know if this is the correct response, but it seems to work
       break;
 
     case 'o': //Stop the composite logger 2nd cam (tertiary)
-      stopCompositeLoggerTertiary();
+      //stopCompositeLoggerTertiary();
       break;      
 
     case 'X': //Start the composite logger 2nd cam (teritary)
-      startCompositeLoggerCams();
+      //startCompositeLoggerCams();
       primarySerial.write(1); //TS needs an acknowledgement that this was received. I don't know if this is the correct response, but it seems to work
       break;
 
     case 'x': //Stop the composite logger 2nd cam (tertiary)
-      stopCompositeLoggerCams();
+      //stopCompositeLoggerCams();
       break;  
 
     case 'P': // set the current page
@@ -350,7 +350,6 @@ void legacySerialCommand(void)
         primarySerial.read(); // First byte of the page identifier can be ignored. It's always 0
 
         if(currentStatus.toothLogEnabled == true) { sendToothLog_legacy(0); } //Sends tooth log values as ints
-        else if (currentStatus.compositeTriggerUsed > 0) { sendCompositeLog_legacy(0); }
         serialStatusFlag = SERIAL_INACTIVE;
       }
       break;
@@ -1201,46 +1200,6 @@ void sendToothLog_legacy(byte startOffset) /* Blocking */
   { 
     //TunerStudio has timed out, send a LOG of all 0s
     for(uint16_t x = 0U; x < (4U*TOOTH_LOG_SIZE); ++x)
-    {
-      primarySerial.write(static_cast<byte>(0x00)); //GCC9 fix
-    }
-    serialStatusFlag = SERIAL_INACTIVE; 
-  } 
-}
-
-void sendCompositeLog_legacy(byte startOffset) /* Non-blocking */
-{
-  if (currentStatus.isToothLog1Full) //Sanity check. Flagging system means this should always be true
-  {
-      serialStatusFlag = SERIAL_TRANSMIT_COMPOSITE_INPROGRESS_LEGACY;
-
-      for (uint8_t x = startOffset; x < TOOTH_LOG_SIZE; ++x)
-      {
-        //Check whether the tx buffer still has space
-        if(primarySerial.availableForWrite() < 4) 
-        { 
-          //tx buffer is full. Store the current state so it can be resumed later
-          logItemsTransmitted = x;
-          return;
-        }
-
-        uint32_t inProgressCompositeTime = toothHistory[x]; //This combined runtime (in us) that the log was going for by this record)
-        
-        primarySerial.write(inProgressCompositeTime >> 24);
-        primarySerial.write(inProgressCompositeTime >> 16);
-        primarySerial.write(inProgressCompositeTime >> 8);
-        primarySerial.write(inProgressCompositeTime);
-
-        primarySerial.write(compositeLogHistory[x]); //The status byte (Indicates the trigger edge, whether it was a pri/sec pulse, the sync status)
-      }
-      currentStatus.isToothLog1Full = false;
-      toothHistoryIndex = 0;
-      serialStatusFlag = SERIAL_INACTIVE; 
-  }
-  else 
-  { 
-    //TunerStudio has timed out, send a LOG of all 0s
-    for(uint16_t x = 0U; x < (5U*TOOTH_LOG_SIZE); ++x)
     {
       primarySerial.write(static_cast<byte>(0x00)); //GCC9 fix
     }

@@ -42,9 +42,6 @@ void processSerialCommand(void);
 /** @brief Should be called when ::serialStatusFlag == SERIAL_TRANSMIT_TOOTH_INPROGRESS, */
 void sendToothLog(void);
 
-/** @brief Should be called when ::serialStatusFlag == LOG_SEND_COMPOSITE */
-void sendCompositeLog(void);
-
 /// @defgroup group-serial-return-codes Serial return codes sent to TS
 /// @{
 static constexpr byte SERIAL_RC_OK         = 0x00U; //!< Success
@@ -564,10 +561,6 @@ void serialTransmit(void)
       sendToothLog_legacy(logItemsTransmitted);
       break;
 
-    case SERIAL_TRANSMIT_COMPOSITE_INPROGRESS:
-      sendCompositeLog();
-      break;
-
     case SERIAL_TRANSMIT_INPROGRESS:
       serialBytesRxTx = sendBufferAndCrcNonBlocking(serialPayload, serialBytesRxTx, serialPayloadLength);
       serialStatusFlag = serialBytesRxTx==serialPayloadLength+sizeof(crc_t) ? SERIAL_INACTIVE : SERIAL_TRANSMIT_INPROGRESS;
@@ -655,12 +648,12 @@ void processSerialCommand(void)
       break;
 
     case 'J': //Start the composite logger
-      startCompositeLogger();
-      sendReturnCodeMsg(SERIAL_RC_OK);
-      break;
+      //startCompositeLogger();
+      //sendReturnCodeMsg(SERIAL_RC_OK);
+      //break;
 
     case 'j': //Stop the composite logger
-      stopCompositeLogger();
+      //stopCompositeLogger();
       sendReturnCodeMsg(SERIAL_RC_OK);
       break;
 
@@ -695,22 +688,22 @@ void processSerialCommand(void)
     }  
 
     case 'O': //Start the composite logger 2nd cam (teritary)
-      startCompositeLoggerTertiary();
+      //startCompositeLoggerTertiary();
       sendReturnCodeMsg(SERIAL_RC_OK);
       break;
 
     case 'o': //Stop the composite logger 2nd cam (tertiary)
-      stopCompositeLoggerTertiary();
-      sendReturnCodeMsg(SERIAL_RC_OK);
-      break;
+      //stopCompositeLoggerTertiary();
+      //sendReturnCodeMsg(SERIAL_RC_OK);
+      //break;
 
     case 'X': //Start the composite logger 2nd cam (teritary)
-      startCompositeLoggerCams();
-      sendReturnCodeMsg(SERIAL_RC_OK);
-      break;
+      //startCompositeLoggerCams();
+      //sendReturnCodeMsg(SERIAL_RC_OK);
+      //break;
 
     case 'x': //Stop the composite logger 2nd cam (tertiary)
-      stopCompositeLoggerCams();
+      //stopCompositeLoggerCams();
       sendReturnCodeMsg(SERIAL_RC_OK);
       break;
 
@@ -881,7 +874,6 @@ void processSerialCommand(void)
     case 'T': //Send 256 tooth log entries to Tuner Studios tooth logger
       logItemsTransmitted = 0;
       if(currentStatus.toothLogEnabled == true) { sendToothLog(); } //Sends tooth log values as ints
-      else if (currentStatus.compositeTriggerUsed > 0U) { sendCompositeLog(); }
       else { /* MISRA no-op */ }
       break;
 
@@ -1115,62 +1107,6 @@ void sendToothLog(void)
   currentStatus.isToothLog1Full = false;
   serialStatusFlag = SERIAL_INACTIVE;
   toothHistoryIndex = 0;
-  logItemsTransmitted = 0;
-
-  //Apply the CRC reflection
-  CRC32_val = ~CRC32_val;
-
-  //Send the CRC
-  (void)serialWrite(CRC32_val);
-}
-
-void sendCompositeLog(void)
-{
-  if ( currentStatus.isToothLog1Full == false )
-  {
-    //If the buffer is not yet full but TS has timed out, pad the rest of the buffer with 0s
-    while(toothHistoryIndex < TOOTH_LOG_SIZE)
-    {
-      toothHistory[toothHistoryIndex] = toothHistory[toothHistoryIndex-1U]; //Composite logger needs a realistic time value to display correctly. Copy the last value
-      compositeLogHistory[toothHistoryIndex] = 0U;
-      toothHistoryIndex++;
-    }
-  }
-
-  uint32_t CRC32_val = 0;
-  if(logItemsTransmitted == 0U)
-  { 
-    //Transmit the size of the packet
-    (void)serialWrite((uint16_t)(sizeof(toothHistory) + sizeof(compositeLogHistory) + 1U)); //Size of the tooth log (uint32_t values) plus the return code
-    
-    //Begin new CRC hash
-    const uint8_t returnCode = SERIAL_RC_OK;
-    CRC32_val = CRC32_serial.crc32(&returnCode, 1, false);
-
-    //Send the return code
-    writeByteReliableBlocking(returnCode);
-  }
-
-  for (; logItemsTransmitted < TOOTH_LOG_SIZE; logItemsTransmitted++)
-  {
-    //Check whether the tx buffer still has space
-    if((uint16_t)primarySerial.availableForWrite() < sizeof(toothHistory[logItemsTransmitted])+sizeof(compositeLogHistory[logItemsTransmitted])) 
-    { 
-      //tx buffer is full. Store the current state so it can be resumed later
-      serialStatusFlag = SERIAL_TRANSMIT_COMPOSITE_INPROGRESS;
-      return;
-    }
-
-    uint32_t transmitted = serialWrite(toothHistory[logItemsTransmitted]); //This combined runtime (in us) that the log was going for by this record
-    (void)CRC32_serial.crc32_upd((const byte*)&transmitted, sizeof(transmitted), false);
-
-    //The status byte (Indicates the trigger edge, whether it was a pri/sec pulse, the sync status)
-    writeByteReliableBlocking(compositeLogHistory[logItemsTransmitted]);
-    CRC32_val = CRC32_serial.crc32_upd((const byte*)&compositeLogHistory[logItemsTransmitted], sizeof(compositeLogHistory[logItemsTransmitted]), false);
-  }
-  currentStatus.isToothLog1Full = false;
-  toothHistoryIndex = 0;
-  serialStatusFlag = SERIAL_INACTIVE;
   logItemsTransmitted = 0;
 
   //Apply the CRC reflection
