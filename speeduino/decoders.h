@@ -4,7 +4,7 @@
 #include "globals.h"
 
 #ifndef UNIT_TEST 
-#define TOOTH_LOG_SIZE      127U
+#define TOOTH_LOG_SIZE      128U
 #else
 #define TOOTH_LOG_SIZE      1U
 #endif
@@ -54,8 +54,8 @@ static_assert(TOOTH_LOG_SIZE<UINT8_MAX, "Check all uses of TOOTH_LOG_SIZE");
 #define BIT_DECODER_2ND_DERIV           0 //The use of the 2nd derivative calculation is limited to certain decoders. This is set to either true or false in each decoders setup routine
 #define BIT_DECODER_IS_SEQUENTIAL       1 //Whether or not the decoder supports sequential operation
 #define BIT_DECODER_UNUSED1             2 
-#define BIT_DECODER_HAS_SECONDARY       3 //Whether or not the decoder supports fixed cranking timing
-#define BIT_DECODER_HAS_FIXED_CRANKING  4
+#define BIT_DECODER_HAS_SECONDARY       3 
+#define BIT_DECODER_HAS_FIXED_CRANKING  4 //Whether or not the decoder supports fixed cranking timing
 #define BIT_DECODER_VALID_TRIGGER       5 //Is set true when the last trigger (Primary or secondary) was valid (ie passed filters)
 #define BIT_DECODER_TOOTH_ANG_CORRECT   6 //Whether or not the triggerToothAngle variable is currently accurate. Some patterns have times when the triggerToothAngle variable cannot be accurately set.
 
@@ -66,7 +66,7 @@ static_assert(TOOTH_LOG_SIZE<UINT8_MAX, "Check all uses of TOOTH_LOG_SIZE");
 
 typedef void (*voidVoidCallback)(void);
 
-extern volatile uint32_t toothHistory[TOOTH_LOG_SIZE];
+extern uint32_t toothHistory[TOOTH_LOG_SIZE];
 extern volatile uint8_t compositeLogHistory[TOOTH_LOG_SIZE];
 extern volatile unsigned int toothHistoryIndex;
 extern volatile uint8_t decoderState;
@@ -75,16 +75,16 @@ extern unsigned long MAX_STALL_TIME;
 
 //static void nullTriggerHandler(void);
 
-//64 element circular buffer, holding uint32_t values
-class CircularBuffer64 {
+//64 element LIFO circular buffer, holding uint32_t values
+class CircularBuffer {
 public:
-    CircularBuffer64(uint32_t *buffer_ptr)
+    CircularBuffer(uint32_t *buffer_ptr)
         : buffer(buffer_ptr)
     {}
-    //uint16_t buffer[64] = {0};
     //  Advance the head and push new value (overwrite oldest)
     void push(uint16_t v) {
-        head = (head + 1) & 0x3F;  //bitwise AND is used for wrap-around at 64
+        //head = (head + 1) & 0x3F;  //bitwise AND is used for wrap-around at 64
+        head = (head + 1) & 0x7F;  //bitwise AND is used for wrap-around at 128
         buffer[head] = v;
     }
 
@@ -103,9 +103,13 @@ public:
         return buffer[idx];
     }
 
+    uint32_t getLast() {
+        return buffer[head];
+    }
+
 private:
     uint8_t   head;
-    uint8_t   tail;
+    //uint8_t   tail;
     uint32_t *buffer; // pointer to external buffer
 };
 
@@ -114,17 +118,24 @@ struct DecoderBase{
     virtual uint16_t getGapCoeff(uint8_t toothNum) = 0; //Get the next expected time gap after the tooth, relative to the previous gap seen. expressed in 1/256ths  
     virtual uint16_t getToothAngle(uint8_t toothNum) = 0; //Get the angle of a specific tooth number
   protected:
+    //setup related variables
     static uint8_t triggerActualTeeth;      //The number of physical teeth on the wheel.
+    static uint8_t teethToSync; //Number of teeth matching in the pattern before we assume successful sync
     static uint8_t checkSyncToothCount; //How many teeth must've been seen successfully before we try to confirm sync (Useful for missing tooth type decoders)
+    static uint8_t zeroDegreeTooth; //The tooth number that corresponds to 0 degrees crank angle  
+    //work related variables
+    static bool primarySync; //Whether or not the primary trigger is currently synced
+    static bool secondarySync; //Whether or not the secondary trigger is currently synced
+    static bool revolutionOne; // For sequential operation, this tracks whether the current revolution is 1 or 2. true = 1, false = 2
     static uint32_t lastGap; // The time gap (in uS) between the last 2 teeth seen
-    static uint8_t toothcurrentCount; //The current number of teeth. 0-th tooth is the tooth before 0 degrees
-    static uint8_t totalToothCount; //Total teeth seen since last sync, caps at 255
+    static uint8_t toothCurrentCount; //The current number of teeth. 0-th tooth is the tooth before 0 degrees
+    static uint8_t totalToothCount; //Total teeth seen since last sync, caps at 255    
     public:
     static uint8_t decoderState;
     virtual void triggerSetup(void) = 0;
-    virtual void triggerPri(void) = 0;    //latin "primus" = "first"
+    virtual void triggerPri(void);    //latin "primus" = "first"
     virtual void triggerSec(void) = 0;    //latin "secundus" = "second"
-    virtual void triggerTert(void) = 0;    //latin "tertius" = "third"
+    virtual void triggerTert(void) {};    //latin "tertius" = "third"
     virtual int16_t getLastToothAngle(void);
     virtual uint32_t getLastToothTime(void);
     virtual uint16_t getRPM(void);
@@ -132,15 +143,14 @@ struct DecoderBase{
     virtual uint32_t getMicrosPerDegree(void) = 0;
     virtual uint16_t getDegreesPerMicros(void);
     virtual uint32_t getRotationTimeMicros(void);
-    bool engineIsRunning(uint32_t atLeastMicros= MAX_STALL_TIME);
-    bool engineIsStopped(uint32_t atLeastMicros);
+    //static functions are not associtated with an instance of the class
+    static bool engineIsRunning(uint32_t atLeastMicros= MAX_STALL_TIME);
+    static bool engineIsStopped(uint32_t atLeastMicros= MAX_STALL_TIME);
 };
-//Missing tooth decoder
-const PROGMEM uint8_t teethToSync = 6; //Number of teeth matching in the pattern before we assume successful sync
 
-struct DecoderMissingTooth : public DecoderBase {
+struct DecoderMissingTooth1 : public DecoderBase {
     void triggerSetup(void) override;
-    void triggerPri(void) override;
+    //void triggerPri(void) override;
     void triggerSec(void) override;
     uint16_t getGapCoeff(uint8_t toothNum) override;
     uint16_t getToothAngle(uint8_t toothNum) override;   
