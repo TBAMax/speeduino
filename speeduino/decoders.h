@@ -129,14 +129,15 @@ struct DecoderBase{
     static uint32_t lastGap; // The time gap (in uS) between the last 2 teeth seen
     static uint8_t toothCurrentCount; //The current number of teeth. 0-th tooth is the tooth before 0 degrees
     static uint8_t totalToothCount; //Total teeth seen since last sync, caps at 255    
-    public:
+  public:
     static uint8_t decoderState;
     virtual void triggerSetup(void) = 0;
     virtual void triggerPri(void);    //latin "primus" = "first"
     virtual void triggerSec(void) = 0;    //latin "secundus" = "second"
     virtual void triggerTert(void) {};    //latin "tertius" = "third"
-    virtual int16_t getLastToothAngle(void);
-    virtual uint32_t getLastToothTime(void);
+    uint16_t getLastToothAngle(void);
+    uint32_t getLastToothTime(void);
+    int8_t getDecoderStatus(void);
     virtual uint16_t getRPM(void);
     virtual int getCrankAngle(void);
     virtual uint32_t getMicrosPerDegree(void) = 0;

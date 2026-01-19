@@ -236,6 +236,8 @@ uint16_t DecoderMissingTooth1::getGapCoeff(uint8_t toothNum) {
 }
 
 uint16_t DecoderMissingTooth1::getToothAngle(uint8_t toothNum) {
+  //if (toothNum == 0) { toothNum = triggerActualTeeth; } //wrap around so that tooth 0 is treated as the last tooth
+  //return (uint16_t)((toothNum-1) * 10); //all other teeth up to tooth 34 (330 degrees)
   switch (toothNum) {
     case 0: return 340; //last tooth before missing tooth gap
     case 1: return 0; //tooth 1 is at 0 degrees
@@ -250,9 +252,19 @@ void DecoderMissingTooth1::triggerSetup(void) {
   //teethToSync=configPage4.triggerTeeth/2;
   toothCurrentCount = 0; //reset the tooth counter
   totalToothCount = 0; //reset the overall tooth counter
-  zeroDegreeTooth = 1; //tooth 1 is at 0 degrees
-  
+  zeroDegreeTooth = 1; //tooth 1 is at 0 degrees  
 }
+
+uint16_t DecoderBase::getLastToothAngle(void)
+{
+  return this->getToothAngle(toothCurrentCount);
+}
+
+uint32_t DecoderBase::getLastToothTime(void)
+{
+  return toothHistoryBuffer.getLast();
+}
+
 void DecoderBase::triggerPri(void) {
   // Missing tooth decoder primary trigger handler
   uint32_t curTime = micros();
